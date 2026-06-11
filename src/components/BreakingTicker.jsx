@@ -8,17 +8,24 @@ const BreakingTicker = ({ articles = [] }) => {
   const trackRef = useRef(null);
   const [duration, setDuration] = useState(30);
 
+  const seen = new Set();
+  const uniqueArticles = articles.filter(a => {
+    if (!a?.slug || !a?.title || seen.has(a.slug)) return false;
+    seen.add(a.slug);
+    return true;
+  });
+
   useEffect(() => {
     if (trackRef.current) {
       const width = trackRef.current.scrollWidth / 2;
       const pixelsPerSecond = 60;
       setDuration(Math.max(width / pixelsPerSecond, 15));
     }
-  }, [articles]);
+  }, [uniqueArticles]);
 
-  if (!articles.length) return null;
+  if (!uniqueArticles.length) return null;
 
-  const items = [...articles, ...articles];
+  const items = [...uniqueArticles, ...uniqueArticles];
 
   return (
     <div className="bg-brand-950 dark:bg-brand-900 text-white overflow-hidden">
@@ -27,7 +34,7 @@ const BreakingTicker = ({ articles = [] }) => {
           <Zap className="w-4 h-4 text-accent-amber animate-pulse-soft" />
           <span className="text-xs font-bold uppercase tracking-wider text-accent-amber">Breaking</span>
           <span className="hidden sm:inline text-[10px] bg-white/10 px-2 py-0.5 rounded-full text-gray-300">
-            {articles.length} live
+            {uniqueArticles.length} live
           </span>
         </div>
         <div className="overflow-hidden flex-1">

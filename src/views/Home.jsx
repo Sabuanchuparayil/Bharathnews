@@ -22,16 +22,14 @@ import { getArticlesPage, getTrendingArticles } from '../services/firestore';
 const PAGE_SIZE = 12;
 const STORY_RING_COUNT = 12;
 
-function mergeStoryPool(primary, fallback, count) {
-  const seen = new Set();
-  const out = [];
-  for (const article of [...primary, ...fallback]) {
-    if (!article?.slug || seen.has(article.slug)) continue;
-    seen.add(article.slug);
-    out.push(article);
-    if (out.length >= count) break;
-  }
-  return out;
+/** Deduplicate articles by slug, excluding any slugs in the exclude set */
+function dedupeArticles(articles, excludeSlugs = new Set()) {
+  const seen = new Set(excludeSlugs);
+  return articles.filter(a => {
+    if (!a?.slug || seen.has(a.slug)) return false;
+    seen.add(a.slug);
+    return true;
+  });
 }
 
 const Home = () => {
@@ -55,13 +53,17 @@ const Home = () => {
       const category = activeCategory === 'all' ? null : activeCategory;
       const [page, trending] = await Promise.all([
         getArticlesPage(category, null, PAGE_SIZE + 4),
-        getTrendingArticles(STORY_RING_COUNT),
+        getTrendingArticles(STORY_RING_COUNT + 4),
       ]);
-      setFeaturedArticles(page.articles.slice(0, 4));
+
+      const featured = page.articles.slice(0, 4);
+      const featuredSlugs = new Set(featured.map(a => a.slug));
+
+      setFeaturedArticles(featured);
       setArticles(page.articles.slice(4));
       setLastDoc(page.lastDoc);
       setHasMore(page.hasMore);
-      setTrendingArticles(mergeStoryPool(trending, page.articles, STORY_RING_COUNT));
+      setTrendingArticles(dedupeArticles(trending, featuredSlugs).slice(0, STORY_RING_COUNT));
     } catch (err) {
       console.error('Error fetching articles:', err);
       setError('Unable to load stories. Please try again.');

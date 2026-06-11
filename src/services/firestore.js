@@ -60,9 +60,18 @@ export const getTrendingArticles = async (count = 5) => {
   const db = await getDbAsync();
   if (!db) return [];
   const { collection, query, orderBy, limit, getDocs } = await firestoreOps();
-  const q = query(collection(db, 'articles'), orderBy('views', 'desc'), limit(count));
+  const q = query(collection(db, 'articles'), orderBy('views', 'desc'), limit(count + 10));
   const snapshot = await getDocs(q);
-  return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+  const seen = new Set();
+  const articles = [];
+  for (const d of snapshot.docs) {
+    const data = { id: d.id, ...d.data() };
+    if (!data.slug || seen.has(data.slug)) continue;
+    seen.add(data.slug);
+    articles.push(data);
+    if (articles.length >= count) break;
+  }
+  return articles;
 };
 
 export const getArticlesByInterests = async (interests, count = 10) => {

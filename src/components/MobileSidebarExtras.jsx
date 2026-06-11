@@ -8,7 +8,15 @@ import ChannelFollowCTA from './ChannelFollowCTA';
 import { getCategoryLabel } from '../utils/categoryColors';
 
 export function MobileTrendingStrip({ articles = [] }) {
-  const items = articles.filter(a => a.slug).slice(0, 6);
+  const seen = new Set();
+  const items = articles
+    .filter(a => {
+      if (!a?.slug || !a?.title || seen.has(a.slug)) return false;
+      seen.add(a.slug);
+      return true;
+    })
+    .slice(0, 6);
+
   if (!items.length) return null;
 
   return (

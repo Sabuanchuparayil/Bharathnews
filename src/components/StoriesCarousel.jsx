@@ -46,7 +46,15 @@ function StoryRing({ article, index }) {
 }
 
 const StoriesCarousel = ({ articles = [] }) => {
-  const stories = articles.slice(0, DISPLAY_COUNT).filter(a => a.slug);
+  const seen = new Set();
+  const stories = articles
+    .filter(a => {
+      if (!a?.slug || !a?.title || seen.has(a.slug)) return false;
+      seen.add(a.slug);
+      return true;
+    })
+    .slice(0, DISPLAY_COUNT);
+
   if (stories.length < 4) return null;
 
   return (
