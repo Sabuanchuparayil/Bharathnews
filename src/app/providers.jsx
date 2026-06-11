@@ -1,22 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import dynamic from 'next/dynamic';
 import { MotionConfig } from 'framer-motion';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { AuthProvider } from '@/context/AuthContext';
+import { InterestProvider } from '@/context/InterestContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import InstallPWA from '@/components/InstallPWA';
-
-const AuthProvider = dynamic(
-  () => import('@/context/AuthContext').then((m) => m.AuthProvider),
-  { ssr: false }
-);
-
-const InterestProvider = dynamic(
-  () => import('@/context/InterestContext').then((m) => m.InterestProvider),
-  { ssr: false }
-);
 
 function useReducedMotion() {
   const [reduced, setReduced] = useState(false);

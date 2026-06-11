@@ -22,3 +22,11 @@ export async function firestoreOps() {
   }
   return firestoreModule;
 }
+
+/** Run a Firestore callback with a live db instance and loaded operators. */
+export async function withFirestore(fn) {
+  const db = getDb();
+  if (!db) throw new Error('Firebase unavailable');
+  const ops = await firestoreOps();
+  return fn(db, ops);
+}

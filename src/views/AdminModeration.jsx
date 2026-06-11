@@ -9,8 +9,7 @@ import {
   getPendingApplications, reviewRoleApplication,
   getPendingCreatorPosts, moderateCreatorPost,
 } from '../services/creator';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../config/firebase.config';
+import { getDb, firestoreOps } from '@/lib/firebase-client';
 
 const AdminModeration = () => {
   const { user, loading, isAdmin, loginWithGoogle } = useAuth();
@@ -34,6 +33,9 @@ const AdminModeration = () => {
 
   const handleAppReview = async (app, approved) => {
     try {
+      const db = getDb();
+      if (!db) throw new Error('Firebase unavailable');
+      const { doc, getDoc } = await firestoreOps();
       const userSnap = await getDoc(doc(db, 'users', app.userId));
       const userData = userSnap.data() || {};
       await reviewRoleApplication(app.id, {

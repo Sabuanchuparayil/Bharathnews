@@ -26,11 +26,14 @@ export const AuthProvider = ({ children }) => {
     }
 
     let unsubscribe;
-    (async () => {
-      const { onAuthStateChanged, signOut } = await import('firebase/auth');
-      const { doc, setDoc, getDoc, updateDoc, serverTimestamp } = await import('firebase/firestore');
-      const { auth, db } = fb;
+    let cancelled = false;
 
+    (async () => {
+      const { onAuthStateChanged } = await import('firebase/auth');
+      const { doc, setDoc, getDoc, serverTimestamp } = await import('firebase/firestore');
+      if (cancelled) return;
+
+      const { auth, db } = fb;
       unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
         if (firebaseUser) {
           setUser(firebaseUser);
@@ -39,7 +42,7 @@ export const AuthProvider = ({ children }) => {
           if (profileSnap.exists()) {
             setUserProfile(profileSnap.data());
           } else {
-            const newProfile = {
+            await setDoc(profileRef, {
               displayName: firebaseUser.displayName,
               email: firebaseUser.email,
               photoURL: firebaseUser.photoURL,
@@ -54,9 +57,9 @@ export const AuthProvider = ({ children }) => {
               },
               bookmarks: [],
               likes: [],
-            };
-            await setDoc(profileRef, newProfile);
-            setUserProfile(newProfile);
+            });
+            const saved = await getDoc(profileRef);
+            setUserProfile(saved.data());
           }
         } else {
           setUser(null);
@@ -66,7 +69,10 @@ export const AuthProvider = ({ children }) => {
       });
     })();
 
-    return () => unsubscribe?.();
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
   }, []);
 
   const loginWithGoogle = async () => {

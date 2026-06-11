@@ -31,10 +31,6 @@ export function getClientFirebase() {
   return client;
 }
 
-export const auth = null;
-export const db = null;
-export const googleProvider = null;
-
 export const getMessagingInstance = async () => {
   const fb = getClientFirebase();
   if (!fb) return null;
