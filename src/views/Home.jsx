@@ -15,6 +15,7 @@ import NewsMasonryGrid from '../components/NewsMasonryGrid';
 import EmptyState from '../components/EmptyState';
 import OnboardingModal from '../components/OnboardingModal';
 import TrendingHeroBanner from '../components/TrendingHeroBanner';
+import { getHomeCategories } from '../config/feeds.config';
 import { getArticlesPage, getTrendingArticles } from '../services/firestore';
 
 const PAGE_SIZE = 12;
@@ -103,14 +104,18 @@ const Home = () => {
       ) : null}
       <ForYouSection />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <div className="sticky-section-header -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 mb-4">
+      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-8">
+        <div className="sticky-section-header -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 mb-4 min-w-0">
           <h2 className="font-display font-bold text-lg text-gray-900 dark:text-white mb-3">Latest Stories</h2>
-          <CategoryFilter onCategoryChange={setActiveCategory} activeCategory={activeCategory} />
+          <CategoryFilter
+            onCategoryChange={setActiveCategory}
+            activeCategory={activeCategory}
+            categories={getHomeCategories()}
+          />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)] gap-6 lg:gap-8 items-start">
+          <div className="min-w-0 w-full">
             {error && !loading && (
               <div className="mb-6 p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 rounded-2xl flex items-center justify-between">
                 <p className="text-sm text-red-700 dark:text-red-300">{error}</p>

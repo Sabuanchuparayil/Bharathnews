@@ -14,8 +14,8 @@ import ChannelFollowCTA from '../components/ChannelFollowCTA';
 import ReadingProgress from '../components/ReadingProgress';
 import ArticleFloatingBar from '../components/ArticleFloatingBar';
 import ArticleRelated from '../components/ArticleRelated';
-import SafeImage from '../components/SafeImage';
-import { getCategoryColor } from '../utils/categoryColors';
+import { resolveArticleImage } from '../utils/articleImages';
+import { getCategoryColor, getCategoryLabel } from '../utils/categoryColors';
 import { getArticleBySlug, trackArticleView } from '../services/firestore';
 import { useAuth } from '../context/AuthContext';
 import { useInterests } from '../context/InterestContext';
@@ -145,7 +145,7 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
         <article>
           <header className="mb-6">
             <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium mb-4 ${getCategoryColor(article.category)}`}>
-              {article.category}
+              {getCategoryLabel(article.category)}
             </span>
             <h1 className={`font-display font-bold text-3xl md:text-4xl lg:text-5xl text-gray-900 dark:text-white mb-4 leading-tight text-balance ${isRtl ? 'text-right' : ''}`}>
               {displayTitle}
@@ -167,7 +167,7 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
 
           <div ref={heroRef} className="relative h-64 md:h-96 rounded-2xl overflow-hidden mb-8">
             <motion.img
-              src={article.imageUrl}
+              src={resolveArticleImage(article)}
               alt={article.title}
               style={{ scale: imageScale, y: imageY }}
               className="w-full h-full object-cover"

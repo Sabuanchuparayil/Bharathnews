@@ -12,7 +12,7 @@ const extractYouTubeId = (url) => {
 };
 import { useAuth } from '../context/AuthContext';
 import { getCreatorPost, trackCreatorPostView } from '../services/creator';
-import { getCategoryColor } from '../utils/categoryColors';
+import { getCategoryColor, getCategoryLabel } from '../utils/categoryColors';
 
 const CreatorPost = ({ postId: postIdProp, initialPost = null }) => {
   const postId = postIdProp;
@@ -72,7 +72,7 @@ const CreatorPost = ({ postId: postIdProp, initialPost = null }) => {
       )}
 
       <div className="flex items-center gap-2 mb-3">
-        <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getCategoryColor(post.category)}`}>{post.category}</span>
+        <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getCategoryColor(post.category)}`}>{getCategoryLabel(post.category)}</span>
         <span className="text-xs text-gray-500 uppercase">{post.type}</span>
       </div>
 

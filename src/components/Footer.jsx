@@ -4,14 +4,11 @@ import React from 'react';
 import Link from 'next/link';
 import { Heart } from 'lucide-react';
 import { SOCIAL_CHANNELS } from '../config/channels.config';
-import { CATEGORY_ROUTES } from '../config/feeds.config';
 
 const FOOTER_NEWS_LINKS = [
-  CATEGORY_ROUTES.india,
-  CATEGORY_ROUTES.gcc,
-  CATEGORY_ROUTES.business,
-  CATEGORY_ROUTES.technology,
+  { path: '/explore', title: 'All Categories' },
   { path: '/videos', title: 'Videos' },
+  { path: '/community', title: 'Community' },
 ];
 
 const Footer = () => {

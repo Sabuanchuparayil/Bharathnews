@@ -11,7 +11,7 @@ const EmptyState = ({
   actionTo,
   onAction,
 }) => (
-  <div className="glass-card-solid rounded-2xl p-8 sm:p-12 text-center">
+  <div className="glass-card-solid rounded-2xl p-8 sm:p-12 text-center w-full">
     {Icon && (
       <div className="w-14 h-14 bg-brand-50 dark:bg-brand-950/50 rounded-2xl flex items-center justify-center mx-auto mb-4">
         <Icon className="w-7 h-7 text-brand-600 dark:text-brand-400" />

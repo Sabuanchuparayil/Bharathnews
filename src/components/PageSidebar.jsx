@@ -31,7 +31,7 @@ const PageSidebar = ({ trendingArticles = [], category = null }) => {
   const rssFeed = category ? getFeedForCategory(category) : null;
 
   return (
-    <aside className="space-y-6 hidden lg:block">
+    <aside className="space-y-6 hidden lg:block min-w-0 w-full">
       <TrendingSection articles={trendingArticles} />
       {categoryVideos.length > 0 && <VideoColumn videos={categoryVideos} />}
       <WeatherMarketWidget />

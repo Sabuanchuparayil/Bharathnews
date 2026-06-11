@@ -3,6 +3,7 @@
 import React from 'react';
 import { TrendingUp, ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
+import { getCategoryLabel } from '../utils/categoryColors';
 
 const TrendingSection = ({ articles = [] }) => {
   if (!articles.length) return null;
@@ -30,7 +31,7 @@ const TrendingSection = ({ articles = [] }) => {
               <h4 className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2 group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors">
                 {article.title}
               </h4>
-              <p className="text-xs text-gray-400 mt-1">{article.category} &middot; {article.views?.toLocaleString()} views</p>
+              <p className="text-xs text-gray-400 mt-1">{getCategoryLabel(article.category)} &middot; {article.views?.toLocaleString()} views</p>
             </div>
             <ArrowUpRight className="w-4 h-4 text-gray-300 group-hover:text-brand-500 transition-colors flex-shrink-0 mt-0.5" />
           </Link>

@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link'
 import { usePathname } from 'next/navigation';
-import { Home, Globe2, TrendingUp, Play, User } from 'lucide-react';
+import { Home, Compass, Play, Users, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const BottomNav = () => {
@@ -11,9 +11,9 @@ const BottomNav = () => {
 
   const tabs = [
     { to: '/', icon: Home, label: 'Home' },
-    { to: '/india', icon: Globe2, label: 'India' },
-    { to: '/gcc', icon: TrendingUp, label: 'GCC' },
+    { to: '/explore', icon: Compass, label: 'Explore' },
     { to: '/videos', icon: Play, label: 'Videos' },
+    { to: '/community', icon: Users, label: 'Community' },
     { to: '/settings', icon: User, label: 'You' },
   ];
 

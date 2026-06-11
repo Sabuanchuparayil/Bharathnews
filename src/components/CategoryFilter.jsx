@@ -7,7 +7,7 @@ import {
   GraduationCap, UserSearch, Home, Plane, MessageSquareQuote,
 } from 'lucide-react';
 import { CATEGORIES, CATEGORY_ROUTES } from '../config/feeds.config';
-import { getCategoryColor } from '../utils/categoryColors';
+import { getCategoryPillClasses } from '../utils/categoryColors';
 
 const CATEGORY_ICONS = {
   all: LayoutGrid,
@@ -35,7 +35,14 @@ export function getActiveCategoryFromPath(pathname, override) {
   return match ? match[0] : 'all';
 }
 
-const CategoryFilter = ({ onCategoryChange, activeCategory }) => {
+const CategoryFilter = ({
+  onCategoryChange,
+  activeCategory,
+  showLabel = false,
+  categories = CATEGORIES,
+  /** Extend scroll area to container edges (use on pages without sticky-section-header padding). */
+  edgeToEdge = false,
+}) => {
   const router = useRouter();
   const pathname = usePathname();
   const resolvedActive = getActiveCategoryFromPath(pathname, activeCategory);
@@ -59,29 +66,36 @@ const CategoryFilter = ({ onCategoryChange, activeCategory }) => {
     onCategoryChange?.(catId);
   };
 
+  const scrollPad = edgeToEdge ? '-mx-4 sm:-mx-6 px-4 sm:px-6' : '';
+
   return (
-    <div className="flex space-x-2 overflow-x-auto scrollbar-hide pb-2">
-      {CATEGORIES.map(cat => {
-        const Icon = CATEGORY_ICONS[cat.id] || LayoutGrid;
-        const isActive = resolvedActive === cat.id;
-        return (
-          <button
-            key={cat.id}
-            type="button"
-            onClick={() => handleClick(cat.id)}
-            className={`category-pill whitespace-nowrap flex items-center space-x-1.5 ${
-              isActive
-                ? cat.id === 'all'
-                  ? 'category-pill-active'
-                  : `${getCategoryColor(cat.id)} ring-2 ring-brand-500/30 font-semibold`
-                : 'category-pill-inactive'
-            }`}
-          >
-            <Icon className="w-3.5 h-3.5" />
-            <span>{cat.name}</span>
-          </button>
-        );
-      })}
+    <div className="min-w-0">
+      {showLabel && (
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">
+          Categories
+        </p>
+      )}
+      <div className={`relative min-w-0 ${scrollPad}`}>
+        <div className="overflow-x-auto scrollbar-hide overscroll-x-contain pb-2 pt-0.5">
+          <div className="flex gap-2 w-max pr-1">
+            {categories.map(cat => {
+              const Icon = CATEGORY_ICONS[cat.id] || LayoutGrid;
+              const isActive = resolvedActive === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => handleClick(cat.id)}
+                  className={`category-pill flex-shrink-0 whitespace-nowrap flex items-center gap-1.5 ${getCategoryPillClasses(cat.id, isActive)}`}
+                >
+                  <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span>{cat.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

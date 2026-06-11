@@ -17,7 +17,7 @@ const Layout = ({
   className = '',
 }) => {
   return (
-    <div className={`min-h-screen bg-surface-1 dark:bg-dark-surface-0 text-gray-900 dark:text-gray-50 ${className}`}>
+    <div className={`min-h-screen overflow-x-hidden bg-surface-1 dark:bg-dark-surface-0 text-gray-900 dark:text-gray-50 ${className}`}>
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-brand-600 focus:text-white focus:rounded-xl"

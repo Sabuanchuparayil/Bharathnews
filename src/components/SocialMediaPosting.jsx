@@ -10,6 +10,7 @@ import {
 import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
 import { getSmartPostSuggestions, getOptimalPostingTimes, logSocialPost } from '../services/socialIntelligence';
+import { getCategoryLabel } from '../utils/categoryColors';
 
 const PLATFORM_ICONS = {
   telegram: { label: 'Telegram', color: 'bg-sky-500', textColor: 'text-sky-600' },
@@ -72,7 +73,7 @@ const PostSuggestionCard = ({ suggestion, onPost }) => {
             <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
               <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{(article.views || 0).toLocaleString()}</span>
               <span className="flex items-center gap-1"><Heart className="w-3 h-3" />{article.likes || 0}</span>
-              <span className="capitalize">{article.category}</span>
+              <span>{getCategoryLabel(article.category)}</span>
             </div>
           </div>
           {article.imageUrl && (

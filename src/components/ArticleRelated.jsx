@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { getArticles } from '../services/firestore';
+import SafeImage from './SafeImage';
+import { getCategoryLabel } from '../utils/categoryColors';
 
 const ArticleRelated = ({ category, currentSlug }) => {
   const [related, setRelated] = useState([]);
@@ -38,16 +40,16 @@ const ArticleRelated = ({ category, currentSlug }) => {
             className="flex-shrink-0 w-56 glass-card-solid rounded-2xl overflow-hidden group"
           >
             <div className="relative h-32 overflow-hidden">
-              <img
+              <SafeImage
                 src={article.imageUrl}
-                alt=""
+                alt={article.title}
+                category={article.category}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                loading="lazy"
               />
             </div>
             <div className="p-3.5">
               <span className="text-[10px] font-bold uppercase text-brand-600 dark:text-brand-400">
-                {article.category}
+                {getCategoryLabel(article.category)}
               </span>
               <h3 className="font-display font-bold text-sm text-gray-900 dark:text-white line-clamp-2 mt-1 group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors">
                 {article.title}

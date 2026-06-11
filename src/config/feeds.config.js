@@ -108,6 +108,14 @@ export const getFeedForCategory = (category) => {
 export const getFeedsForCategory = (category) =>
   RSS_FEEDS.filter(f => f.category === category);
 
+/** Primary categories shown on the home page filter (avoids clutter). Full list on Explore. */
+export const HOME_CATEGORY_IDS = [
+  'all', 'breaking', 'india', 'gcc', 'business', 'technology', 'sports', 'entertainment', 'health',
+];
+
+export const getHomeCategories = () =>
+  CATEGORIES.filter(c => HOME_CATEGORY_IDS.includes(c.id));
+
 export const CATEGORIES = [
   { id: 'all', name: 'All News', color: 'bg-gray-100 text-gray-700' },
   { id: 'breaking', name: 'Breaking', color: 'bg-red-100 text-red-700' },

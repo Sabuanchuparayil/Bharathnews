@@ -20,7 +20,7 @@ const AdSlot = ({ slot, format = 'auto', responsive = true, className = '' }) =>
 
   if (!PUBLISHER_ID || !adSlot) {
     return (
-      <div className={`bg-surface-2 dark:bg-dark-surface-2 rounded-xl p-8 text-center border-2 border-dashed border-gray-200 dark:border-gray-700 ${className}`}>
+      <div className={`bg-surface-2 dark:bg-dark-surface-2 rounded-xl p-8 text-center border-2 border-dashed border-gray-200 dark:border-gray-700 w-full ${className}`}>
         <p className="text-gray-600 dark:text-gray-400 font-medium">Ad Space</p>
         <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Configure NEXT_PUBLIC_ADSENSE_PUBLISHER_ID</p>
       </div>

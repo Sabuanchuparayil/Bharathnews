@@ -5,8 +5,12 @@ import Link from 'next/link';
 import { TrendingUp } from 'lucide-react';
 import ShareButton from './ShareButton';
 
-const TrendingHeroBanner = ({ title, summary, slug }) => (
-  <section className="relative gradient-hero text-white py-16 sm:py-20 overflow-hidden rounded-3xl mx-4 sm:mx-6 max-w-7xl lg:mx-auto">
+const TrendingHeroBanner = ({ title, summary, slug, embedded = false }) => (
+  <section
+    className={`relative gradient-hero text-white py-12 sm:py-16 overflow-hidden rounded-3xl w-full ${
+      embedded ? '' : 'mx-4 sm:mx-6 max-w-7xl lg:mx-auto'
+    }`}
+  >
     <div className="relative z-10 px-6 sm:px-10">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-2">

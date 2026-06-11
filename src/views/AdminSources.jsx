@@ -6,6 +6,7 @@ import { ArrowLeft, ToggleLeft, ToggleRight, AlertCircle } from 'lucide-react';
 import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import { getSources, updateSource } from '../services/admin';
+import { getCategoryLabel } from '../utils/categoryColors';
 
 const AdminSources = () => {
   const { isAdmin, loading, user, loginWithGoogle } = useAuth();
@@ -62,7 +63,7 @@ const AdminSources = () => {
                     <p className="font-medium truncate">{src.name}</p>
                     <p className="text-xs text-gray-500 truncate">{src.url}</p>
                     <div className="flex gap-2 mt-1">
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand-50 text-brand-700">{src.category}</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand-50 text-brand-700">{getCategoryLabel(src.category)}</span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{src.type}</span>
                       {src.lastError && (
                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-50 text-red-600 flex items-center gap-1">

@@ -7,6 +7,7 @@ import ShareButton from '../components/ShareButton';
 import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import { getMyCreatorPosts, getCreatorProfileByUserId, checkRevenueShareEligibility } from '../services/creator';
+import { getCategoryLabel } from '../utils/categoryColors';
 
 const STATUS_STYLES = {
   draft: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
@@ -143,7 +144,7 @@ const CreatorSpace = () => {
                 {post.status}
               </span>
               <h3 className="font-medium text-gray-900 dark:text-white mt-1">{post.title}</h3>
-              <p className="text-xs text-gray-500">{post.type} · {post.category}</p>
+              <p className="text-xs text-gray-500">{post.type} · {getCategoryLabel(post.category)}</p>
             </div>
             <div className="text-right text-xs text-gray-400">
               <p>{post.views || 0} views</p>

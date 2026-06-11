@@ -6,6 +6,8 @@ import { Sparkles, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '../context/AuthContext';
 import { getArticlesByInterests } from '../services/firestore';
+import SafeImage from './SafeImage';
+import { getCategoryLabel } from '../utils/categoryColors';
 
 const ForYouSection = () => {
   const { user, userProfile } = useAuth();
@@ -93,9 +95,14 @@ const ForYouSection = () => {
           >
             <Link href={`/article/${article.slug}`} className="block glass-card-solid rounded-2xl overflow-hidden group">
               <div className="relative h-36 overflow-hidden">
-                <img src={article.imageUrl} alt={article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                <SafeImage
+                  src={article.imageUrl}
+                  alt={article.title}
+                  category={article.category}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
                 <div className="absolute top-2 left-2">
-                  <span className="text-[10px] font-bold uppercase bg-white/90 dark:bg-dark-surface-1/90 backdrop-blur-sm px-2 py-0.5 rounded-md text-brand-700 dark:text-brand-300">{article.category}</span>
+                  <span className="text-[10px] font-bold uppercase bg-white/90 dark:bg-dark-surface-1/90 backdrop-blur-sm px-2 py-0.5 rounded-md text-brand-700 dark:text-brand-300">{getCategoryLabel(article.category)}</span>
                 </div>
               </div>
               <div className="p-3.5">

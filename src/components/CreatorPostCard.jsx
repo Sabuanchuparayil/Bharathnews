@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Eye, Heart } from 'lucide-react';
 import ShareButton from './ShareButton';
-import { getCategoryColor } from '../utils/categoryColors';
+import { getCategoryColor, getCategoryLabel } from '../utils/categoryColors';
 
 const TYPE_LABELS = {
   article: 'Article',
@@ -24,7 +24,7 @@ const CreatorPostCard = ({ post }) => (
         <div className="flex items-center gap-2 mb-2">
           <span className="text-[10px] font-bold uppercase tracking-wider text-brand-600">{TYPE_LABELS[post.type] || post.type}</span>
           <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${getCategoryColor(post.category)}`}>
-            {post.category}
+            {getCategoryLabel(post.category)}
           </span>
         </div>
         <h3 className="font-display font-bold text-base text-gray-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors line-clamp-2">

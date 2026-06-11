@@ -26,13 +26,18 @@ function stripHtml(html) {
   return html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
 }
 
+function isAudioVideoEnclosure(url) {
+  return /\.(mp3|mp4)(?:[?#]|$)/i.test(url);
+}
+
 function extractImage(itemXml) {
   const encUrl = extractAttr(itemXml, 'enclosure', 'url');
-  if (encUrl) return encUrl;
+  if (encUrl && !isAudioVideoEnclosure(encUrl)) return encUrl;
 
-  const mediaUrl = extractAttr(itemXml, 'media:content', 'url') ||
-                   extractAttr(itemXml, 'media:thumbnail', 'url');
-  if (mediaUrl) return mediaUrl;
+  for (const tag of ['media:content', 'media:thumbnail', 'media:group']) {
+    const mediaUrl = extractAttr(itemXml, tag, 'url');
+    if (mediaUrl) return mediaUrl;
+  }
 
   const imgMatch = itemXml.match(/<img[^>]+src=["']([^"']+)["']/i);
   if (imgMatch) return imgMatch[1];

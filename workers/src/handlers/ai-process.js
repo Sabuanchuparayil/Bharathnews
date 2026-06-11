@@ -1,4 +1,5 @@
 import { generateMultilingualArticle } from '../lib/llama.js';
+import { getCategoryFallbackImage, resolveArticleImage } from '../lib/image-resolver.js';
 import { getFirebaseToken } from '../lib/firebase-auth.js';
 import { runQuery, FIRESTORE_BASE } from '../lib/firestore-rest.js';
 import { loadSiteSettings } from '../lib/sources-loader.js';
@@ -51,7 +52,11 @@ async function processOneArticle(env, raw, token, targetLangs, settings) {
   const source = raw.source || '';
   const category = raw.category || 'india';
   const region = raw.region || 'india';
-  const imageUrl = raw.imageUrl || '';
+  const imageUrl = raw.imageUrl || await resolveArticleImage({
+    imageUrl: '',
+    sourceUrl: raw.sourceUrl || raw.link || '',
+    category,
+  }) || getCategoryFallbackImage(category);
   const topics = raw.topics || [category];
   const qualityScore = raw.qualityScore || 6;
   const language = raw.detectedLanguage || raw.language || 'en';

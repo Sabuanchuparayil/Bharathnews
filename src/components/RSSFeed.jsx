@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Rss, ExternalLink, AlertCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { getCategoryLabel } from '../utils/categoryColors';
 
 const stripHtml = (html) => {
   if (!html) return '';
@@ -89,7 +90,7 @@ const RSSFeed = ({ feedUrl, title }) => {
               {stripHtml(item.description)}
             </p>
             <div className="flex items-center justify-between text-xs text-gray-500">
-              <span>{item.category}</span>
+              <span>{getCategoryLabel(item.category)}</span>
               <span>{formatDistanceToNow(new Date(item.pubDate), { addSuffix: true })}</span>
             </div>
           </article>

@@ -1,4 +1,5 @@
 import { loadEnabledSources, updateSourceHealth } from '../lib/sources-loader.js';
+import { resolveArticleImage } from '../lib/image-resolver.js';
 import { fetchAndParseFeed } from '../lib/rss-parser.js';
 import { getFirebaseToken } from '../lib/firebase-auth.js';
 import { FIRESTORE_BASE } from '../lib/firestore-rest.js';
@@ -22,6 +23,11 @@ export async function handleRSSIngest(env) {
         if (!item.title || !item.link) continue;
 
         const slug = item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 80);
+        const resolvedImage = await resolveArticleImage({
+          imageUrl: item.imageUrl || '',
+          sourceUrl: item.link,
+          category: feed.category || 'india',
+        });
         const ok = await storeRawArticle(env, {
           title: item.title,
           description: item.description || '',
@@ -32,7 +38,7 @@ export async function handleRSSIngest(env) {
           region: feed.region || 'india',
           language: feed.language || 'en',
           publishedAt: item.pubDate || new Date().toISOString(),
-          imageUrl: item.imageUrl || '',
+          imageUrl: resolvedImage,
           slug,
         }, token);
 

@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import SafeImage from './SafeImage';
 import ShareButton from './ShareButton';
-import { getCategoryColor } from '../utils/categoryColors';
+import { getCategoryColor, getCategoryLabel } from '../utils/categoryColors';
 
 const HeroSection = ({ featured = [] }) => {
   if (!featured.length || !featured[0]?.slug) return null;
@@ -30,13 +30,14 @@ const HeroSection = ({ featured = [] }) => {
                 <SafeImage
                   src={main.imageUrl}
                   alt={main.title}
+                  category={main.category}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
                   <div className="flex items-center space-x-3 mb-3">
                     <span className={`text-xs font-semibold uppercase px-2.5 py-1 rounded-full backdrop-blur-sm ${getCategoryColor(main.category)}`}>
-                      {main.category}
+                      {getCategoryLabel(main.category)}
                     </span>
                     <span className="flex items-center space-x-1 text-xs text-gray-200">
                       <TrendingUp className="w-3 h-3" />
@@ -86,11 +87,12 @@ const HeroSection = ({ featured = [] }) => {
                   <SafeImage
                     src={article.imageUrl}
                     alt={article.title}
+                    category={article.category}
                     className="w-24 h-24 lg:w-28 lg:h-28 object-cover rounded-xl flex-shrink-0 group-hover:scale-105 transition-transform duration-300"
                   />
                   <div className="flex-1 flex flex-col justify-between min-w-0">
                     <div>
-                      <span className="text-xs font-medium text-brand-600 dark:text-brand-400">{article.category}</span>
+                      <span className="text-xs font-medium text-brand-600 dark:text-brand-400">{getCategoryLabel(article.category)}</span>
                       <h3 className="font-display font-bold text-sm lg:text-base text-gray-900 dark:text-white line-clamp-2 mt-1 group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors">
                         {article.title}
                       </h3>

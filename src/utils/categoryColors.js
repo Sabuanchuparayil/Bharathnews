@@ -20,15 +20,35 @@ const COLOR_MAP = {
 const categoryLookup = Object.fromEntries(CATEGORIES.map(c => [c.id, c]));
 const categoryNameLookup = Object.fromEntries(CATEGORIES.map(c => [c.name.toLowerCase(), c]));
 
+const CATEGORY_ALIASES = {
+  'real-estate': 'realestate',
+  real_estate: 'realestate',
+};
+
+function normalizeCategoryKey(category) {
+  const raw = (category || '').toLowerCase().trim();
+  return CATEGORY_ALIASES[raw] || raw.replace(/[\s_-]+/g, '');
+}
+
+export const getCategoryLabel = (category) => {
+  const raw = (category || '').toLowerCase().trim();
+  const key = normalizeCategoryKey(category);
+  const cat = categoryLookup[key] || categoryNameLookup[raw];
+  if (cat?.name) return cat.name;
+  if (!category) return 'News';
+  if (raw === 'gcc') return 'GCC';
+  return category.charAt(0).toUpperCase() + category.slice(1);
+};
+
 export const getCategoryColor = (category) => {
-  const key = (category || '').toLowerCase();
-  const cat = categoryLookup[key] || categoryNameLookup[key];
+  const key = normalizeCategoryKey(category);
+  const cat = categoryLookup[key] || categoryNameLookup[(category || '').toLowerCase().trim()];
   if (!cat?.color) return 'bg-brand-100 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300';
   return COLOR_MAP[cat.color] || cat.color;
 };
 
 export const getCategoryAccentBorder = (category) => {
-  const key = (category || '').toLowerCase();
+  const key = normalizeCategoryKey(category);
   const borders = {
     india: 'border-l-orange-500',
     gcc: 'border-l-green-500',
@@ -43,6 +63,22 @@ export const getCategoryAccentBorder = (category) => {
     lifestyle: 'border-l-rose-500',
     opinion: 'border-l-slate-500',
     breaking: 'border-l-red-500',
+    world: 'border-l-violet-500',
   };
   return borders[key] || 'border-l-brand-500';
+};
+
+/** Tailwind classes for category filter pills — colored inactive + highlighted active. */
+export const getCategoryPillClasses = (categoryId, isActive) => {
+  if (categoryId === 'all') {
+    return isActive
+      ? 'category-pill-active'
+      : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700';
+  }
+
+  const color = getCategoryColor(categoryId);
+  if (isActive) {
+    return `${color} ring-2 ring-offset-1 ring-current/25 font-semibold shadow-sm`;
+  }
+  return `${color} opacity-90 hover:opacity-100`;
 };

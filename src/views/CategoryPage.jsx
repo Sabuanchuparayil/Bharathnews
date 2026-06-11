@@ -49,10 +49,10 @@ const CategoryPage = ({ category, title }) => {
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <h1 className="font-display font-bold text-3xl text-gray-900 dark:text-white mb-4">{title}</h1>
+      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 sm:py-8">
+        <h1 className="font-display font-bold text-2xl sm:text-3xl text-gray-900 dark:text-white mb-4">{title}</h1>
         <div className="mb-6">
-          <CategoryFilter />
+          <CategoryFilter showLabel edgeToEdge />
         </div>
 
         {!loading && leadArticle?.slug && (
@@ -61,12 +61,13 @@ const CategoryPage = ({ category, title }) => {
               title={leadArticle.title}
               summary={leadArticle.summary}
               slug={leadArticle.slug}
+              embedded
             />
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)] gap-6 lg:gap-8 items-start">
+          <div className="min-w-0 w-full">
             {!loading && articles.length === 0 ? (
               <EmptyState
                 icon={Newspaper}

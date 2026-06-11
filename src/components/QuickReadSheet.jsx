@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import SafeImage from './SafeImage';
 import ShareButton from './ShareButton';
-import { getCategoryColor } from '../utils/categoryColors';
+import { getCategoryColor, getCategoryLabel } from '../utils/categoryColors';
 
 const QuickReadSheet = ({ article, onClose }) => {
   if (!article) return null;
@@ -45,9 +45,14 @@ const QuickReadSheet = ({ article, onClose }) => {
               <X className="w-5 h-5 text-gray-500" />
             </button>
 
-            <SafeImage src={article.imageUrl} alt={article.title} className="w-full h-40 object-cover rounded-2xl mb-4" />
+            <SafeImage
+              src={article.imageUrl}
+              alt={article.title}
+              category={article.category}
+              className="w-full h-40 object-cover rounded-2xl mb-4"
+            />
             <span className={`inline-block text-xs font-semibold uppercase px-2.5 py-1 rounded-full mb-3 ${getCategoryColor(article.category)}`}>
-              {article.category}
+              {getCategoryLabel(article.category)}
             </span>
             <h2 className="font-display font-bold text-xl text-gray-900 dark:text-white leading-snug mb-2">{article.title}</h2>
             <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-4 mb-4">{article.summary}</p>

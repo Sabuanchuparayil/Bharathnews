@@ -10,6 +10,7 @@ import {
   getPendingCreatorPosts, moderateCreatorPost,
 } from '../services/creator';
 import { getDbAsync, firestoreOps } from '@/lib/firebase-client';
+import { getCategoryLabel } from '../utils/categoryColors';
 
 const AdminModeration = () => {
   const { user, loading, isAdmin, loginWithGoogle } = useAuth();
@@ -120,7 +121,7 @@ const AdminModeration = () => {
                 <div>
                   <span className="text-xs font-semibold uppercase text-brand-600">{post.type}</span>
                   <h3 className="font-display font-bold text-lg mt-1">{post.title}</h3>
-                  <p className="text-sm text-gray-500 mt-1">by {'@' + post.authorSlug} · {post.category}</p>
+                  <p className="text-sm text-gray-500 mt-1">by {'@' + post.authorSlug} · {getCategoryLabel(post.category)}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-3 line-clamp-3">{post.body}</p>
                 </div>
               </div>
