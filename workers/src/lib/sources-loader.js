@@ -81,6 +81,6 @@ export async function loadSiteSettings(env) {
 
 export const DEFAULT_SETTINGS = {
   qualityThreshold: 6,
-  targetLanguages: ['ml', 'ta', 'te', 'kn', 'hi', 'ar'],
+  targetLanguages: ['ml', 'hi', 'ar'],
   adSlots: {},
 };

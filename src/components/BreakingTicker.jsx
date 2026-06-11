@@ -3,17 +3,23 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Zap } from 'lucide-react';
 import Link from 'next/link';
+import { useLanguage } from '../context/LanguageContext';
+import { localizeArticles } from '../utils/localizeArticle';
 
 const BreakingTicker = ({ articles = [] }) => {
+  const { language } = useLanguage();
   const trackRef = useRef(null);
   const [duration, setDuration] = useState(30);
 
   const seen = new Set();
-  const uniqueArticles = articles.filter(a => {
-    if (!a?.slug || !a?.title || seen.has(a.slug)) return false;
-    seen.add(a.slug);
-    return true;
-  });
+  const uniqueArticles = localizeArticles(
+    articles.filter(a => {
+      if (!a?.slug || !a?.title || seen.has(a.slug)) return false;
+      seen.add(a.slug);
+      return true;
+    }),
+    language
+  );
 
   useEffect(() => {
     if (trackRef.current) {
@@ -49,7 +55,7 @@ const BreakingTicker = ({ articles = [] }) => {
                 href={`/article/${article.slug}`}
                 className="text-sm text-gray-200 hover:text-white transition-colors inline-block"
               >
-                {article.title}
+                {article.displayTitle}
               </Link>
             ))}
           </div>

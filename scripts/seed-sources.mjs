@@ -141,7 +141,7 @@ async function seed() {
     body: JSON.stringify({
       fields: toFields({
         qualityThreshold: 6,
-        targetLanguages: 'ml,ta,te,kn,hi,ar',
+        targetLanguages: 'ml,hi,ar',
         headerText: 'The Bharath News',
         footerText: 'India-GCC News for the Global Indian',
       }),

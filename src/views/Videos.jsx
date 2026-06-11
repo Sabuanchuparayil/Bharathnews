@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Video } from 'lucide-react';
 import Layout from '../components/Layout';
 import VideoEmbed from '../components/VideoEmbed';
+import EmptyState from '../components/EmptyState';
 import { YOUTUBE_CHANNELS } from '../config/feeds.config';
 import { useVideos } from '../hooks/useVideos';
 
@@ -44,6 +46,14 @@ const Videos = () => {
             </div>
           ))}
         </div>
+      ) : videos.length === 0 ? (
+        <EmptyState
+          icon={Video}
+          title="No videos yet"
+          description="We're syncing the latest videos from India and GCC news channels. Check back shortly."
+          actionLabel="Back to Home"
+          actionTo="/"
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {videos.map((video, index) => (

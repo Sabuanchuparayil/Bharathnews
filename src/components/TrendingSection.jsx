@@ -4,17 +4,23 @@ import React from 'react';
 import { TrendingUp, ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
 import { getCategoryLabel } from '../utils/categoryColors';
+import { useLanguage } from '../context/LanguageContext';
+import { localizeArticles } from '../utils/localizeArticle';
 
 const TrendingSection = ({ articles = [] }) => {
+  const { language } = useLanguage();
   const validArticles = articles.filter(a => a?.slug && a?.title);
   if (!validArticles.length) return null;
 
   const seen = new Set();
-  const uniqueArticles = validArticles.filter(a => {
-    if (seen.has(a.slug)) return false;
-    seen.add(a.slug);
-    return true;
-  }).slice(0, 10);
+  const uniqueArticles = localizeArticles(
+    validArticles.filter(a => {
+      if (seen.has(a.slug)) return false;
+      seen.add(a.slug);
+      return true;
+    }),
+    language
+  ).slice(0, 10);
 
   return (
     <div className="glass-card-solid rounded-2xl p-5">
@@ -37,7 +43,7 @@ const TrendingSection = ({ articles = [] }) => {
             </span>
             <div className="flex-1 min-w-0">
               <h4 className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2 group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors">
-                {article.title}
+                {article.displayTitle}
               </h4>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{getCategoryLabel(article.category)} · {(article.views || 0).toLocaleString()} views</p>
             </div>

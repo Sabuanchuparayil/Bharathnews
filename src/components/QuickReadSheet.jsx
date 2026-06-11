@@ -7,10 +7,15 @@ import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import SafeImage from './SafeImage';
 import ShareButton from './ShareButton';
+import { useLanguage } from '../context/LanguageContext';
+import { localizeArticle } from '../utils/localizeArticle';
 import { getCategoryColor, getCategoryLabel } from '../utils/categoryColors';
 
 const QuickReadSheet = ({ article, onClose }) => {
+  const { language } = useLanguage();
   if (!article) return null;
+
+  const localized = localizeArticle(article, language);
 
   const publishedDate = article.publishedAt?.seconds
     ? article.publishedAt.seconds * 1000
@@ -47,7 +52,7 @@ const QuickReadSheet = ({ article, onClose }) => {
 
             <SafeImage
               src={article.imageUrl}
-              alt={article.title}
+              alt={localized.displayTitle}
               category={article.category}
               width={400}
               height={160}
@@ -57,8 +62,8 @@ const QuickReadSheet = ({ article, onClose }) => {
             <span className={`inline-block text-xs font-semibold uppercase px-2.5 py-1 rounded-full mb-3 ${getCategoryColor(article.category)}`}>
               {getCategoryLabel(article.category)}
             </span>
-            <h2 className="font-display font-bold text-xl text-gray-900 dark:text-white leading-snug mb-2">{article.title}</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-4 mb-4">{article.summary}</p>
+            <h2 className="font-display font-bold text-xl text-gray-900 dark:text-white leading-snug mb-2">{localized.displayTitle}</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-4 mb-4">{localized.displaySummary}</p>
             <div className="flex items-center space-x-2 text-xs text-gray-400 mb-5">
               <Clock className="w-3.5 h-3.5" />
               <span>{publishedDate ? formatDistanceToNow(new Date(publishedDate), { addSuffix: true }) : ''}</span>
@@ -67,8 +72,8 @@ const QuickReadSheet = ({ article, onClose }) => {
             </div>
             <div className="flex items-center gap-3">
               <ShareButton
-                title={article.title}
-                text={article.summary}
+                title={localized.displayTitle}
+                text={localized.displaySummary}
                 path={`/article/${article.slug}`}
                 contentType="article"
                 showLabel

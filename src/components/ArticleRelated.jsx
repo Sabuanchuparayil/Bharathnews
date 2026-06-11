@@ -5,9 +5,12 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { getArticles } from '../services/firestore';
 import SafeImage from './SafeImage';
+import { useLanguage } from '../context/LanguageContext';
+import { localizeArticle } from '../utils/localizeArticle';
 import { getCategoryLabel } from '../utils/categoryColors';
 
 const ArticleRelated = ({ category, currentSlug }) => {
+  const { language } = useLanguage();
   const [related, setRelated] = useState([]);
 
   useEffect(() => {
@@ -33,7 +36,9 @@ const ArticleRelated = ({ category, currentSlug }) => {
         </Link>
       </div>
       <div className="flex space-x-4 overflow-x-auto scrollbar-hide pb-2 -mx-1 px-1">
-        {related.map(article => (
+        {related.map(article => {
+          const localized = localizeArticle(article, language);
+          return (
           <Link
             key={article.id}
             href={`/article/${article.slug}`}
@@ -42,7 +47,7 @@ const ArticleRelated = ({ category, currentSlug }) => {
             <div className="relative h-32 overflow-hidden">
               <SafeImage
                 src={article.imageUrl}
-                alt={article.title}
+                alt={localized.displayTitle}
                 category={article.category}
                 width={224}
                 height={128}
@@ -55,11 +60,12 @@ const ArticleRelated = ({ category, currentSlug }) => {
                 {getCategoryLabel(article.category)}
               </span>
               <h3 className="font-display font-bold text-sm text-gray-900 dark:text-white line-clamp-2 mt-1 group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors">
-                {article.title}
+                {localized.displayTitle}
               </h3>
             </div>
           </Link>
-        ))}
+          );
+        })}
       </div>
     </section>
   );

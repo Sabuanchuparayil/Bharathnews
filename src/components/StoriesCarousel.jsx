@@ -5,6 +5,8 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { Zap } from 'lucide-react';
 import SafeImage from './SafeImage';
+import { useLanguage } from '../context/LanguageContext';
+import { localizeArticles } from '../utils/localizeArticle';
 import { getCategoryColor, getCategoryLabel } from '../utils/categoryColors';
 
 const DISPLAY_COUNT = 12;
@@ -24,7 +26,7 @@ function StoryRing({ article, index }) {
         <div className="story-ring p-[3px] rounded-full relative">
           <SafeImage
             src={article.imageUrl}
-            alt={article.title}
+            alt={article.displayTitle}
             category={article.category}
             width={76}
             height={76}
@@ -38,7 +40,7 @@ function StoryRing({ article, index }) {
           </span>
         </div>
         <span className="mt-3 w-full text-[10px] sm:text-xs font-medium text-gray-600 dark:text-gray-400 text-center line-clamp-2 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors leading-tight">
-          {article.title}
+          {article.displayTitle}
         </span>
       </Link>
     </motion.div>
@@ -46,14 +48,16 @@ function StoryRing({ article, index }) {
 }
 
 const StoriesCarousel = ({ articles = [] }) => {
+  const { language } = useLanguage();
   const seen = new Set();
-  const stories = articles
-    .filter(a => {
+  const stories = localizeArticles(
+    articles.filter(a => {
       if (!a?.slug || !a?.title || seen.has(a.slug)) return false;
       seen.add(a.slug);
       return true;
-    })
-    .slice(0, DISPLAY_COUNT);
+    }),
+    language
+  ).slice(0, DISPLAY_COUNT);
 
   if (stories.length < 4) return null;
 

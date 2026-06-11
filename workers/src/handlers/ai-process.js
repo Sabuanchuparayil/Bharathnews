@@ -11,7 +11,7 @@ export async function handleAIProcess(env) {
   const settings = await loadSiteSettings(env);
   const targetLangs = Array.isArray(settings.targetLanguages)
     ? settings.targetLanguages
-    : (settings.targetLanguages || 'ml,ta,te,kn,hi,ar').split(',').map(s => s.trim());
+    : (settings.targetLanguages || 'ml,hi,ar').split(',').map(s => s.trim());
   const processed = [];
 
   const docs = await runQuery(env, {

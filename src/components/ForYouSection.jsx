@@ -5,12 +5,15 @@ import { motion } from 'framer-motion';
 import { Sparkles, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { getArticlesByInterests } from '../services/firestore';
 import SafeImage from './SafeImage';
+import { localizeArticle } from '../utils/localizeArticle';
 import { getCategoryLabel } from '../utils/categoryColors';
 
 const ForYouSection = () => {
   const { user, userProfile } = useAuth();
+  const { language } = useLanguage();
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -91,7 +94,9 @@ const ForYouSection = () => {
             seen.add(a.slug);
             return true;
           });
-        })().map((article, index) => (
+        })().map((article, index) => {
+          const localized = localizeArticle(article, language);
+          return (
           <motion.div
             key={article.id || index}
             initial={{ opacity: 0, scale: 0.9 }}
@@ -104,7 +109,7 @@ const ForYouSection = () => {
               <div className="relative h-36 overflow-hidden">
                 <SafeImage
                   src={article.imageUrl}
-                  alt={article.title}
+                  alt={localized.displayTitle}
                   category={article.category}
                   width={400}
                   height={144}
@@ -116,12 +121,13 @@ const ForYouSection = () => {
                 </div>
               </div>
               <div className="p-3.5">
-                <h3 className="font-display font-bold text-sm text-gray-900 dark:text-white line-clamp-2 group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors">{article.title}</h3>
+                <h3 className="font-display font-bold text-sm text-gray-900 dark:text-white line-clamp-2 group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors">{localized.displayTitle}</h3>
                 <p className="text-xs text-gray-400 mt-2">{article.source || article.author}</p>
               </div>
             </Link>
           </motion.div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );

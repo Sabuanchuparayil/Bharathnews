@@ -9,6 +9,18 @@ const MAX_SOURCES_PER_RUN = 13;
 const ITEMS_PER_SOURCE = 5;
 const PARALLEL_BATCH = 4;
 
+/** Unicode-safe slug for regional language headlines (Malayalam, Tamil, Hindi, Arabic, etc.) */
+function slugifyTitle(title) {
+  const slug = (title || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFKC')
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+  return slug || `article-${Date.now().toString(36)}`;
+}
+
 /** Pick at least one source per category, then fill remaining slots. */
 function balancedSourcePick(sources, maxTotal) {
   const byCategory = {};
@@ -48,7 +60,7 @@ async function ingestOneFeed(env, feed, token) {
     for (const item of items.slice(0, ITEMS_PER_SOURCE)) {
       if (!item.title || !item.link) continue;
 
-      const slug = item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 80);
+      const slug = slugifyTitle(item.title);
       const category = feed.category || 'india';
       // RSS media when present; category placeholder otherwise. og:image is resolved at
       // publish time in ai-process when imageUrl is empty or a category fallback.
