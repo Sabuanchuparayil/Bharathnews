@@ -10,7 +10,7 @@ import MobileSidebarExtras from '../components/MobileSidebarExtras';
 import TrendingHeroBanner from '../components/TrendingHeroBanner';
 import CategoryFilter from '../components/CategoryFilter';
 import { Newspaper } from 'lucide-react';
-import { getArticlesPage, getTrendingArticles } from '../services/firestore';
+import { fetchUniqueArticles, getTrendingArticles } from '../services/firestore';
 
 const PAGE_SIZE = 12;
 
@@ -25,7 +25,7 @@ const CategoryPage = ({ category, title }) => {
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      getArticlesPage(category, null, PAGE_SIZE),
+      fetchUniqueArticles(category, PAGE_SIZE),
       getTrendingArticles(5),
     ]).then(([page, trending]) => {
       setArticles(page.articles);
@@ -40,7 +40,7 @@ const CategoryPage = ({ category, title }) => {
     if (!hasMore || loadingMore || !lastDoc) return;
     setLoadingMore(true);
     try {
-      const page = await getArticlesPage(category, lastDoc, PAGE_SIZE * 2);
+      const page = await fetchUniqueArticles(category, PAGE_SIZE, lastDoc);
       setArticles(prev => {
         const existingSlugs = new Set(prev.map(a => a.slug));
         const fresh = page.articles.filter(a => a.slug && !existingSlugs.has(a.slug));

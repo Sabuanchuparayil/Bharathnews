@@ -31,7 +31,7 @@ const NewsMasonryGrid = ({ articles = [], loading = false, showMobileNewsletter 
         <NewsCard
           article={article}
           index={index}
-          variant={index % 5 === 0 ? 'featured' : 'default'}
+          variant="default"
         />
       </div>
     );

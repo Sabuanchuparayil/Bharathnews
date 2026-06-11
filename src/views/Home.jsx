@@ -17,10 +17,11 @@ import EmptyState from '../components/EmptyState';
 import OnboardingModal from '../components/OnboardingModal';
 import TrendingHeroBanner from '../components/TrendingHeroBanner';
 import { getHomeCategories } from '../config/feeds.config';
-import { getArticlesPage, getTrendingArticles } from '../services/firestore';
+import { getArticlesPage, getTrendingArticles, fetchUniqueArticles } from '../services/firestore';
 
 const PAGE_SIZE = 12;
 const STORY_RING_COUNT = 12;
+const FEATURED_COUNT = 4;
 
 /** Deduplicate articles by slug, excluding any slugs in the exclude set */
 function dedupeArticles(articles, excludeSlugs = new Set()) {
@@ -52,13 +53,13 @@ const Home = () => {
     try {
       const category = activeCategory === 'all' ? null : activeCategory;
       const [page, trending] = await Promise.all([
-        getArticlesPage(category, null, (PAGE_SIZE + 4) * 3),
+        fetchUniqueArticles(category, PAGE_SIZE + FEATURED_COUNT),
         getTrendingArticles(STORY_RING_COUNT + 4),
       ]);
 
-      const featured = page.articles.slice(0, 4);
+      const featured = page.articles.slice(0, FEATURED_COUNT);
       const featuredSlugs = new Set(featured.map(a => a.slug));
-      const gridArticles = page.articles.slice(4).filter(a => !featuredSlugs.has(a.slug));
+      const gridArticles = page.articles.slice(FEATURED_COUNT);
 
       setFeaturedArticles(featured);
       setArticles(gridArticles);
@@ -90,7 +91,7 @@ const Home = () => {
     setLoadingMore(true);
     try {
       const category = activeCategory === 'all' ? null : activeCategory;
-      const page = await getArticlesPage(category, lastDoc, PAGE_SIZE * 2);
+      const page = await fetchUniqueArticles(category, PAGE_SIZE, lastDoc);
       setArticles(prev => {
         const existingSlugs = new Set([
           ...featuredArticles.map(a => a.slug),

@@ -95,11 +95,7 @@ const NewsCard = ({ article, variant = 'default', index = 0 }) => {
   if (variant === 'compact') {
     return (
       <motion.div
-        layout
-        initial={{ opacity: 0, y: 10 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ delay: index * 0.05 }}
+        initial={false}
         className={`border-l-4 ${getCategoryAccentBorder(category)}`}
       >
         <Link href={`/article/${slug}`} className="group flex space-x-4 p-3 rounded-2xl hover:bg-surface-2 dark:hover:bg-dark-surface-2 transition-colors">
@@ -123,17 +119,13 @@ const NewsCard = ({ article, variant = 'default', index = 0 }) => {
   return (
     <>
       <motion.article
-        layout
         drag="x"
         dragConstraints={{ left: 0, right: 120 }}
         dragElastic={0.1}
         onDrag={(_, info) => setDragX(info.offset.x)}
         onDragEnd={handleDragEnd}
         style={{ x: dragX }}
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: '-50px' }}
-        transition={{ delay: index * 0.08, duration: 0.5, layout: { duration: 0.3 } }}
+        initial={false}
         whileHover={{ y: -4 }}
         className={`glass-card-solid rounded-2xl overflow-hidden group card-lift border-l-4 ${getCategoryAccentBorder(category)} relative`}
       >

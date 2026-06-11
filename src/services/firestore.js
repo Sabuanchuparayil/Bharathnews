@@ -53,6 +53,29 @@ export const getArticlesPage = async (category = null, lastDoc = null, pageSize 
   return { articles, lastDoc: lastVisible, hasMore: snapshot.docs.length === pageSize };
 };
 
+/** Paginate until enough unique-by-slug articles are collected (duplicate-heavy datasets). */
+export const fetchUniqueArticles = async (category = null, minCount = 12, startAfterDoc = null) => {
+  const seenSlugs = new Set();
+  const articles = [];
+  let lastDoc = startAfterDoc;
+  let hasMore = true;
+
+  while (articles.length < minCount && hasMore) {
+    const page = await getArticlesPage(category, lastDoc, 24);
+    for (const article of page.articles) {
+      if (!article?.slug || seenSlugs.has(article.slug)) continue;
+      seenSlugs.add(article.slug);
+      articles.push(article);
+      if (articles.length >= minCount) break;
+    }
+    lastDoc = page.lastDoc;
+    hasMore = page.hasMore;
+    if (!page.articles.length) break;
+  }
+
+  return { articles, lastDoc, hasMore };
+};
+
 export const getArticleBySlug = async (slug) => {
   const db = await getDbAsync();
   if (!db) return null;
