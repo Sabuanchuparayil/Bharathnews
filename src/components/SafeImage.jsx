@@ -11,7 +11,7 @@ const OPTIMIZED_HOSTS = [
   'images.unsplash.com',
   'img.youtube.com',
   'i.ytimg.com',
-  'lh3.googleusercontent.com',
+  '*.googleusercontent.com',
   'firebasestorage.googleapis.com',
   'ui-avatars.com',
 ];
@@ -21,7 +21,13 @@ function canOptimize(url) {
   if (!url.startsWith('https://')) return false;
   try {
     const { hostname } = new URL(url);
-    return OPTIMIZED_HOSTS.some(h => hostname === h || hostname.endsWith(`.${h.replace('*.', '')}`));
+    return OPTIMIZED_HOSTS.some(pattern => {
+      if (pattern.startsWith('*.')) {
+        const suffix = pattern.slice(1);
+        return hostname.endsWith(suffix) || hostname === suffix.slice(1);
+      }
+      return hostname === pattern;
+    });
   } catch {
     return false;
   }
