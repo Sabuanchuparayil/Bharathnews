@@ -90,8 +90,15 @@ const Home = () => {
     setLoadingMore(true);
     try {
       const category = activeCategory === 'all' ? null : activeCategory;
-      const page = await getArticlesPage(category, lastDoc, PAGE_SIZE);
-      setArticles(prev => [...prev, ...page.articles]);
+      const page = await getArticlesPage(category, lastDoc, PAGE_SIZE * 2);
+      setArticles(prev => {
+        const existingSlugs = new Set([
+          ...featuredArticles.map(a => a.slug),
+          ...prev.map(a => a.slug),
+        ]);
+        const fresh = page.articles.filter(a => a.slug && !existingSlugs.has(a.slug));
+        return [...prev, ...fresh];
+      });
       setLastDoc(page.lastDoc);
       setHasMore(page.hasMore);
     } catch (err) {

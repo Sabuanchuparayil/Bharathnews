@@ -84,7 +84,14 @@ const ForYouSection = () => {
       </div>
 
       <div className="flex space-x-4 overflow-x-auto scrollbar-hide px-4 sm:px-6 pb-4">
-        {articles.map((article, index) => (
+        {(() => {
+          const seen = new Set();
+          return articles.filter(a => {
+            if (!a?.slug || !a?.title || seen.has(a.slug)) return false;
+            seen.add(a.slug);
+            return true;
+          });
+        })().map((article, index) => (
           <motion.div
             key={article.id || index}
             initial={{ opacity: 0, scale: 0.9 }}

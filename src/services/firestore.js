@@ -97,10 +97,18 @@ export const getArticlesByInterests = async (interests, count = 10) => {
     collection(db, 'articles'),
     where('category', 'in', topCategories),
     orderBy('score', 'desc'),
-    limit(count)
+    limit(count + 10)
   );
   const snapshot = await getDocs(q);
-  return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+  const seen = new Set();
+  return snapshot.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .filter(a => {
+      if (!a.slug || seen.has(a.slug)) return false;
+      seen.add(a.slug);
+      return true;
+    })
+    .slice(0, count);
 };
 
 export const trackArticleView = async (articleId) => {
@@ -210,20 +218,23 @@ export const searchArticles = async (searchTerm, pageSize = 30) => {
   ];
 
   const results = await Promise.all(queries.map(q => getDocs(q)));
-  const seen = new Set();
+  const seenIds = new Set();
+  const seenSlugs = new Set();
   const articles = [];
 
   for (const snapshot of results) {
     for (const d of snapshot.docs) {
-      if (seen.has(d.id)) continue;
+      if (seenIds.has(d.id)) continue;
+      seenIds.add(d.id);
       const data = { id: d.id, ...d.data() };
+      if (data.slug && seenSlugs.has(data.slug)) continue;
       const matchesTerm =
         data.title?.toLowerCase().includes(term) ||
         data.summary?.toLowerCase().includes(term) ||
         data.category?.toLowerCase().includes(term) ||
         data.author?.toLowerCase().includes(term);
       if (matchesTerm) {
-        seen.add(d.id);
+        if (data.slug) seenSlugs.add(data.slug);
         articles.push(data);
       }
     }

@@ -39,10 +39,18 @@ const CategoryPage = ({ category, title }) => {
   const handleLoadMore = async () => {
     if (!hasMore || loadingMore || !lastDoc) return;
     setLoadingMore(true);
-    const page = await getArticlesPage(category, lastDoc, PAGE_SIZE);
-    setArticles(prev => [...prev, ...page.articles]);
-    setLastDoc(page.lastDoc);
-    setHasMore(page.hasMore);
+    try {
+      const page = await getArticlesPage(category, lastDoc, PAGE_SIZE * 2);
+      setArticles(prev => {
+        const existingSlugs = new Set(prev.map(a => a.slug));
+        const fresh = page.articles.filter(a => a.slug && !existingSlugs.has(a.slug));
+        return [...prev, ...fresh];
+      });
+      setLastDoc(page.lastDoc);
+      setHasMore(page.hasMore);
+    } catch {
+      /* ignore */
+    }
     setLoadingMore(false);
   };
 
