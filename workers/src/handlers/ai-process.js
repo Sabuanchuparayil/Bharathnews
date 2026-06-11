@@ -4,7 +4,7 @@ import { getFirebaseToken } from '../lib/firebase-auth.js';
 import { runQuery, FIRESTORE_BASE } from '../lib/firestore-rest.js';
 import { loadSiteSettings } from '../lib/sources-loader.js';
 
-const BATCH_SIZE = 2;
+const BATCH_SIZE = 5;
 
 export async function handleAIProcess(env) {
   const token = await getFirebaseToken(env);

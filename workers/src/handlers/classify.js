@@ -3,7 +3,7 @@ import { getFirebaseToken } from '../lib/firebase-auth.js';
 import { runQuery, FIRESTORE_BASE } from '../lib/firestore-rest.js';
 import { loadSiteSettings } from '../lib/sources-loader.js';
 
-const BATCH_SIZE = 5;
+const BATCH_SIZE = 10;
 
 export async function handleClassify(env) {
   const token = await getFirebaseToken(env);

@@ -85,14 +85,23 @@ function parseAtom(xml) {
 }
 
 export async function fetchAndParseFeed(url) {
-  const response = await fetch(url, {
-    headers: { 'User-Agent': 'TheBharathNews/1.0 (RSS Reader)' },
-    cf: { cacheTtl: 300, cacheEverything: true },
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+  try {
+    const response = await fetch(url, {
+      headers: { 'User-Agent': 'TheBharathNews/1.0 (RSS Reader)' },
+      cf: { cacheTtl: 300, cacheEverything: true },
+      signal: controller.signal,
+    });
 
-  if (!response.ok) return [];
+    if (!response.ok) return [];
 
-  const xml = await response.text();
-  const isAtom = xml.includes('<feed') && xml.includes('<entry');
-  return isAtom ? parseAtom(xml) : parseRSS(xml);
+    const xml = await response.text();
+    const isAtom = xml.includes('<feed') && xml.includes('<entry');
+    return isAtom ? parseAtom(xml) : parseRSS(xml);
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(timeout);
+  }
 }

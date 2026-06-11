@@ -1,55 +1,96 @@
 import { loadEnabledSources, updateSourceHealth } from '../lib/sources-loader.js';
-import { resolveArticleImage } from '../lib/image-resolver.js';
+import { getCategoryFallbackImage } from '../lib/image-resolver.js';
 import { fetchAndParseFeed } from '../lib/rss-parser.js';
 import { getFirebaseToken } from '../lib/firebase-auth.js';
 import { FIRESTORE_BASE } from '../lib/firestore-rest.js';
 
-const MAX_SOURCES_PER_RUN = 12;
-const ITEMS_PER_SOURCE = 2;
+/** One source per category (13 cats); keeps HTTP /api/ingest under Worker time limits. */
+const MAX_SOURCES_PER_RUN = 13;
+const ITEMS_PER_SOURCE = 3;
+const PARALLEL_BATCH = 4;
+
+/** Pick at least one source per category, then fill remaining slots. */
+function balancedSourcePick(sources, maxTotal) {
+  const byCategory = {};
+  for (const s of sources) {
+    const cat = s.category || 'india';
+    if (!byCategory[cat]) byCategory[cat] = [];
+    byCategory[cat].push(s);
+  }
+
+  const picked = [];
+  const pickedSet = new Set();
+
+  for (const cat of Object.keys(byCategory)) {
+    if (picked.length >= maxTotal) break;
+    const source = byCategory[cat].shift();
+    if (source) {
+      picked.push(source);
+      pickedSet.add(source);
+    }
+  }
+
+  const remaining = sources.filter(s => !pickedSet.has(s));
+  for (const s of remaining) {
+    if (picked.length >= maxTotal) break;
+    picked.push(s);
+  }
+
+  return picked;
+}
+
+async function ingestOneFeed(env, feed, token) {
+  const results = [];
+  try {
+    const items = await fetchAndParseFeed(feed.url);
+    let stored = 0;
+
+    for (const item of items.slice(0, ITEMS_PER_SOURCE)) {
+      if (!item.title || !item.link) continue;
+
+      const slug = item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 80);
+      const resolvedImage = item.imageUrl || getCategoryFallbackImage(feed.category || 'india');
+      const ok = await storeRawArticle(env, {
+        title: item.title,
+        description: item.description || '',
+        sourceUrl: item.link,
+        source: feed.name,
+        sourceId: feed.id,
+        category: feed.category || 'india',
+        region: feed.region || 'india',
+        language: feed.language || 'en',
+        publishedAt: item.pubDate || new Date().toISOString(),
+        imageUrl: resolvedImage,
+        slug,
+      }, token);
+
+      if (ok) {
+        stored++;
+        results.push(item.title);
+      }
+    }
+
+    await updateSourceHealth(env, feed.id, { itemCount: stored, lastError: '' }, token);
+  } catch (error) {
+    console.error(`Error fetching ${feed.name}:`, error.message);
+    await updateSourceHealth(env, feed.id, { itemCount: 0, lastError: error.message.slice(0, 200) }, token);
+  }
+  return results;
+}
 
 export async function handleRSSIngest(env) {
   const token = await getFirebaseToken(env);
   const allSources = await loadEnabledSources(env, 'rss');
   const googleSources = await loadEnabledSources(env, 'googlenews');
-  const sources = [...allSources, ...googleSources].slice(0, MAX_SOURCES_PER_RUN);
+  const sources = balancedSourcePick([...allSources, ...googleSources], MAX_SOURCES_PER_RUN);
   const results = [];
 
-  for (const feed of sources) {
-    try {
-      const items = await fetchAndParseFeed(feed.url);
-      let stored = 0;
-
-      for (const item of items.slice(0, ITEMS_PER_SOURCE)) {
-        if (!item.title || !item.link) continue;
-
-        const slug = item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 80);
-        const resolvedImage = await resolveArticleImage({
-          imageUrl: item.imageUrl || '',
-          sourceUrl: item.link,
-          category: feed.category || 'india',
-        });
-        const ok = await storeRawArticle(env, {
-          title: item.title,
-          description: item.description || '',
-          sourceUrl: item.link,
-          source: feed.name,
-          sourceId: feed.id,
-          category: feed.category || 'india',
-          region: feed.region || 'india',
-          language: feed.language || 'en',
-          publishedAt: item.pubDate || new Date().toISOString(),
-          imageUrl: resolvedImage,
-          slug,
-        }, token);
-
-        if (ok) { stored++; results.push(item.title); }
-      }
-
-      await updateSourceHealth(env, feed.id, { itemCount: stored, lastError: '' }, token);
-    } catch (error) {
-      console.error(`Error fetching ${feed.name}:`, error.message);
-      await updateSourceHealth(env, feed.id, { itemCount: 0, lastError: error.message.slice(0, 200) }, token);
-    }
+  for (let i = 0; i < sources.length; i += PARALLEL_BATCH) {
+    const batch = sources.slice(i, i + PARALLEL_BATCH);
+    const batchResults = await Promise.all(
+      batch.map(feed => ingestOneFeed(env, feed, token))
+    );
+    for (const r of batchResults) results.push(...r);
   }
 
   console.log(`RSS ingest complete: ${results.length} new articles from ${sources.length} sources`);
