@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Rss, ExternalLink, AlertCircle } from 'lucide-react';
+import { Rss } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { getCategoryLabel } from '../utils/categoryColors';
 
@@ -15,33 +15,70 @@ const stripHtml = (html) => {
   }
 };
 
-const RSSFeed = ({ feedUrl, title }) => {
+async function fetchViaRss2Json(feedUrl) {
+  const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`);
+  if (!res.ok) throw new Error('rss2json HTTP error');
+  const data = await res.json();
+  if (data.status !== 'ok') throw new Error(data.message || 'rss2json error');
+  return data.items;
+}
+
+async function fetchViaAllOrigins(feedUrl) {
+  const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(feedUrl)}`);
+  if (!res.ok) throw new Error('allorigins HTTP error');
+  const text = await res.text();
+  const parser = new DOMParser();
+  const xml = parser.parseFromString(text, 'text/xml');
+  const items = [...xml.querySelectorAll('item')];
+  return items.map(el => ({
+    title: el.querySelector('title')?.textContent || '',
+    link: el.querySelector('link')?.textContent || '',
+    description: el.querySelector('description')?.textContent || '',
+    pubDate: el.querySelector('pubDate')?.textContent || '',
+    category: el.querySelector('category')?.textContent || '',
+  }));
+}
+
+function normalizeItems(items) {
+  return items.slice(0, 5).map(item => ({
+    title: item.title || 'Untitled',
+    link: item.link || '#',
+    description: item.description || '',
+    pubDate: item.pubDate || new Date().toISOString(),
+    category: item.category || 'General',
+  }));
+}
+
+const RSSFeed = ({ feedUrl, title, fallbackUrls = [] }) => {
   const [feedItems, setFeedItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    const urls = [feedUrl, ...fallbackUrls].filter(Boolean);
+    let cancelled = false;
+
     const fetchRSS = async () => {
-      try {
-        const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
-        const response = await fetch(apiUrl);
-        if (!response.ok) throw new Error('Failed to fetch RSS feed');
-        const data = await response.json();
-        if (data.status !== 'ok') throw new Error(data.message || 'Failed to load RSS feed');
-        setFeedItems(data.items.slice(0, 5).map(item => ({
-          title: item.title || 'Untitled',
-          link: item.link || '#',
-          description: item.description || '',
-          pubDate: item.pubDate || new Date().toISOString(),
-          category: item.category || 'General',
-        })));
-      } catch (err) {
-        setError(`${title}: Failed to load RSS feed.`);
+      for (const url of urls) {
+        if (cancelled) return;
+        try {
+          const items = await fetchViaRss2Json(url);
+          if (!cancelled) { setFeedItems(normalizeItems(items)); setLoading(false); }
+          return;
+        } catch { /* try next strategy */ }
+
+        try {
+          const items = await fetchViaAllOrigins(url);
+          if (!cancelled) { setFeedItems(normalizeItems(items)); setLoading(false); }
+          return;
+        } catch { /* try next URL */ }
       }
-      setLoading(false);
+      if (!cancelled) { setError('Unable to load feed right now.'); setLoading(false); }
     };
-    if (feedUrl) fetchRSS();
-  }, [feedUrl, title]);
+
+    fetchRSS();
+    return () => { cancelled = true; };
+  }, [feedUrl, fallbackUrls]);
 
   if (loading) {
     return (
@@ -58,18 +95,7 @@ const RSSFeed = ({ feedUrl, title }) => {
   }
 
   if (error) {
-    return (
-      <div className="glass-card-solid rounded-2xl p-6">
-        <div className="flex items-center space-x-2 mb-4">
-          <AlertCircle className="w-5 h-5 text-accent-rose" />
-          <h3 className="font-display font-semibold text-lg text-gray-900 dark:text-white">{title}</h3>
-        </div>
-        <p className="text-accent-rose text-sm mb-4">{error}</p>
-        <a href={feedUrl} target="_blank" rel="noopener noreferrer" className="text-brand-600 dark:text-brand-400 hover:text-brand-700 font-medium text-sm transition-colors">
-          View original RSS feed
-        </a>
-      </div>
-    );
+    return null;
   }
 
   return (

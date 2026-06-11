@@ -10,9 +10,15 @@ import RSSFeed from '../components/RSSFeed';
 import { RSS_FEEDS } from '../config/feeds.config';
 import { useAuth } from '../context/AuthContext';
 
+const COMMUNITY_FEED_NAMES = ['Indian Express', 'The Hindu', 'NDTV'];
+
 const Community = () => {
   const { isCreator, isContentWriter } = useAuth();
-  const communityFeed = RSS_FEEDS.find(f => f.name === 'Scroll.in') || RSS_FEEDS[0];
+  const communityFeed = RSS_FEEDS.find(f => COMMUNITY_FEED_NAMES.includes(f.name)) || RSS_FEEDS[0];
+  const fallbackUrls = RSS_FEEDS
+    .filter(f => f.category === 'india' && f.url !== communityFeed.url)
+    .slice(0, 2)
+    .map(f => f.url);
 
   return (
     <Layout mainClassName="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -75,7 +81,7 @@ const Community = () => {
         </div>
 
         <aside className="hidden lg:block">
-          <RSSFeed feedUrl={communityFeed.url} title={`Live from ${communityFeed.name}`} />
+          <RSSFeed feedUrl={communityFeed.url} title={`Live from ${communityFeed.name}`} fallbackUrls={fallbackUrls} />
         </aside>
       </div>
     </Layout>
