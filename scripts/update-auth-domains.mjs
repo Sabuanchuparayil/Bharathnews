@@ -7,6 +7,9 @@
  *   npm run firebase:auth-domains
  *   node scripts/update-auth-domains.mjs thebharathnews.com www.thebharathnews.com
  *   node scripts/update-auth-domains.mjs --sa /path/to/service-account.json
+ *
+ * Auth (in order): Firebase CLI session (`firebase login`), then service account via
+ * FIREBASE_SERVICE_ACCOUNT_JSON, GOOGLE_APPLICATION_CREDENTIALS, --sa, or workers/secrets.env.
  */
 
 import { readFileSync, existsSync } from 'fs';
@@ -42,6 +45,10 @@ function parseArgs(argv) {
     }
   }
 
+  if (!saPath && process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    saPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  }
+
   if (!saPath) {
     const secretsEnv = join(ROOT, 'workers/secrets.env');
     if (existsSync(secretsEnv)) {
@@ -52,11 +59,7 @@ function parseArgs(argv) {
     }
   }
 
-  if (!saPath) {
-    saPath = join(process.env.HOME || '', 'Desktop/thebharathnews-app-firebase-adminsdk-fbsvc-e952386d06.json');
-  }
-
-  return { domains: domains.length ? domains : DEFAULT_DOMAINS, saPath };
+  return { domains: domains.length ? domains : DEFAULT_DOMAINS, saPath: saPath || null };
 }
 
 async function tokenFromServiceAccount(saPath) {
@@ -170,6 +173,31 @@ async function updateViaFirebaseTools(toAdd) {
   return updateAuthDomains(PROJECT_ID, merged);
 }
 
+async function updateViaServiceAccount(toAdd, saPath) {
+  if (!saPath) {
+    throw new Error(
+      'No service account path. Set FIREBASE_SERVICE_ACCOUNT_JSON, GOOGLE_APPLICATION_CREDENTIALS, --sa, or workers/secrets.env',
+    );
+  }
+  if (!existsSync(saPath)) {
+    throw new Error(`Service account file not found: ${saPath}`);
+  }
+
+  const token = await tokenFromServiceAccount(saPath);
+  const current = await getDomainsViaServiceAccount(token);
+  const merged = [...current];
+  for (const domain of toAdd) {
+    if (!merged.includes(domain)) merged.push(domain);
+  }
+  if (merged.length === current.length) {
+    console.log('Authorized domains already up to date (service account).');
+    return merged;
+  }
+  const updated = await updateDomainsViaServiceAccount(token, merged);
+  console.log('Updated via service account.');
+  return updated;
+}
+
 async function main() {
   const { domains: toAdd, saPath } = parseArgs(process.argv.slice(2));
 
@@ -177,19 +205,25 @@ async function main() {
   try {
     updated = await updateViaFirebaseTools(toAdd);
     console.log('Updated via Firebase CLI session.');
-  } catch {
-    const token = await tokenFromServiceAccount(saPath);
-    const current = await getDomainsViaServiceAccount(token);
-    const merged = [...current];
-    for (const domain of toAdd) {
-      if (!merged.includes(domain)) merged.push(domain);
-    }
-    if (merged.length === current.length) {
-      updated = merged;
-      console.log('Authorized domains already up to date (service account).');
+  } catch (cliErr) {
+    const message = cliErr?.message || String(cliErr);
+    const authUnavailable = /not yet authenticated|Unable to refresh auth/i.test(message);
+    if (authUnavailable) {
+      console.warn('Firebase CLI session unavailable:', message);
+      console.warn('Falling back to service account if configured.');
     } else {
-      updated = await updateDomainsViaServiceAccount(token, merged);
-      console.log('Updated via service account.');
+      console.warn('Firebase CLI update failed:', message);
+      console.warn('Attempting service account fallback.');
+    }
+
+    try {
+      updated = await updateViaServiceAccount(toAdd, saPath);
+    } catch (saErr) {
+      console.error('Service account fallback failed:', saErr.message || saErr);
+      if (authUnavailable) {
+        console.error('Run `npx firebase login` or provide a service account via --sa / FIREBASE_SERVICE_ACCOUNT_JSON.');
+      }
+      throw saErr;
     }
   }
 
