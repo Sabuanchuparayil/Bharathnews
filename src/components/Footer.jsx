@@ -35,7 +35,7 @@ const Footer = () => {
               <span className="font-display font-bold text-lg text-gray-900 dark:text-white">The Bharath News</span>
             </Link>
             <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-              AI-powered news for the India-GCC community. Breaking news, business, technology — in English and Malayalam.
+              Your trusted source for India-GCC news. Breaking news, business, technology — in English and Malayalam.
             </p>
           </div>
 
@@ -85,7 +85,7 @@ const Footer = () => {
             <span>&copy; {year} The Bharath News.</span>
             <span className="hidden sm:inline">Made with</span>
             <Heart className="w-3.5 h-3.5 text-accent-rose hidden sm:inline" />
-            <span className="hidden sm:inline">and AI</span>
+            <span className="hidden sm:inline">in India</span>
           </p>
           <div className="flex items-center space-x-4">
             <span className="text-xs text-gray-400 bg-surface-2 dark:bg-dark-surface-2 px-3 py-1 rounded-full">v1.1</span>

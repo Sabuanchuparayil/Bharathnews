@@ -50,7 +50,7 @@ const NewsletterSignup = () => {
     <div className="bg-gradient-to-br from-brand-600 to-brand-800 rounded-2xl p-6 text-white">
       <Mail className="w-8 h-8 text-brand-200 mb-3" />
       <h3 className="font-display font-bold text-lg mb-1">Stay Informed</h3>
-      <p className="text-sm text-brand-200 mb-2">Weekly AI-curated digest from India & GCC</p>
+      <p className="text-sm text-brand-200 mb-2">Weekly curated digest from India &amp; GCC</p>
       <div className="flex items-center space-x-2 mb-4">
         <Users className="w-4 h-4 text-brand-200" />
         <span className="text-xs text-brand-200">Join {subscriberCount > 0 ? subscriberCount.toLocaleString() : '...'}+ readers</span>

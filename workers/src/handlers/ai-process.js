@@ -100,7 +100,7 @@ async function processOneArticle(env, raw, token, targetLangs, settings) {
         region: { stringValue: region },
         language: { stringValue: language },
         source: { stringValue: source },
-        author: { stringValue: 'The Bharath News AI' },
+        author: { stringValue: 'The Bharath News' },
         qualityScore: { doubleValue: qualityScore },
         score: { integerValue: String(parsed.score || qualityScore) },
         editorialStatus: { stringValue: 'published' },

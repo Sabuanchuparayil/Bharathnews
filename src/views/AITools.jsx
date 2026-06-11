@@ -31,7 +31,7 @@ const AITools = () => {
         <div className="flex items-center justify-center min-h-[60vh] px-4">
           <div className="glass-card-solid rounded-2xl p-8 text-center max-w-md">
             <h1 className="font-display font-bold text-3xl text-gray-900 dark:text-white mb-4">Sign In Required</h1>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">Please sign in to access AI Tools.</p>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">Please sign in to access Creator Tools.</p>
             <button onClick={loginWithGoogle} className="btn-primary">Sign in with Google</button>
           </div>
         </div>
@@ -53,23 +53,23 @@ const AITools = () => {
   }
 
   const handleRewrite = () => {
-    setResults({ ...results, rewrite: 'AI-rewritten content here.' });
+    setResults({ ...results, rewrite: 'Rewritten content here.' });
     toast.success('Content rewritten!');
   };
 
   const handleTranslate = () => {
-    setResults({ ...results, translation: 'AI-translated content here.' });
+    setResults({ ...results, translation: 'Translated content here.' });
     toast.success('Translation completed!');
   };
 
   const handleGenerateAd = () => {
-    setResults({ ...results, ad: 'AI-generated ad creative here.' });
+    setResults({ ...results, ad: 'Generated ad creative here.' });
     toast.success('Ad generated!');
   };
 
   return (
     <Layout showBottomNav={false} showChatbot={false} mainClassName="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <h1 className="font-display font-bold text-3xl text-gray-900 dark:text-white mb-6">AI Tools</h1>
+      <h1 className="font-display font-bold text-3xl text-gray-900 dark:text-white mb-6">Creator Tools</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="glass-card-solid rounded-2xl p-6">

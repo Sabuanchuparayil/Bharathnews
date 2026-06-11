@@ -222,7 +222,7 @@ const SocialMediaPosting = () => {
           <Sparkles className="w-5 h-5 text-accent-amber" />
           <h2 className="font-display font-bold text-2xl text-gray-900 dark:text-white">Smart Posting</h2>
         </div>
-        <span className="text-xs text-gray-400">AI-powered recommendations</span>
+        <span className="text-xs text-gray-400">Smart recommendations</span>
       </div>
 
       <div className="glass-card-solid rounded-2xl p-5">

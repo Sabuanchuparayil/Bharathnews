@@ -5,11 +5,11 @@ export function siteMetadata({ title, description, path = '', image, type = 'web
   const url = `${SITE_URL}${path}`;
   return {
     title: title ? `${title} | ${SITE_NAME}` : SITE_NAME,
-    description: description || 'AI-Powered News for India and GCC. Breaking news, business, technology, and community stories.',
+    description: description || 'Breaking news from India and GCC. Business, technology, and community stories.',
     alternates: { canonical: url },
     openGraph: {
       title: title || SITE_NAME,
-      description: description || 'AI-Powered News for India and GCC regions',
+      description: description || 'Breaking news from India and GCC regions',
       url,
       siteName: SITE_NAME,
       type,
@@ -18,7 +18,7 @@ export function siteMetadata({ title, description, path = '', image, type = 'web
     twitter: {
       card: image ? 'summary_large_image' : 'summary',
       title: title || SITE_NAME,
-      description: description || 'AI-Powered News for India and GCC regions',
+      description: description || 'Breaking news from India and GCC regions',
       images: image ? [image] : [],
     },
   };

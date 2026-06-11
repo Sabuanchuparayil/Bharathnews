@@ -31,12 +31,12 @@ export const viewport = {
 
 export const metadata = {
   title: 'The Bharath News',
-  description: 'AI-Powered News for India and GCC. Breaking news, business, technology, and community stories in English and Malayalam.',
+  description: 'Breaking news from India and GCC. Business, technology, and community stories in English and Malayalam.',
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://thebharathnews.com'),
   manifest: '/manifest.json',
   openGraph: {
     title: 'The Bharath News',
-    description: 'AI-Powered News for India and GCC regions',
+    description: 'Breaking news from India and GCC regions',
     type: 'website',
     url: 'https://thebharathnews.com',
   },

@@ -10,7 +10,7 @@ import { useFocusTrap } from '../hooks/useFocusTrap';
 const ChatbotWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: "Hi! I'm your AI news assistant. Ask me about today's top stories, any topic, or news from India and GCC." }
+    { role: 'assistant', content: "Hi! I'm your Bharath News assistant. Ask me about today's top stories, any topic, or news from India and GCC." }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -50,7 +50,7 @@ const ChatbotWidget = () => {
             exit={{ scale: 0 }}
             onClick={() => setIsOpen(true)}
             className="floating-action"
-            aria-label="Open AI Chat"
+            aria-label="Open News Chat"
           >
             <Sparkles className="w-6 h-6" />
           </motion.button>
@@ -63,7 +63,7 @@ const ChatbotWidget = () => {
             ref={chatTrapRef}
             role="dialog"
             aria-modal="true"
-            aria-label="AI News Chat"
+            aria-label="Bharath News Chat"
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
@@ -75,7 +75,7 @@ const ChatbotWidget = () => {
                   <Bot className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-display font-bold text-sm text-gray-900 dark:text-white">News AI</h3>
+                  <h3 className="font-display font-bold text-sm text-gray-900 dark:text-white">News Bot</h3>
                   <p className="text-[10px] text-accent-emerald font-medium">Online</p>
                 </div>
               </div>

@@ -34,7 +34,7 @@ function canOptimize(url) {
 }
 
 const SafeImage = ({ src, alt = '', className = '', category, fallback, width = 800, height = 450, sizes, ...props }) => {
-  const resolvedFallback = fallback || (category ? getCategoryFallbackImage(category) : DEFAULT_FALLBACK);
+  const resolvedFallback = fallback || (category ? getCategoryFallbackImage(category, alt) : DEFAULT_FALLBACK);
   const [imgSrc, setImgSrc] = useState(src || resolvedFallback);
   const [failed, setFailed] = useState(false);
 
