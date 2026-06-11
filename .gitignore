@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+.env.local
+.env.production
+*.local
+*.log
+.DS_Store
+thebharathnews-*.json
+firebase-adminsdk-*.json
+.wrangler/
+.dev.vars

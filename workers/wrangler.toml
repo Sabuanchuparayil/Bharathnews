@@ -1,0 +1,17 @@
+name = "bharathnews-api"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+[triggers]
+crons = ["*/15 * * * *"]
+
+[vars]
+ENVIRONMENT = "production"
+
+[ai]
+binding = "AI"
+
+# Add secrets via: wrangler secret put TELEGRAM_BOT_TOKEN
+# Add secrets via: wrangler secret put TELEGRAM_CHANNEL_ID
+# Add secrets via: wrangler secret put FIREBASE_PROJECT_ID
+# Add secrets via: wrangler secret put FIREBASE_TOKEN
