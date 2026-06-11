@@ -27,7 +27,7 @@ put_secret() {
   printf '%s' "$value" | npx wrangler secret put "$name"
 }
 
-put_secret FIREBASE_PROJECT_ID "${FIREBASE_PROJECT_ID:-thebharathnews-app}"
+put_secret FIREBASE_PROJECT_ID "${FIREBASE_PROJECT_ID:-}"
 
 if [[ -n "${FIREBASE_SERVICE_ACCOUNT_JSON:-}" && -f "${FIREBASE_SERVICE_ACCOUNT_JSON}" ]]; then
   FIREBASE_TOKEN="$(node "${ROOT}/scripts/generate-firebase-token.mjs" "${FIREBASE_SERVICE_ACCOUNT_JSON}")"

@@ -15,7 +15,7 @@ MAIN_SITE_URL = "https://thebharathnews.com"
 binding = "AI"
 
 # Secrets (run from workers/ after wrangler login):
-#   npx wrangler secret put FIREBASE_PROJECT_ID                # thebharathnews-app
+#   npx wrangler secret put FIREBASE_PROJECT_ID                # your-project-id
 #   npx wrangler secret put FIREBASE_SERVICE_ACCOUNT_JSON      # full JSON (preferred, auto-renews)
 #   npx wrangler secret put FIREBASE_TOKEN                     # OR static bearer token (expires 1h)
 #   npx wrangler secret put TELEGRAM_BOT_TOKEN
