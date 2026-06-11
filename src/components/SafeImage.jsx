@@ -7,6 +7,26 @@ import { getCategoryFallbackImage } from '../utils/articleImages';
 
 const DEFAULT_FALLBACK = 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=800&h=400&fit=crop';
 
+const OPTIMIZED_HOSTS = [
+  'images.unsplash.com',
+  'img.youtube.com',
+  'i.ytimg.com',
+  'lh3.googleusercontent.com',
+  'firebasestorage.googleapis.com',
+  'ui-avatars.com',
+];
+
+function canOptimize(url) {
+  if (typeof url !== 'string') return false;
+  if (!url.startsWith('https://')) return false;
+  try {
+    const { hostname } = new URL(url);
+    return OPTIMIZED_HOSTS.some(h => hostname === h || hostname.endsWith(`.${h.replace('*.', '')}`));
+  } catch {
+    return false;
+  }
+}
+
 const SafeImage = ({ src, alt = '', className = '', category, fallback, width = 800, height = 450, sizes, ...props }) => {
   const resolvedFallback = fallback || (category ? getCategoryFallbackImage(category) : DEFAULT_FALLBACK);
   const [imgSrc, setImgSrc] = useState(src || resolvedFallback);
@@ -25,7 +45,7 @@ const SafeImage = ({ src, alt = '', className = '', category, fallback, width = 
     );
   }
 
-  const skipOptimization = typeof imgSrc === 'string' && imgSrc.startsWith('http://');
+  const skipOptimization = !canOptimize(imgSrc);
 
   return (
     <Image
