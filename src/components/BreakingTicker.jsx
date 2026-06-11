@@ -1,10 +1,22 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useRef, useEffect, useState } from 'react';
 import { Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const BreakingTicker = ({ articles = [] }) => {
+  const trackRef = useRef(null);
+  const [duration, setDuration] = useState(30);
+
+  useEffect(() => {
+    if (trackRef.current) {
+      const width = trackRef.current.scrollWidth / 2;
+      const pixelsPerSecond = 60;
+      setDuration(Math.max(width / pixelsPerSecond, 15));
+    }
+  }, [articles]);
+
   if (!articles.length) return null;
+
+  const items = [...articles, ...articles];
 
   return (
     <div className="bg-brand-950 dark:bg-brand-900 text-white overflow-hidden">
@@ -12,23 +24,26 @@ const BreakingTicker = ({ articles = [] }) => {
         <div className="flex items-center space-x-2 mr-4 flex-shrink-0">
           <Zap className="w-4 h-4 text-accent-amber animate-pulse-soft" />
           <span className="text-xs font-bold uppercase tracking-wider text-accent-amber">Breaking</span>
+          <span className="hidden sm:inline text-[10px] bg-white/10 px-2 py-0.5 rounded-full text-gray-300">
+            {articles.length} live
+          </span>
         </div>
         <div className="overflow-hidden flex-1">
-          <motion.div
-            animate={{ x: [0, -2000] }}
-            transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
-            className="flex items-center space-x-12 whitespace-nowrap"
+          <div
+            ref={trackRef}
+            className="ticker-track items-center space-x-12 whitespace-nowrap"
+            style={{ '--ticker-duration': `${duration}s` }}
           >
-            {[...articles, ...articles].map((article, i) => (
+            {items.map((article, i) => (
               <Link
-                key={i}
+                key={`${article.slug}-${i}`}
                 to={`/article/${article.slug}`}
-                className="text-sm text-gray-200 hover:text-white transition-colors"
+                className="text-sm text-gray-200 hover:text-white transition-colors inline-block"
               >
                 {article.title}
               </Link>
             ))}
-          </motion.div>
+          </div>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Heart } from 'lucide-react';
+import { SOCIAL_CHANNELS } from '../config/channels.config';
 
 const Footer = () => {
   const year = new Date().getFullYear();
@@ -17,7 +18,7 @@ const Footer = () => {
               <span className="font-display font-bold text-lg text-gray-900 dark:text-white">BharathNews</span>
             </Link>
             <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-              AI-powered news for the India-GCC community. Breaking news, business, technology — in English, Malayalam, and Arabic.
+              AI-powered news for the India-GCC community. Breaking news, business, technology — in English and Malayalam.
             </p>
           </div>
 
@@ -33,8 +34,17 @@ const Footer = () => {
           <div>
             <h4 className="font-display font-bold text-sm text-gray-900 dark:text-white mb-4">Follow Us</h4>
             <ul className="space-y-2.5">
-              {['WhatsApp Channel', 'Telegram', 'YouTube', 'Instagram', 'Facebook'].map(link => (
-                <li key={link}><a href="#" className="text-sm text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">{link}</a></li>
+              {Object.values(SOCIAL_CHANNELS).map(channel => (
+                <li key={channel.name}>
+                  <a
+                    href={channel.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
+                  >
+                    {channel.name}
+                  </a>
+                </li>
               ))}
             </ul>
           </div>
@@ -42,7 +52,7 @@ const Footer = () => {
           <div>
             <h4 className="font-display font-bold text-sm text-gray-900 dark:text-white mb-4">Legal</h4>
             <ul className="space-y-2.5">
-              {[['Privacy', '/privacy'], ['Terms', '/terms'], ['Contact', '#']].map(([label, href]) => (
+              {[['Privacy', '/privacy'], ['Terms', '/terms']].map(([label, href]) => (
                 <li key={label}><Link to={href} className="text-sm text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">{label}</Link></li>
               ))}
             </ul>
@@ -57,7 +67,7 @@ const Footer = () => {
             <span className="hidden sm:inline">and AI</span>
           </p>
           <div className="flex items-center space-x-4">
-            <span className="text-xs text-gray-400 bg-surface-2 dark:bg-dark-surface-2 px-3 py-1 rounded-full">v1.0</span>
+            <span className="text-xs text-gray-400 bg-surface-2 dark:bg-dark-surface-2 px-3 py-1 rounded-full">v1.1</span>
           </div>
         </div>
       </div>

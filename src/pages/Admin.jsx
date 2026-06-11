@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
-import { Plus, Edit, Trash2, Users, BarChart3, Settings, FileText, Globe, Layout, Upload } from 'lucide-react';
-import { useSearchParams, Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import Layout from '../components/Layout';
+import { Plus, Edit, Trash2, Users, BarChart3, Settings, FileText, Globe, Layout as LayoutIcon, Upload } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const Admin = () => {
-  const [searchParams] = useSearchParams();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { user, isAdmin, loading, loginWithGoogle } = useAuth();
   const [news, setNews] = useState([
     { id: 1, title: "സാമ്പിൾ വാർത്ത", status: "പ്രസിദ്ധീകരിച്ചു" },
     // Add more mock news
@@ -17,13 +16,6 @@ const Admin = () => {
   const [footerText, setFooterText] = useState('© 2024 The Bharath News');
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
-
-  useEffect(() => {
-    const login = searchParams.get('login');
-    if (login === 'true') {
-      setIsLoggedIn(true);
-    }
-  }, [searchParams]);
 
   const handleAddNews = () => {
     // Logic to add news
@@ -65,47 +57,79 @@ const Admin = () => {
     }
   };
 
-  if (!isLoggedIn) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="font-display font-bold text-3xl text-gray-900 mb-4">Access Denied</h1>
-          <p className="text-gray-600">Please use the correct admin URL to access this page.</p>
+      <Layout showBottomNav={false} showChatbot={false}>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="w-8 h-8 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
         </div>
-      </div>
+      </Layout>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Layout showBottomNav={false} showChatbot={false}>
+        <div className="flex items-center justify-center min-h-[60vh] px-4">
+          <div className="glass-card-solid rounded-2xl p-8 text-center max-w-md">
+            <h1 className="font-display font-bold text-3xl text-gray-900 dark:text-white mb-4">Sign In Required</h1>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">Please sign in to access the admin panel.</p>
+            <button onClick={loginWithGoogle} className="btn-primary">Sign in with Google</button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <Layout showBottomNav={false} showChatbot={false}>
+        <div className="flex items-center justify-center min-h-[60vh] px-4">
+          <div className="glass-card-solid rounded-2xl p-8 text-center max-w-md">
+            <h1 className="font-display font-bold text-3xl text-gray-900 dark:text-white mb-4">Access Denied</h1>
+            <p className="text-gray-600 dark:text-gray-400">Admin role required.</p>
+          </div>
+        </div>
+      </Layout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <h1 className="font-display font-bold text-3xl text-gray-900 mb-6">Admin Dashboard</h1>
+    <Layout showBottomNav={false} showChatbot={false} mainClassName="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <h1 className="font-display font-bold text-3xl text-gray-900 dark:text-white mb-6">Admin Dashboard</h1>
         
         {/* Admin Features */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <Users className="w-8 h-8 text-indigo-700 mb-4" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="glass-card-solid rounded-2xl p-6">
+            <FileText className="w-8 h-8 text-brand-600 dark:text-brand-400 mb-4" />
+            <h3 className="font-display font-semibold text-lg">Moderation</h3>
+            <p className="text-gray-600 mb-3">Review creator applications and UGC submissions.</p>
+            <Link to="/admin/moderation" className="text-brand-600 hover:text-brand-700 text-sm font-medium">
+              Open Moderation Queue →
+            </Link>
+          </div>
+          <div className="glass-card-solid rounded-2xl p-6">
+            <Users className="w-8 h-8 text-brand-600 dark:text-brand-400 mb-4" />
             <h3 className="font-display font-semibold text-lg">User Management</h3>
             <p className="text-gray-600">Manage users and permissions.</p>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <BarChart3 className="w-8 h-8 text-indigo-700 mb-4" />
+          <div className="glass-card-solid rounded-2xl p-6">
+            <BarChart3 className="w-8 h-8 text-brand-600 dark:text-brand-400 mb-4" />
             <h3 className="font-display font-semibold text-lg">Analytics</h3>
             <p className="text-gray-600 mb-3">View site statistics and reports.</p>
             <Link to="/admin/dashboard" className="text-brand-600 hover:text-brand-700 text-sm font-medium">
               Open Analytics Dashboard →
             </Link>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <Settings className="w-8 h-8 text-indigo-700 mb-4" />
+          <div className="glass-card-solid rounded-2xl p-6">
+            <Settings className="w-8 h-8 text-brand-600 dark:text-brand-400 mb-4" />
             <h3 className="font-display font-semibold text-lg">Settings</h3>
             <p className="text-gray-600">Configure site preferences.</p>
           </div>
         </div>
 
         {/* Logo Upload */}
-        <div className="bg-white p-6 rounded-lg shadow-md mb-8">
+        <div className="glass-card-solid rounded-2xl p-6 mb-8">
           <h2 className="font-display font-bold text-xl mb-4">Upload Logo</h2>
           <div className="flex items-center space-x-4">
             <input
@@ -117,7 +141,7 @@ const Admin = () => {
             />
             <label
               htmlFor="logo-upload"
-              className="flex items-center space-x-2 bg-indigo-700 text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-indigo-800 transition-colors"
+              className="flex items-center space-x-2 bg-brand-600 text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-brand-700 transition-colors"
             >
               <Upload className="w-4 h-4" />
               <span>Choose Logo</span>
@@ -134,10 +158,10 @@ const Admin = () => {
         {/* Edit Sections */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           {/* Categories */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
+          <div className="glass-card-solid rounded-2xl p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="font-display font-bold text-xl">Edit Categories</h2>
-              <button onClick={handleAddCategory} className="bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+              <button onClick={handleAddCategory} className="bg-brand-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
                 <Plus className="w-4 h-4" />
                 <span>Add</span>
               </button>
@@ -147,7 +171,7 @@ const Admin = () => {
                 <li key={index} className="flex justify-between items-center p-2 border rounded">
                   <span>{cat}</span>
                   <div className="flex space-x-2">
-                    <button onClick={() => handleEditCategory(index)} className="text-indigo-700">
+                    <button onClick={() => handleEditCategory(index)} className="text-brand-600 dark:text-brand-400">
                       <Edit className="w-4 h-4" />
                     </button>
                     <button onClick={() => handleDeleteCategory(index)} className="text-red-700">
@@ -160,10 +184,10 @@ const Admin = () => {
           </div>
 
           {/* Topics */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
+          <div className="glass-card-solid rounded-2xl p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="font-display font-bold text-xl">Edit Topics</h2>
-              <button onClick={() => setTopics([...topics, prompt('Add new topic:') || ''])} className="bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+              <button onClick={() => setTopics([...topics, prompt('Add new topic:') || ''])} className="bg-brand-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
                 <Plus className="w-4 h-4" />
                 <span>Add</span>
               </button>
@@ -180,7 +204,7 @@ const Admin = () => {
                         updated[index] = edited;
                         setTopics(updated);
                       }
-                    }} className="text-indigo-700">
+                    }} className="text-brand-600 dark:text-brand-400">
                       <Edit className="w-4 h-4" />
                     </button>
                     <button onClick={() => setTopics(topics.filter((_, i) => i !== index))} className="text-red-700">
@@ -195,7 +219,7 @@ const Admin = () => {
 
         {/* Header and Footer */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow-md">
+          <div className="glass-card-solid rounded-2xl p-6">
             <h2 className="font-display font-bold text-xl mb-4">Edit Header</h2>
             <input
               type="text"
@@ -204,7 +228,7 @@ const Admin = () => {
               className="w-full p-2 border rounded"
             />
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-md">
+          <div className="glass-card-solid rounded-2xl p-6">
             <h2 className="font-display font-bold text-xl mb-4">Edit Footer</h2>
             <input
               type="text"
@@ -216,10 +240,10 @@ const Admin = () => {
         </div>
 
         {/* News Management */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
+        <div className="glass-card-solid rounded-2xl p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-display font-bold text-xl">Manage News</h2>
-            <button onClick={handleAddNews} className="bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+            <button onClick={handleAddNews} className="bg-brand-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
               <Plus className="w-4 h-4" />
               <span>Add News</span>
             </button>
@@ -238,7 +262,7 @@ const Admin = () => {
                   <td className="py-2">{item.title}</td>
                   <td className="py-2">{item.status}</td>
                   <td className="py-2 flex space-x-2">
-                    <button onClick={() => handleEditNews(item.id)} className="text-indigo-700">
+                    <button onClick={() => handleEditNews(item.id)} className="text-brand-600 dark:text-brand-400">
                       <Edit className="w-4 h-4" />
                     </button>
                     <button onClick={() => handleDeleteNews(item.id)} className="text-red-700">
@@ -250,9 +274,7 @@ const Admin = () => {
             </tbody>
           </table>
         </div>
-      </main>
-      <Footer />
-    </div>
+    </Layout>
   );
 };
 

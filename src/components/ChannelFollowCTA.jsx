@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, MessageCircle, Send } from 'lucide-react';
+import { SOCIAL_CHANNELS } from '../config/channels.config';
 
 const ChannelFollowCTA = () => {
   const [dismissed, setDismissed] = useState(
@@ -14,24 +15,25 @@ const ChannelFollowCTA = () => {
   };
 
   return (
-    <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-xl p-6 relative">
+    <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/30 dark:to-blue-950/30 border border-green-200 dark:border-green-800/50 rounded-xl p-6 relative">
       <button
         onClick={handleDismiss}
-        className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+        aria-label="Dismiss"
+        className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
       >
         <X className="w-5 h-5" />
       </button>
 
-      <h3 className="font-display font-bold text-lg text-gray-900 mb-2">
+      <h3 className="font-display font-bold text-lg text-gray-900 dark:text-white mb-2">
         Never miss a story
       </h3>
-      <p className="text-gray-600 text-sm mb-4">
+      <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
         Get breaking news instantly on your favorite platform
       </p>
 
       <div className="flex flex-wrap gap-3">
         <a
-          href="https://whatsapp.com/channel/YOUR_CHANNEL_ID"
+          href={SOCIAL_CHANNELS.whatsapp.url}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
@@ -40,7 +42,7 @@ const ChannelFollowCTA = () => {
           <span>WhatsApp</span>
         </a>
         <a
-          href="https://t.me/TheBharathNews"
+          href={SOCIAL_CHANNELS.telegram.url}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center space-x-2 bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"

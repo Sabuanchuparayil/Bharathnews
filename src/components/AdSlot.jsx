@@ -15,9 +15,9 @@ const AdSlot = ({ slot, format = 'auto', responsive = true, className = '' }) =>
 
   if (!slot) {
     return (
-      <div className={`bg-gray-100 rounded-xl p-8 text-center border-2 border-dashed border-gray-300 ${className}`}>
-        <p className="text-gray-500 font-medium">Ad Space</p>
-        <p className="text-sm text-gray-400 mt-1">Premium ad space available</p>
+      <div className={`bg-surface-2 dark:bg-dark-surface-2 rounded-xl p-8 text-center border-2 border-dashed border-gray-200 dark:border-gray-700 ${className}`}>
+        <p className="text-gray-600 dark:text-gray-400 font-medium">Ad Space</p>
+        <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Premium ad space available</p>
       </div>
     );
   }

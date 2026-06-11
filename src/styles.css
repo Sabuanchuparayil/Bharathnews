@@ -5,6 +5,18 @@
 @tailwind utilities;
 
 @layer base {
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
   html {
     scroll-behavior: smooth;
     -webkit-tap-highlight-color: transparent;
@@ -164,6 +176,76 @@
   .dark .category-pill-inactive:hover {
     background-color: theme('colors.dark-surface.3');
   }
+
+  .story-ring {
+    background: linear-gradient(135deg, theme('colors.brand.500'), theme('colors.accent.emerald'), theme('colors.accent.amber'));
+  }
+
+  .masonry-grid {
+    column-gap: 1.5rem;
+    columns: 1;
+  }
+
+  @media (min-width: 640px) {
+    .masonry-grid {
+      columns: 2;
+    }
+  }
+
+  .masonry-item {
+    break-inside: avoid;
+    margin-bottom: 1.5rem;
+  }
+
+  .card-lift {
+    @apply transition-all duration-300;
+  }
+
+  .card-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: theme('boxShadow.card-hover');
+  }
+
+  .article-drop-cap > p:first-of-type::first-letter {
+    float: left;
+    font-family: theme('fontFamily.display');
+    font-size: 3.5rem;
+    line-height: 0.8;
+    font-weight: 700;
+    margin-right: 0.5rem;
+    margin-top: 0.15rem;
+    color: theme('colors.brand.600');
+  }
+
+  .dark .article-drop-cap > p:first-of-type::first-letter {
+    color: theme('colors.brand.400');
+  }
+
+  .ticker-track {
+    display: flex;
+    width: max-content;
+    animation: ticker-scroll var(--ticker-duration, 30s) linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ticker-track {
+      animation: none;
+    }
+  }
+
+  .sticky-section-header {
+    position: sticky;
+    top: 4rem;
+    z-index: 30;
+    background-color: rgb(248 250 252 / 0.9);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgb(241 245 249);
+  }
+
+  .dark .sticky-section-header {
+    background-color: rgb(15 23 42 / 0.9);
+    border-bottom-color: rgb(30 41 59);
+  }
 }
 
 @layer utilities {
@@ -209,4 +291,9 @@
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
+}
+
+@keyframes ticker-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
 }

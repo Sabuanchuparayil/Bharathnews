@@ -1,15 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Search, Bell, Sun, Moon, LogIn, BookmarkIcon, Settings as SettingsIcon } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useFocusTrap } from '../hooks/useFocusTrap';
+import { useClickOutside } from '../hooks/useClickOutside';
+
+const NotificationsPanel = lazy(() => import('./NotificationsPanel'));
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const profileRef = useRef(null);
+  const searchTrapRef = useFocusTrap(searchOpen);
+  const menuTrapRef = useFocusTrap(mobileMenuOpen);
+  const profileTrapRef = useFocusTrap(profileOpen);
+  useClickOutside(profileRef, profileOpen, () => setProfileOpen(false));
   const { user, loginWithGoogle, logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const location = useLocation();
@@ -32,6 +42,7 @@ const Header = () => {
     { to: '/gcc', label: 'GCC' },
     { to: '/business', label: 'Business' },
     { to: '/technology', label: 'Tech' },
+    { to: '/explore', label: 'Explore' },
     { to: '/videos', label: 'Videos' },
     { to: '/community', label: 'Community' },
   ];
@@ -92,15 +103,27 @@ const Header = () => {
                 {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </button>
 
-              <button className="btn-ghost p-2.5 rounded-xl relative" aria-label="Notifications">
+              <button
+                onClick={() => setNotificationsOpen(!notificationsOpen)}
+                className="btn-ghost p-2.5 rounded-xl relative"
+                aria-label="Notifications"
+                aria-expanded={notificationsOpen}
+              >
                 <Bell className="w-5 h-5" />
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-accent-rose rounded-full" />
               </button>
+              {notificationsOpen && (
+                <Suspense fallback={null}>
+                  <NotificationsPanel isOpen={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
+                </Suspense>
+              )}
 
               {user ? (
-                <div className="relative">
+                <div className="relative" ref={profileRef}>
                   <button
                     onClick={() => setProfileOpen(!profileOpen)}
+                    aria-label="User menu"
+                    aria-expanded={profileOpen}
                     className="w-9 h-9 rounded-xl overflow-hidden ring-2 ring-transparent hover:ring-brand-500/50 transition-all"
                   >
                     <img src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName}&background=4338ca&color=fff`} alt="" className="w-full h-full object-cover" />
@@ -108,6 +131,9 @@ const Header = () => {
                   <AnimatePresence>
                     {profileOpen && (
                       <motion.div
+                        ref={profileTrapRef}
+                        role="menu"
+                        aria-label="User menu"
                         initial={{ opacity: 0, scale: 0.95, y: -10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: -10 }}
@@ -139,6 +165,7 @@ const Header = () => {
               <button
                 onClick={() => setMobileMenuOpen(true)}
                 className="lg:hidden btn-ghost p-2.5 rounded-xl"
+                aria-label="Open menu"
               >
                 <Menu className="w-5 h-5" />
               </button>
@@ -157,6 +184,10 @@ const Header = () => {
             onClick={() => setSearchOpen(false)}
           >
             <motion.div
+              ref={searchTrapRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Search"
               initial={{ opacity: 0, y: -20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -20, scale: 0.95 }}
@@ -177,7 +208,7 @@ const Header = () => {
                     }
                   }}
                 />
-                <button onClick={() => setSearchOpen(false)} className="p-1 hover:bg-surface-2 dark:hover:bg-dark-surface-2 rounded-lg">
+                <button onClick={() => setSearchOpen(false)} aria-label="Close search" className="p-1 hover:bg-surface-2 dark:hover:bg-dark-surface-2 rounded-lg">
                   <X className="w-5 h-5 text-gray-500" />
                 </button>
               </div>
@@ -210,6 +241,10 @@ const Header = () => {
             onClick={() => setMobileMenuOpen(false)}
           >
             <motion.div
+              ref={menuTrapRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Navigation menu"
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}

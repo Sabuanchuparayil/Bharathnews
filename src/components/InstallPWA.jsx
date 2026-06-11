@@ -24,9 +24,7 @@ const InstallPWA = () => {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
     const result = await deferredPrompt.userChoice;
-    if (result.outcome === 'accepted') {
-      setShowBanner(false);
-    }
+    if (result.outcome === 'accepted') setShowBanner(false);
     setDeferredPrompt(null);
   };
 
@@ -38,31 +36,23 @@ const InstallPWA = () => {
   if (!showBanner) return null;
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50 animate-slide-up">
+    <div className="fixed bottom-20 md:bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 glass-card-solid rounded-2xl shadow-floating p-4 z-50 animate-slide-up border border-gray-100 dark:border-gray-800">
       <div className="flex items-start space-x-3">
-        <div className="w-10 h-10 bg-brand-700 rounded-lg flex items-center justify-center flex-shrink-0">
+        <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center flex-shrink-0">
           <span className="text-white font-bold">B</span>
         </div>
         <div className="flex-1">
-          <h3 className="font-display font-bold text-gray-900">Install The Bharath News</h3>
-          <p className="text-sm text-gray-600 mt-1">Get instant access with offline reading and push notifications</p>
+          <h3 className="font-display font-bold text-gray-900 dark:text-white">Install The Bharath News</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Get instant access with offline reading and push notifications</p>
           <div className="flex space-x-3 mt-3">
-            <button
-              onClick={handleInstall}
-              className="bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center space-x-1 hover:bg-brand-800 transition-colors"
-            >
+            <button onClick={handleInstall} className="btn-primary text-sm flex items-center space-x-1">
               <Download className="w-4 h-4" />
               <span>Install</span>
             </button>
-            <button
-              onClick={handleDismiss}
-              className="text-gray-500 px-4 py-2 rounded-lg text-sm hover:bg-gray-100 transition-colors"
-            >
-              Not now
-            </button>
+            <button onClick={handleDismiss} className="btn-ghost text-sm">Not now</button>
           </div>
         </div>
-        <button onClick={handleDismiss} className="text-gray-400 hover:text-gray-600">
+        <button onClick={handleDismiss} aria-label="Dismiss install prompt" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
           <X className="w-5 h-5" />
         </button>
       </div>

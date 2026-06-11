@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Bot, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { chatWithAI } from '../services/ai';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 const ChatbotWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -13,6 +14,7 @@ const ChatbotWidget = () => {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const messagesEndRef = useRef(null);
+  const chatTrapRef = useFocusTrap(isOpen);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -56,6 +58,10 @@ const ChatbotWidget = () => {
       <AnimatePresence>
         {isOpen && (
           <motion.div
+            ref={chatTrapRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="AI News Chat"
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
@@ -71,7 +77,7 @@ const ChatbotWidget = () => {
                   <p className="text-[10px] text-accent-emerald font-medium">Online</p>
                 </div>
               </div>
-              <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-surface-2 dark:hover:bg-dark-surface-2 rounded-xl transition-colors">
+              <button onClick={() => setIsOpen(false)} aria-label="Close chat" className="p-2 hover:bg-surface-2 dark:hover:bg-dark-surface-2 rounded-xl transition-colors">
                 <X className="w-4 h-4 text-gray-500" />
               </button>
             </div>
@@ -109,11 +115,13 @@ const ChatbotWidget = () => {
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleSend()}
                   placeholder="Ask about today's news..."
+                  aria-label="Chat message"
                   className="flex-1 input-field py-2.5 text-sm rounded-xl"
                 />
                 <button
                   onClick={handleSend}
                   disabled={!input.trim() || loading}
+                  aria-label="Send message"
                   className="p-2.5 bg-brand-600 hover:bg-brand-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-xl transition-colors"
                 >
                   <Send className="w-4 h-4" />

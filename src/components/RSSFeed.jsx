@@ -2,6 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { Rss, ExternalLink, AlertCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
+const stripHtml = (html) => {
+  if (!html) return '';
+  try {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    return doc.body.textContent || '';
+  } catch {
+    return html.replace(/<[^>]*>?/g, '');
+  }
+};
+
 const RSSFeed = ({ feedUrl, title }) => {
   const [feedItems, setFeedItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -12,49 +22,33 @@ const RSSFeed = ({ feedUrl, title }) => {
       try {
         const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
         const response = await fetch(apiUrl);
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch RSS feed');
-        }
-        
+        if (!response.ok) throw new Error('Failed to fetch RSS feed');
         const data = await response.json();
-        
-        if (data.status !== 'ok') {
-          throw new Error(data.message || 'Failed to load RSS feed');
-        }
-        
-        const parsedItems = data.items.map(item => ({
+        if (data.status !== 'ok') throw new Error(data.message || 'Failed to load RSS feed');
+        setFeedItems(data.items.slice(0, 5).map(item => ({
           title: item.title || 'Untitled',
           link: item.link || '#',
           description: item.description || '',
           pubDate: item.pubDate || new Date().toISOString(),
-          category: item.category || 'General'
-        }));
-        
-        setFeedItems(parsedItems.slice(0, 5));
-        setLoading(false);
+          category: item.category || 'General',
+        })));
       } catch (err) {
-        setError(`${title} Failed to load RSS feed. Please check your connection or try again later.`);
-        setLoading(false);
+        setError(`${title}: Failed to load RSS feed.`);
       }
+      setLoading(false);
     };
-
-    if (feedUrl) {
-      fetchRSS();
-    }
+    if (feedUrl) fetchRSS();
   }, [feedUrl, title]);
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="glass-card-solid rounded-2xl p-6">
         <div className="flex items-center space-x-2 mb-4">
-          <Rss className="w-5 h-5 text-indigo-700" />
-          <h3 className="font-display font-semibold text-lg text-gray-900">{title}</h3>
+          <Rss className="w-5 h-5 text-brand-600 dark:text-brand-400" />
+          <h3 className="font-display font-semibold text-lg text-gray-900 dark:text-white">{title}</h3>
         </div>
-        <div className="animate-pulse space-y-4">
-          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-          <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+        <div className="space-y-3">
+          {[...Array(3)].map((_, i) => <div key={i} className="h-4 skeleton" />)}
         </div>
       </div>
     );
@@ -62,75 +56,42 @@ const RSSFeed = ({ feedUrl, title }) => {
 
   if (error) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="glass-card-solid rounded-2xl p-6">
         <div className="flex items-center space-x-2 mb-4">
-          <AlertCircle className="w-5 h-5 text-red-500" />
-          <h3 className="font-display font-semibold text-lg text-gray-900">{title}</h3>
+          <AlertCircle className="w-5 h-5 text-accent-rose" />
+          <h3 className="font-display font-semibold text-lg text-gray-900 dark:text-white">{title}</h3>
         </div>
-        <p className="text-red-600 text-sm mb-4">{error}</p>
-        <div className="pt-4 border-t border-gray-100">
-          <a 
-            href={feedUrl} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-indigo-700 hover:text-indigo-800 font-medium transition-colors"
-          >
-            View original RSS feed
-          </a>
-        </div>
+        <p className="text-accent-rose text-sm mb-4">{error}</p>
+        <a href={feedUrl} target="_blank" rel="noopener noreferrer" className="text-brand-600 dark:text-brand-400 hover:text-brand-700 font-medium text-sm transition-colors">
+          View original RSS feed
+        </a>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
+    <div className="glass-card-solid rounded-2xl p-6">
       <div className="flex items-center space-x-2 mb-4">
-        <Rss className="w-5 h-5 text-indigo-700" />
-        <h3 className="font-display font-semibold text-lg text-gray-900">{title}</h3>
+        <Rss className="w-5 h-5 text-brand-600 dark:text-brand-400" />
+        <h3 className="font-display font-semibold text-lg text-gray-900 dark:text-white">{title}</h3>
       </div>
-      
       <div className="space-y-4">
         {feedItems.map((item, index) => (
-          <article key={index} className="border-b border-gray-100 pb-4 last:border-b-0 last:pb-0">
-            <h4 className="font-medium text-gray-900 mb-2 line-clamp-2">
-              <a 
-                href={item.link} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="hover:text-indigo-700 transition-colors"
-              >
+          <article key={index} className="border-b border-gray-100 dark:border-gray-800 pb-4 last:border-b-0 last:pb-0">
+            <h4 className="font-medium text-gray-900 dark:text-white mb-2 line-clamp-2">
+              <a href={item.link} target="_blank" rel="noopener noreferrer" className="hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
                 {item.title}
               </a>
             </h4>
-            <p className="text-sm text-gray-600 mb-2 line-clamp-3">
-              {item.description.replace(/<[^>]*>/g, '')}
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 line-clamp-3">
+              {stripHtml(item.description)}
             </p>
             <div className="flex items-center justify-between text-xs text-gray-500">
               <span>{item.category}</span>
               <span>{formatDistanceToNow(new Date(item.pubDate), { addSuffix: true })}</span>
             </div>
-            <a 
-              href={item.link} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="inline-flex items-center space-x-1 text-indigo-700 hover:text-indigo-800 text-sm mt-2 transition-colors"
-            >
-              <span>Read more</span>
-              <ExternalLink className="w-3 h-3" />
-            </a>
           </article>
         ))}
-      </div>
-      
-      <div className="mt-4 pt-4 border-t border-gray-100">
-        <a 
-          href={feedUrl} 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="text-indigo-700 hover:text-indigo-800 font-medium transition-colors"
-        >
-          View full RSS feed
-        </a>
       </div>
     </div>
   );

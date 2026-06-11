@@ -28,6 +28,7 @@ const BottomNav = () => {
             <Link
               key={tab.to}
               to={tab.to}
+              aria-current={active ? 'page' : undefined}
               className="flex flex-col items-center justify-center w-16 h-full relative"
             >
               {active && (

@@ -3,6 +3,7 @@ import { handleAIProcess } from './handlers/ai-process.js';
 import { handleDistribute } from './handlers/distribute.js';
 import { handleVideoFetch } from './handlers/video-fetch.js';
 import { handleSitemap } from './handlers/sitemap.js';
+import { handleSubdomainRedirect } from './handlers/subdomain.js';
 
 export default {
   async scheduled(event, env, ctx) {
@@ -11,6 +12,9 @@ export default {
   },
 
   async fetch(request, env, ctx) {
+    const subdomainRedirect = handleSubdomainRedirect(request, env);
+    if (subdomainRedirect) return subdomainRedirect;
+
     const url = new URL(request.url);
 
     if (url.pathname === '/api/ingest' && request.method === 'POST') {

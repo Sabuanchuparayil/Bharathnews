@@ -3,6 +3,9 @@ import { motion } from 'framer-motion';
 import { TrendingUp, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
+import SafeImage from './SafeImage';
+import ShareButton from './ShareButton';
+import { getCategoryColor } from '../utils/categoryColors';
 
 const HeroSection = ({ featured = [] }) => {
   if (!featured.length || !featured[0]?.slug) return null;
@@ -19,9 +22,10 @@ const HeroSection = ({ featured = [] }) => {
             animate={{ opacity: 1, y: 0 }}
             className="lg:col-span-3 relative group"
           >
-            <Link to={`/article/${main.slug}`} className="block">
+            <div className="relative">
+              <Link to={`/article/${main.slug}`} className="block">
               <div className="relative h-72 sm:h-80 lg:h-[420px] rounded-3xl overflow-hidden">
-                <img
+                <SafeImage
                   src={main.imageUrl}
                   alt={main.title}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
@@ -29,7 +33,7 @@ const HeroSection = ({ featured = [] }) => {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
                   <div className="flex items-center space-x-3 mb-3">
-                    <span className="category-pill bg-brand-500/90 text-white text-xs backdrop-blur-sm">
+                    <span className={`text-xs font-semibold uppercase px-2.5 py-1 rounded-full backdrop-blur-sm ${getCategoryColor(main.category)}`}>
                       {main.category}
                     </span>
                     <span className="flex items-center space-x-1 text-xs text-gray-200">
@@ -47,12 +51,23 @@ const HeroSection = ({ featured = [] }) => {
                     <span>{main.author}</span>
                     <span className="flex items-center space-x-1">
                       <Clock className="w-3 h-3" />
-                      <span>{main.publishedAt ? formatDistanceToNow(new Date(main.publishedAt), { addSuffix: true }) : ''}</span>
+                      <span>{main.publishedAt ? formatDistanceToNow(new Date(main.publishedAt?.seconds ? main.publishedAt.seconds * 1000 : main.publishedAt), { addSuffix: true }) : ''}</span>
                     </span>
                   </div>
                 </div>
               </div>
-            </Link>
+              </Link>
+              <div className="absolute top-4 right-4 z-10">
+                <ShareButton
+                  title={main.title}
+                  text={main.summary}
+                  path={`/article/${main.slug}`}
+                  contentType="article"
+                  size="sm"
+                  className="[&_button]:bg-black/40 [&_button]:text-white [&_button]:hover:bg-black/60"
+                />
+              </div>
+            </div>
           </motion.div>
 
           <div className="lg:col-span-2 flex flex-col space-y-4">
@@ -67,7 +82,7 @@ const HeroSection = ({ featured = [] }) => {
                   to={`/article/${article.slug}`}
                   className="group flex space-x-4 glass-card-solid rounded-2xl p-4 h-full"
                 >
-                  <img
+                  <SafeImage
                     src={article.imageUrl}
                     alt={article.title}
                     className="w-24 h-24 lg:w-28 lg:h-28 object-cover rounded-xl flex-shrink-0 group-hover:scale-105 transition-transform duration-300"
@@ -81,7 +96,7 @@ const HeroSection = ({ featured = [] }) => {
                     </div>
                     <div className="flex items-center space-x-2 text-xs text-gray-500 mt-2">
                       <Clock className="w-3 h-3" />
-                      <span>{article.publishedAt ? formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true }) : ''}</span>
+                      <span>{article.publishedAt ? formatDistanceToNow(new Date(article.publishedAt?.seconds ? article.publishedAt.seconds * 1000 : article.publishedAt), { addSuffix: true }) : ''}</span>
                     </div>
                   </div>
                 </Link>
