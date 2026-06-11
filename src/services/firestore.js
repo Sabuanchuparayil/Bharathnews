@@ -38,9 +38,17 @@ export const getArticlesPage = async (category = null, lastDoc = null, pageSize 
     }
   }
   const snapshot = await getDocs(q);
-  const articles = snapshot.docs
+  const allArticles = snapshot.docs
     .map(d => ({ id: d.id, ...d.data() }))
     .filter(a => !a.editorialStatus || a.editorialStatus === 'published');
+
+  const seenSlugs = new Set();
+  const articles = allArticles.filter(a => {
+    if (!a.slug || seenSlugs.has(a.slug)) return false;
+    seenSlugs.add(a.slug);
+    return true;
+  });
+
   const lastVisible = snapshot.docs[snapshot.docs.length - 1] || null;
   return { articles, lastDoc: lastVisible, hasMore: snapshot.docs.length === pageSize };
 };

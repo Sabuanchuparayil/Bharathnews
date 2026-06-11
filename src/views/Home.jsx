@@ -52,15 +52,16 @@ const Home = () => {
     try {
       const category = activeCategory === 'all' ? null : activeCategory;
       const [page, trending] = await Promise.all([
-        getArticlesPage(category, null, PAGE_SIZE + 4),
+        getArticlesPage(category, null, (PAGE_SIZE + 4) * 3),
         getTrendingArticles(STORY_RING_COUNT + 4),
       ]);
 
       const featured = page.articles.slice(0, 4);
       const featuredSlugs = new Set(featured.map(a => a.slug));
+      const gridArticles = page.articles.slice(4).filter(a => !featuredSlugs.has(a.slug));
 
       setFeaturedArticles(featured);
-      setArticles(page.articles.slice(4));
+      setArticles(gridArticles);
       setLastDoc(page.lastDoc);
       setHasMore(page.hasMore);
       setTrendingArticles(dedupeArticles(trending, featuredSlugs).slice(0, STORY_RING_COUNT));
