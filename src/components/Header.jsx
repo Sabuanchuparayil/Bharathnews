@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { useClickOutside } from '../hooks/useClickOutside';
+import { HEADER_NAV } from '../config/feeds.config';
 
 const NotificationsPanel = lazy(() => import('./NotificationsPanel'));
 
@@ -39,18 +40,7 @@ const Header = () => {
     setSearchOpen(false);
   }, [pathname]);
 
-  const navLinks = [
-    { to: '/', label: 'Home' },
-    { to: '/india', label: 'India' },
-    { to: '/gcc', label: 'GCC' },
-    { to: '/business', label: 'Business' },
-    { to: '/technology', label: 'Tech' },
-    { to: '/explore', label: 'Explore' },
-    { to: '/videos', label: 'Videos' },
-    { to: '/community', label: 'Community' },
-  ];
-
-  const isActive = (path) => pathname === path;
+  const isActive = (path) => (path === '/' ? pathname === '/' : pathname.startsWith(path));
 
   return (
     <>
@@ -74,12 +64,12 @@ const Header = () => {
             </Link>
 
             <nav className="hidden lg:flex items-center space-x-1">
-              {navLinks.map(link => (
+              {HEADER_NAV.map(link => (
                 <Link
-                  key={link.to}
-                  href={link.to}
+                  key={link.path}
+                  href={link.path}
                   className={`px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-                    isActive(link.to)
+                    isActive(link.path)
                       ? 'bg-brand-50 dark:bg-brand-950/50 text-brand-700 dark:text-brand-300'
                       : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-surface-2 dark:hover:bg-dark-surface-2'
                   }`}
@@ -262,12 +252,12 @@ const Header = () => {
                 </button>
               </div>
               <nav className="space-y-1">
-                {navLinks.map(link => (
+                {HEADER_NAV.map(link => (
                   <Link
-                    key={link.to}
-                    href={link.to}
+                    key={link.path}
+                    href={link.path}
                     className={`block px-4 py-3 rounded-xl font-medium transition-colors ${
-                      isActive(link.to)
+                      isActive(link.path)
                         ? 'bg-brand-50 dark:bg-brand-950/50 text-brand-700 dark:text-brand-300'
                         : 'text-gray-700 dark:text-gray-300 hover:bg-surface-2 dark:hover:bg-dark-surface-2'
                     }`}

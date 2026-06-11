@@ -7,6 +7,7 @@ import NewsMasonryGrid from '../components/NewsMasonryGrid';
 import EmptyState from '../components/EmptyState';
 import PageSidebar from '../components/PageSidebar';
 import TrendingHeroBanner from '../components/TrendingHeroBanner';
+import CategoryFilter from '../components/CategoryFilter';
 import { Newspaper } from 'lucide-react';
 import { getArticlesPage, getTrendingArticles } from '../services/firestore';
 
@@ -49,7 +50,10 @@ const CategoryPage = ({ category, title }) => {
   return (
     <Layout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <h1 className="font-display font-bold text-3xl text-gray-900 dark:text-white mb-6">{title}</h1>
+        <h1 className="font-display font-bold text-3xl text-gray-900 dark:text-white mb-4">{title}</h1>
+        <div className="mb-6">
+          <CategoryFilter />
+        </div>
 
         {!loading && leadArticle?.slug && (
           <div className="mb-8">

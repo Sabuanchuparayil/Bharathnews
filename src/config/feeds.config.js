@@ -76,6 +76,14 @@ export const YOUTUBE_CHANNELS = [
   { channelId: 'UCwouKE4bKDRetlX0YRFYkCQ', name: 'Republic TV', category: 'india' },
 ];
 
+/** Primary site navigation — sections only, no category duplicates. */
+export const HEADER_NAV = [
+  { path: '/', label: 'Home' },
+  { path: '/explore', label: 'Explore' },
+  { path: '/videos', label: 'Videos' },
+  { path: '/community', label: 'Community' },
+];
+
 export const CATEGORY_ROUTES = {
   india: { path: '/india', title: 'India News' },
   gcc: { path: '/gcc', title: 'GCC News' },

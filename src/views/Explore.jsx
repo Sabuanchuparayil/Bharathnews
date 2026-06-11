@@ -24,7 +24,7 @@ const Explore = () => {
           return (
             <Link
               key={cat.id}
-              to={route.path}
+              href={route.path}
               className="glass-card-solid rounded-2xl p-6 card-lift block group"
             >
               <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold mb-3 ${getCategoryColor(cat.id)}`}>

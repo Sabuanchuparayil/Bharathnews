@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Newspaper, RefreshCw } from 'lucide-react';
 import Layout from '../components/Layout';
 import HeroSection from '../components/HeroSection';
@@ -19,6 +20,7 @@ import { getArticlesPage, getTrendingArticles } from '../services/firestore';
 const PAGE_SIZE = 12;
 
 const Home = () => {
+  const searchParams = useSearchParams();
   const [activeCategory, setActiveCategory] = useState('all');
   const [articles, setArticles] = useState([]);
   const [featuredArticles, setFeaturedArticles] = useState([]);
@@ -51,6 +53,15 @@ const Home = () => {
     }
     setLoading(false);
   }, [activeCategory]);
+
+  useEffect(() => {
+    const queryCategory = searchParams.get('category');
+    if (queryCategory === 'breaking') {
+      setActiveCategory('breaking');
+    } else if (!queryCategory) {
+      setActiveCategory('all');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     fetchInitial();

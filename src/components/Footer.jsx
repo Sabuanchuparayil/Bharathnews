@@ -4,6 +4,15 @@ import React from 'react';
 import Link from 'next/link';
 import { Heart } from 'lucide-react';
 import { SOCIAL_CHANNELS } from '../config/channels.config';
+import { CATEGORY_ROUTES } from '../config/feeds.config';
+
+const FOOTER_NEWS_LINKS = [
+  CATEGORY_ROUTES.india,
+  CATEGORY_ROUTES.gcc,
+  CATEGORY_ROUTES.business,
+  CATEGORY_ROUTES.technology,
+  { path: '/videos', title: 'Videos' },
+];
 
 const Footer = () => {
   const year = new Date().getFullYear();
@@ -27,8 +36,12 @@ const Footer = () => {
           <div>
             <h4 className="font-display font-bold text-sm text-gray-900 dark:text-white mb-4">News</h4>
             <ul className="space-y-2.5">
-              {['India', 'GCC', 'Business', 'Technology', 'Videos'].map(link => (
-                <li key={link}><Link href={`/${link.toLowerCase()}`} className="text-sm text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">{link}</Link></li>
+              {FOOTER_NEWS_LINKS.map(link => (
+                <li key={link.path}>
+                  <Link href={link.path} className="text-sm text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
+                    {link.title.replace(' News', '')}
+                  </Link>
+                </li>
               ))}
             </ul>
           </div>
