@@ -26,6 +26,9 @@ function StoryRing({ article, index }) {
             src={article.imageUrl}
             alt={article.title}
             category={article.category}
+            width={76}
+            height={76}
+            sizes="76px"
             className="w-14 h-14 sm:w-[4.25rem] sm:h-[4.25rem] lg:w-[4.75rem] lg:h-[4.75rem] rounded-full object-cover ring-2 ring-white dark:ring-dark-surface-0"
           />
           <span
@@ -46,10 +49,6 @@ const StoriesCarousel = ({ articles = [] }) => {
   const stories = articles.slice(0, DISPLAY_COUNT).filter(a => a.slug);
   if (stories.length < 4) return null;
 
-  const gridStyle = {
-    gridTemplateColumns: `repeat(${stories.length}, minmax(0, 1fr))`,
-  };
-
   return (
     <section className="py-4 border-b border-gray-100 dark:border-gray-800/60">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
@@ -69,8 +68,8 @@ const StoriesCarousel = ({ articles = [] }) => {
           ))}
         </div>
 
-        {/* Tablet+: equal columns across full width */}
-        <div className="hidden sm:grid gap-x-2 lg:gap-x-3 gap-y-4" style={gridStyle}>
+        {/* Tablet+: auto-fill grid that wraps gracefully at every breakpoint */}
+        <div className="hidden sm:grid grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))] gap-x-2 lg:gap-x-3 gap-y-4">
           {stories.map((article, index) => (
             <StoryRing key={article.id || `${article.slug}-${index}`} article={article} index={index} />
           ))}

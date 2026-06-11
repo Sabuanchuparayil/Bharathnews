@@ -13,6 +13,9 @@ const AdvertorialBanner = ({ ad }) => {
         <SafeImage
           src={imageUrl || 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=100&h=100&fit=crop'}
           alt={title}
+          width={64}
+          height={64}
+          sizes="64px"
           className="w-16 h-16 rounded-xl object-cover"
         />
         <div className="flex-1">

@@ -99,6 +99,9 @@ const ForYouSection = () => {
                   src={article.imageUrl}
                   alt={article.title}
                   category={article.category}
+                  width={400}
+                  height={144}
+                  sizes="(max-width: 640px) 50vw, 200px"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
                 <div className="absolute top-2 left-2">

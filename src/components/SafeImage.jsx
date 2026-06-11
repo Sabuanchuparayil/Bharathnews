@@ -7,7 +7,7 @@ import { getCategoryFallbackImage } from '../utils/articleImages';
 
 const DEFAULT_FALLBACK = 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=800&h=400&fit=crop';
 
-const SafeImage = ({ src, alt = '', className = '', category, fallback, width = 800, height = 450, ...props }) => {
+const SafeImage = ({ src, alt = '', className = '', category, fallback, width = 800, height = 450, sizes, ...props }) => {
   const resolvedFallback = fallback || (category ? getCategoryFallbackImage(category) : DEFAULT_FALLBACK);
   const [imgSrc, setImgSrc] = useState(src || resolvedFallback);
   const [failed, setFailed] = useState(false);
@@ -25,6 +25,8 @@ const SafeImage = ({ src, alt = '', className = '', category, fallback, width = 
     );
   }
 
+  const skipOptimization = typeof imgSrc === 'string' && imgSrc.startsWith('http://');
+
   return (
     <Image
       src={imgSrc}
@@ -33,8 +35,8 @@ const SafeImage = ({ src, alt = '', className = '', category, fallback, width = 
       height={height}
       className={className}
       loading="lazy"
-      unoptimized
-      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+      sizes={sizes || '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw'}
+      unoptimized={skipOptimization}
       onError={() => {
         if (imgSrc !== resolvedFallback) {
           setImgSrc(resolvedFallback);

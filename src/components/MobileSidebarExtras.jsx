@@ -32,6 +32,9 @@ export function MobileTrendingStrip({ articles = [] }) {
                   src={article.imageUrl}
                   alt={article.title}
                   category={article.category}
+                  width={176}
+                  height={96}
+                  sizes="176px"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
                 <span className="absolute top-2 left-2 w-6 h-6 bg-black/50 backdrop-blur-sm rounded-lg flex items-center justify-center text-[11px] font-bold text-white">

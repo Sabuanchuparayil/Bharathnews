@@ -44,6 +44,9 @@ const ArticleRelated = ({ category, currentSlug }) => {
                 src={article.imageUrl}
                 alt={article.title}
                 category={article.category}
+                width={224}
+                height={128}
+                sizes="224px"
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               />
             </div>

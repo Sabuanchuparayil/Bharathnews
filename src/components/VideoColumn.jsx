@@ -28,6 +28,9 @@ const VideoColumn = ({ videos = [] }) => {
                 <SafeImage
                   src={video.thumbnail || `https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`}
                   alt={video.title}
+                  width={112}
+                  height={64}
+                  sizes="112px"
                   className="w-28 h-16 object-cover rounded-xl flex-shrink-0"
                 />
                 <div className="flex-1 min-w-0">

@@ -49,6 +49,9 @@ const QuickReadSheet = ({ article, onClose }) => {
               src={article.imageUrl}
               alt={article.title}
               category={article.category}
+              width={400}
+              height={160}
+              sizes="(max-width: 640px) 100vw, 400px"
               className="w-full h-40 object-cover rounded-2xl mb-4"
             />
             <span className={`inline-block text-xs font-semibold uppercase px-2.5 py-1 rounded-full mb-3 ${getCategoryColor(article.category)}`}>
