@@ -6,7 +6,7 @@ export const SOCIAL_CHANNELS = {
   },
   whatsapp: {
     name: 'WhatsApp Channel',
-    url: import.meta.env.VITE_WHATSAPP_CHANNEL_URL || 'https://whatsapp.com/channel/0029VaXXXXXXXX',
+    url: process.env.NEXT_PUBLIC_WHATSAPP_CHANNEL_URL || 'https://whatsapp.com/channel/0029VaXXXXXXXX',
     icon: 'MessageCircle',
   },
   youtube: {
@@ -26,4 +26,4 @@ export const SOCIAL_CHANNELS = {
   },
 };
 
-export const TELEGRAM_CHANNEL_ID = import.meta.env.VITE_TELEGRAM_CHANNEL_ID || '@TheBharathNews';
+export const TELEGRAM_CHANNEL_ID = process.env.NEXT_PUBLIC_TELEGRAM_CHANNEL_ID || '@TheBharathNews';

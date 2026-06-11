@@ -1,5 +1,7 @@
+'use client';
+
 import React from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { TrendingUp } from 'lucide-react';
 import ShareButton from './ShareButton';
 
@@ -25,7 +27,7 @@ const TrendingHeroBanner = ({ title, summary, slug }) => (
       <h2 className="font-display font-bold text-2xl sm:text-4xl leading-tight text-balance mb-4">{title}</h2>
       {summary && <p className="text-brand-200 text-lg max-w-2xl line-clamp-2 mb-6">{summary}</p>}
       {slug && (
-        <Link to={`/article/${slug}`} className="btn-primary inline-flex bg-white text-brand-700 hover:bg-brand-50">
+        <Link href={`/article/${slug}`} className="btn-primary inline-flex bg-white text-brand-700 hover:bg-brand-50">
           Read Full Story
         </Link>
       )}

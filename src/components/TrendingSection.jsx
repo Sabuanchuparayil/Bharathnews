@@ -1,6 +1,8 @@
+'use client';
+
 import React from 'react';
 import { TrendingUp, ArrowUpRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 
 const TrendingSection = ({ articles = [] }) => {
   if (!articles.length) return null;
@@ -18,7 +20,7 @@ const TrendingSection = ({ articles = [] }) => {
         {articles.map((article, index) => (
           <Link
             key={article.id || index}
-            to={`/article/${article.slug}`}
+            href={`/article/${article.slug}`}
             className="group flex items-start space-x-3 p-2 -mx-2 rounded-xl hover:bg-surface-2 dark:hover:bg-dark-surface-2 transition-colors"
           >
             <span className="flex-shrink-0 w-7 h-7 bg-brand-50 dark:bg-brand-950/50 rounded-lg flex items-center justify-center text-xs font-bold text-brand-700 dark:text-brand-300">

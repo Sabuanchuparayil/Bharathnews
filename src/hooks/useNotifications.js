@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import { getMessagingInstance } from '../config/firebase.config';
 import { getToken, onMessage } from 'firebase/messaging';
@@ -14,7 +16,7 @@ export function useNotifications() {
         const messaging = await getMessagingInstance();
         if (messaging) {
           const fcmToken = await getToken(messaging, {
-            vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
+            vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
           });
           setToken(fcmToken);
         }

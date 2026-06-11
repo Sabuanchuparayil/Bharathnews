@@ -1,7 +1,9 @@
+'use client';
+
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, X, Zap } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { getTrendingArticles } from '../services/firestore';
 import { useFocusTrap } from '../hooks/useFocusTrap';
@@ -51,7 +53,7 @@ const NotificationsPanel = ({ isOpen, onClose }) => {
                 articles.map((article, i) => (
                   <Link
                     key={article.id || i}
-                    to={`/article/${article.slug}`}
+                    href={`/article/${article.slug}`}
                     onClick={onClose}
                     className="flex items-start space-x-3 p-4 hover:bg-surface-2 dark:hover:bg-dark-surface-2 transition-colors border-b border-gray-50 dark:border-gray-800/50 last:border-0"
                   >

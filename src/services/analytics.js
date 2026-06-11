@@ -1,3 +1,5 @@
+'use client';
+
 export const trackPageView = (pageName) => {
   if (typeof window !== 'undefined' && window.gtag) {
     window.gtag('event', 'page_view', { page_title: pageName });

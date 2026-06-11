@@ -1,5 +1,7 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { Users, BadgeCheck } from 'lucide-react';
 import { getFeaturedCreators } from '../services/creator';
 
@@ -21,7 +23,7 @@ const FeaturedCreators = () => {
         {creators.map(creator => (
           <Link
             key={creator.slug}
-            to={`/@${creator.slug}`}
+            href={`/@${creator.slug}`}
             className="glass-card-solid rounded-2xl p-4 card-lift flex items-center gap-3"
           >
             {creator.photoURL ? (
@@ -36,7 +38,7 @@ const FeaturedCreators = () => {
                 {creator.displayName}
                 {creator.verified && <BadgeCheck className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />}
               </p>
-              <p className="text-xs text-gray-500">@{creator.slug}</p>
+              <p className="text-xs text-gray-500">{'@' + creator.slug}</p>
               <p className="text-xs text-gray-400">{creator.followerCount || 0} followers</p>
             </div>
           </Link>

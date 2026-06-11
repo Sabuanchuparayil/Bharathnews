@@ -1,3 +1,5 @@
+'use client';
+
 const SITE_ORIGIN = typeof window !== 'undefined'
   ? window.location.origin
   : 'https://thebharathnews.com';

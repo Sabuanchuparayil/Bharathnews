@@ -1,6 +1,8 @@
+'use client';
+
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { Zap } from 'lucide-react';
 
 const StoriesCarousel = ({ articles = [] }) => {
@@ -26,8 +28,7 @@ const StoriesCarousel = ({ articles = [] }) => {
               transition={{ delay: index * 0.05 }}
               className="flex-shrink-0"
             >
-              <Link
-                to={`/article/${article.slug}`}
+              <Link href={`/article/${article.slug}`}
                 className="group flex flex-col items-center w-[72px] sm:w-20"
               >
                 <div className="story-ring p-[3px] rounded-full">

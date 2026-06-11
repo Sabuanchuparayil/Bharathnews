@@ -1,4 +1,4 @@
-const WORKER_BASE = import.meta.env.VITE_WORKER_URL || '';
+const WORKER_BASE = process.env.NEXT_PUBLIC_WORKER_URL || '';
 
 async function callWorkerAI(endpoint, payload) {
   if (!WORKER_BASE) {

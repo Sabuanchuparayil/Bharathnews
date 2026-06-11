@@ -29,8 +29,8 @@ function chunk(type, data) {
 function createPng(size) {
   const width = size;
   const height = size;
-  const rowSize = Math.ceil((width * 3 + 3) / 4) * 4;
-  const rawData = Buffer.alloc(rowSize * height + height);
+  const rowSize = width * 3;
+  const rawData = Buffer.alloc((1 + rowSize) * height);
   let offset = 0;
   for (let y = 0; y < height; y++) {
     rawData[offset++] = 0;
@@ -39,7 +39,6 @@ function createPng(size) {
       rawData[offset++] = 0x38;
       rawData[offset++] = 0xca;
     }
-    offset += rowSize - width * 3;
   }
 
   const compressed = deflateSync(rawData);

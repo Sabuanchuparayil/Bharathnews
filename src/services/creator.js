@@ -1,3 +1,5 @@
+'use client';
+
 import {
   collection, doc, getDoc, getDocs, addDoc, updateDoc, setDoc,
   query, where, orderBy, limit, serverTimestamp, increment,

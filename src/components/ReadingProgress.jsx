@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 
 const ReadingProgress = ({ readTimeMinutes = 5 }) => {

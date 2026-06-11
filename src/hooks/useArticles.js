@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect, useCallback } from 'react';
 import { getArticles, getTrendingArticles, getArticlesByInterests } from '../services/firestore';
 import { useAuth } from '../context/AuthContext';

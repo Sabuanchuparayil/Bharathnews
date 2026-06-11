@@ -1,7 +1,9 @@
+'use client';
+
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { useAuth } from '../context/AuthContext';
 import { getArticlesByInterests } from '../services/firestore';
 
@@ -35,7 +37,7 @@ const ForYouSection = () => {
                 <p className="text-sm text-gray-500 dark:text-gray-400">Select your interests to see tailored stories here.</p>
               </div>
             </div>
-            <Link to="/settings" className="btn-primary text-sm flex items-center space-x-1">
+            <Link href="/settings" className="btn-primary text-sm flex items-center space-x-1">
               <span>Get Started</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
@@ -57,7 +59,7 @@ const ForYouSection = () => {
           </div>
           <div className="glass-card-solid rounded-2xl p-6 text-center">
             <p className="text-gray-500 dark:text-gray-400">We're curating stories based on your interests. Check back soon!</p>
-            <Link to="/settings" className="text-brand-600 dark:text-brand-400 text-sm font-medium mt-2 inline-block hover:text-brand-700 transition-colors">Update interests</Link>
+            <Link href="/settings" className="text-brand-600 dark:text-brand-400 text-sm font-medium mt-2 inline-block hover:text-brand-700 transition-colors">Update interests</Link>
           </div>
         </div>
       </section>
@@ -73,7 +75,7 @@ const ForYouSection = () => {
           <Sparkles className="w-5 h-5 text-accent-amber" />
           <h2 className="font-display font-bold text-xl text-gray-900 dark:text-white">For You</h2>
         </div>
-        <Link to="/settings" className="flex items-center space-x-1 text-sm text-brand-600 dark:text-brand-400 hover:text-brand-700 transition-colors">
+        <Link href="/settings" className="flex items-center space-x-1 text-sm text-brand-600 dark:text-brand-400 hover:text-brand-700 transition-colors">
           <span>Customize</span>
           <ArrowRight className="w-4 h-4" />
         </Link>
@@ -89,7 +91,7 @@ const ForYouSection = () => {
             transition={{ delay: index * 0.05 }}
             className="flex-shrink-0 w-64"
           >
-            <Link to={`/article/${article.slug}`} className="block glass-card-solid rounded-2xl overflow-hidden group">
+            <Link href={`/article/${article.slug}`} className="block glass-card-solid rounded-2xl overflow-hidden group">
               <div className="relative h-36 overflow-hidden">
                 <img src={article.imageUrl} alt={article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
                 <div className="absolute top-2 left-2">

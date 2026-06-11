@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useRef } from 'react';
 import { Share2, Link2, MessageCircle, Smartphone } from 'lucide-react';
 import { toast } from 'react-toastify';

@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { Rss, ExternalLink, AlertCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';

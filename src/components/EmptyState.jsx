@@ -1,5 +1,7 @@
+'use client';
+
 import React from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 
 const EmptyState = ({
   icon: Icon,
@@ -20,7 +22,7 @@ const EmptyState = ({
       <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto mb-6">{description}</p>
     )}
     {actionLabel && actionTo && (
-      <Link to={actionTo} className="btn-primary inline-flex">{actionLabel}</Link>
+      <Link href={actionTo} className="btn-primary inline-flex">{actionLabel}</Link>
     )}
     {actionLabel && onAction && !actionTo && (
       <button onClick={onAction} className="btn-primary">{actionLabel}</button>

@@ -1,7 +1,10 @@
+'use client';
+
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Search, Bell, Sun, Moon, LogIn, BookmarkIcon, Settings as SettingsIcon } from 'lucide-react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import Link from 'next/link'
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useFocusTrap } from '../hooks/useFocusTrap';
@@ -22,8 +25,8 @@ const Header = () => {
   useClickOutside(profileRef, profileOpen, () => setProfileOpen(false));
   const { user, loginWithGoogle, logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
-  const location = useLocation();
-  const navigate = useNavigate();
+  const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -47,7 +50,7 @@ const Header = () => {
     { to: '/community', label: 'Community' },
   ];
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path) => pathname === path;
 
   return (
     <>
@@ -60,7 +63,7 @@ const Header = () => {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-16">
-            <Link to="/" className="flex items-center space-x-2.5 group">
+            <Link href="/" className="flex items-center space-x-2.5 group">
               <div className="w-9 h-9 bg-gradient-to-br from-brand-500 to-brand-700 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
                 <span className="text-white font-bold text-base">B</span>
               </div>
@@ -143,10 +146,10 @@ const Header = () => {
                           <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{user.displayName}</p>
                           <p className="text-xs text-gray-500 truncate">{user.email}</p>
                         </div>
-                        <Link to="/bookmarks" className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-surface-2 dark:hover:bg-dark-surface-2 text-sm text-gray-700 dark:text-gray-300">
+                        <Link href="/bookmarks" className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-surface-2 dark:hover:bg-dark-surface-2 text-sm text-gray-700 dark:text-gray-300">
                           <BookmarkIcon className="w-4 h-4" /><span>Bookmarks</span>
                         </Link>
-                        <Link to="/settings" className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-surface-2 dark:hover:bg-dark-surface-2 text-sm text-gray-700 dark:text-gray-300">
+                        <Link href="/settings" className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-surface-2 dark:hover:bg-dark-surface-2 text-sm text-gray-700 dark:text-gray-300">
                           <SettingsIcon className="w-4 h-4" /><span>Settings</span>
                         </Link>
                         <button onClick={logout} className="w-full flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/30 text-sm text-red-600">
@@ -203,7 +206,7 @@ const Header = () => {
                   className="flex-1 bg-transparent text-lg text-gray-900 dark:text-white placeholder-gray-400 outline-none"
                   onKeyDown={e => {
                     if (e.key === 'Enter' && e.target.value) {
-                      navigate(`/search?q=${encodeURIComponent(e.target.value)}`);
+                      router.push(`/search?q=${encodeURIComponent(e.target.value)}`);
                       setSearchOpen(false);
                     }
                   }}
@@ -218,7 +221,7 @@ const Header = () => {
                   {['India GCC Trade', 'Dubai Jobs', 'Kerala Floods', 'Tech Layoffs', 'Cricket'].map(term => (
                     <button
                       key={term}
-                      onClick={() => { navigate(`/search?q=${encodeURIComponent(term)}`); setSearchOpen(false); }}
+                      onClick={() => { router.push(`/search?q=${encodeURIComponent(term)}`); setSearchOpen(false); }}
                       className="category-pill category-pill-inactive text-xs"
                     >
                       {term}

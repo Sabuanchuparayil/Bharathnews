@@ -1,10 +1,13 @@
+'use client';
+
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import Link from 'next/link'
+import { usePathname } from 'next/navigation';
 import { Home, Globe2, TrendingUp, Play, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const BottomNav = () => {
-  const location = useLocation();
+  const pathname = usePathname();
 
   const tabs = [
     { to: '/', icon: Home, label: 'Home' },
@@ -15,8 +18,8 @@ const BottomNav = () => {
   ];
 
   const isActive = (path) => {
-    if (path === '/') return location.pathname === '/';
-    return location.pathname.startsWith(path);
+    if (path === '/') return pathname === '/';
+    return pathname.startsWith(path);
   };
 
   return (

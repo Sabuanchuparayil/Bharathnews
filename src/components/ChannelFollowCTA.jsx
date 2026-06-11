@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
+'use client';
+
+import React, { useState, useEffect } from 'react';
 import { X, MessageCircle, Send } from 'lucide-react';
 import { SOCIAL_CHANNELS } from '../config/channels.config';
 
 const ChannelFollowCTA = () => {
-  const [dismissed, setDismissed] = useState(
-    () => localStorage.getItem('channelCTAdismissed') === 'true'
-  );
+  const [dismissed, setDismissed] = useState(true);
+
+  useEffect(() => {
+    setDismissed(localStorage.getItem('channelCTAdismissed') === 'true');
+  }, []);
 
   if (dismissed) return null;
 

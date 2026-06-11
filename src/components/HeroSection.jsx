@@ -1,7 +1,9 @@
+'use client';
+
 import React from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Clock } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import SafeImage from './SafeImage';
 import ShareButton from './ShareButton';
@@ -23,7 +25,7 @@ const HeroSection = ({ featured = [] }) => {
             className="lg:col-span-3 relative group"
           >
             <div className="relative">
-              <Link to={`/article/${main.slug}`} className="block">
+              <Link href={`/article/${main.slug}`} className="block">
               <div className="relative h-72 sm:h-80 lg:h-[420px] rounded-3xl overflow-hidden">
                 <SafeImage
                   src={main.imageUrl}
@@ -78,8 +80,7 @@ const HeroSection = ({ featured = [] }) => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1 * (index + 1) }}
               >
-                <Link
-                  to={`/article/${article.slug}`}
+                <Link href={`/article/${article.slug}`}
                   className="group flex space-x-4 glass-card-solid rounded-2xl p-4 h-full"
                 >
                   <SafeImage

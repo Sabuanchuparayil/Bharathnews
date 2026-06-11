@@ -1,5 +1,7 @@
+'use client';
+
 import React from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { Heart } from 'lucide-react';
 import { SOCIAL_CHANNELS } from '../config/channels.config';
 
@@ -11,7 +13,7 @@ const Footer = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
           <div className="col-span-2 md:col-span-1">
-            <Link to="/" className="flex items-center space-x-2 mb-4">
+            <Link href="/" className="flex items-center space-x-2 mb-4">
               <div className="w-8 h-8 bg-gradient-to-br from-brand-500 to-brand-700 rounded-xl flex items-center justify-center">
                 <span className="text-white font-bold text-sm">B</span>
               </div>
@@ -26,7 +28,7 @@ const Footer = () => {
             <h4 className="font-display font-bold text-sm text-gray-900 dark:text-white mb-4">News</h4>
             <ul className="space-y-2.5">
               {['India', 'GCC', 'Business', 'Technology', 'Videos'].map(link => (
-                <li key={link}><Link to={`/${link.toLowerCase()}`} className="text-sm text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">{link}</Link></li>
+                <li key={link}><Link href={`/${link.toLowerCase()}`} className="text-sm text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">{link}</Link></li>
               ))}
             </ul>
           </div>
@@ -53,7 +55,7 @@ const Footer = () => {
             <h4 className="font-display font-bold text-sm text-gray-900 dark:text-white mb-4">Legal</h4>
             <ul className="space-y-2.5">
               {[['Privacy', '/privacy'], ['Terms', '/terms']].map(([label, href]) => (
-                <li key={label}><Link to={href} className="text-sm text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">{label}</Link></li>
+                <li key={label}><Link href={href} className="text-sm text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">{label}</Link></li>
               ))}
             </ul>
           </div>

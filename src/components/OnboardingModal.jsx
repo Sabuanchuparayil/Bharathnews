@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+'use client';
+
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, Check } from 'lucide-react';
 import { CATEGORIES } from '../config/feeds.config';
@@ -10,9 +12,11 @@ const OnboardingModal = () => {
   const { user, userProfile, updateUserInterests } = useAuth();
   const [selected, setSelected] = useState([]);
   const [saving, setSaving] = useState(false);
-  const [dismissed, setDismissed] = useState(
-    () => localStorage.getItem('onboardingDismissed') === 'true'
-  );
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    setDismissed(localStorage.getItem('onboardingDismissed') === 'true');
+  }, []);
 
   const completed = userProfile?.onboardingComplete;
   const shouldShow = user && !completed && !dismissed;

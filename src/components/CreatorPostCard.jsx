@@ -1,5 +1,7 @@
+'use client';
+
 import React from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { Eye, Heart } from 'lucide-react';
 import ShareButton from './ShareButton';
 import { getCategoryColor } from '../utils/categoryColors';
@@ -14,7 +16,7 @@ const TYPE_LABELS = {
 
 const CreatorPostCard = ({ post }) => (
   <div className="glass-card-solid rounded-2xl overflow-hidden card-lift group relative">
-    <Link to={`/creator/post/${post.id}`} className="block">
+    <Link href={`/creator/post/${post.id}`} className="block">
       {post.coverImage && (
         <img src={post.coverImage} alt="" className="w-full h-40 object-cover" loading="lazy" />
       )}

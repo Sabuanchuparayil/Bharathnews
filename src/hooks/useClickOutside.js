@@ -1,3 +1,5 @@
+'use client';
+
 import { useEffect, useRef as useReactRef } from 'react';
 
 export const useClickOutside = (ref, isActive, onClose) => {

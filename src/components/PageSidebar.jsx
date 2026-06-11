@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useMemo } from 'react';
 import TrendingSection from './TrendingSection';
 import WeatherMarketWidget from './WeatherMarketWidget';

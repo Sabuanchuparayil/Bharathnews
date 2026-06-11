@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect, useRef } from 'react';
 import { YOUTUBE_CHANNELS } from '../config/feeds.config';
 

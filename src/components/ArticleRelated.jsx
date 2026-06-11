@@ -1,5 +1,7 @@
+'use client';
+
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { getArticles } from '../services/firestore';
 
@@ -21,8 +23,7 @@ const ArticleRelated = ({ category, currentSlug }) => {
     <section className="mt-12 pt-8 border-t border-gray-100 dark:border-gray-800">
       <div className="flex items-center justify-between mb-5">
         <h2 className="font-display font-bold text-xl text-gray-900 dark:text-white">Related Stories</h2>
-        <Link
-          to={`/${category}`}
+        <Link href={`/${category}`}
           className="flex items-center space-x-1 text-sm text-brand-600 dark:text-brand-400 hover:text-brand-700 transition-colors"
         >
           <span>More</span>
@@ -33,7 +34,7 @@ const ArticleRelated = ({ category, currentSlug }) => {
         {related.map(article => (
           <Link
             key={article.id}
-            to={`/article/${article.slug}`}
+            href={`/article/${article.slug}`}
             className="flex-shrink-0 w-56 glass-card-solid rounded-2xl overflow-hidden group"
           >
             <div className="relative h-32 overflow-hidden">

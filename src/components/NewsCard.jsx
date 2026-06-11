@@ -1,8 +1,10 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, Heart, Bookmark, Eye, ChevronUp } from 'lucide-react';
 import ShareButton from './ShareButton';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
@@ -96,7 +98,7 @@ const NewsCard = ({ article, variant = 'default', index = 0 }) => {
         transition={{ delay: index * 0.05 }}
         className={`border-l-4 ${getCategoryAccentBorder(category)}`}
       >
-        <Link to={`/article/${slug}`} className="group flex space-x-4 p-3 rounded-2xl hover:bg-surface-2 dark:hover:bg-dark-surface-2 transition-colors">
+        <Link href={`/article/${slug}`} className="group flex space-x-4 p-3 rounded-2xl hover:bg-surface-2 dark:hover:bg-dark-surface-2 transition-colors">
           <SafeImage src={imageUrl} alt={title} className="w-20 h-20 object-cover rounded-xl flex-shrink-0" />
           <div className="flex-1 min-w-0">
             <span className={`text-[11px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full ${getCategoryColor(category)}`}>{category}</span>
@@ -137,7 +139,7 @@ const NewsCard = ({ article, variant = 'default', index = 0 }) => {
           </div>
         )}
 
-        <Link to={`/article/${slug}`}>
+        <Link href={`/article/${slug}`}>
           <div className={`relative ${imageHeight} overflow-hidden`}>
             <SafeImage
               src={imageUrl}

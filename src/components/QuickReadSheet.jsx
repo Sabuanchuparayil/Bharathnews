@@ -1,7 +1,9 @@
+'use client';
+
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Clock, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import SafeImage from './SafeImage';
 import ShareButton from './ShareButton';
@@ -64,8 +66,7 @@ const QuickReadSheet = ({ article, onClose }) => {
                 showLabel
                 className="flex-shrink-0"
               />
-              <Link
-                to={`/article/${article.slug}`}
+              <Link href={`/article/${article.slug}`}
                 onClick={onClose}
                 className="btn-primary flex-1 flex items-center justify-center space-x-2"
               >

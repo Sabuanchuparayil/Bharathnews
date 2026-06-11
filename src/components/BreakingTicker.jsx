@@ -1,6 +1,8 @@
+'use client';
+
 import React, { useRef, useEffect, useState } from 'react';
 import { Zap } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 
 const BreakingTicker = ({ articles = [] }) => {
   const trackRef = useRef(null);
@@ -37,7 +39,7 @@ const BreakingTicker = ({ articles = [] }) => {
             {items.map((article, i) => (
               <Link
                 key={`${article.slug}-${i}`}
-                to={`/article/${article.slug}`}
+                href={`/article/${article.slug}`}
                 className="text-sm text-gray-200 hover:text-white transition-colors inline-block"
               >
                 {article.title}

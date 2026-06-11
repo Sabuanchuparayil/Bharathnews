@@ -1,8 +1,8 @@
-import typography from '@tailwindcss/typography';
+const typography = require('@tailwindcss/typography');
 
 /** @type {import('tailwindcss').Config} */
-export default {
-  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+module.exports = {
+  content: ['./src/**/*.{js,ts,jsx,tsx}'],
   darkMode: 'class',
   theme: {
     extend: {
@@ -51,15 +51,15 @@ export default {
         '4xl': '2rem',
       },
       boxShadow: {
-        'glass': '0 8px 32px rgba(0, 0, 0, 0.08)',
+        glass: '0 8px 32px rgba(0, 0, 0, 0.08)',
         'glass-lg': '0 16px 48px rgba(0, 0, 0, 0.12)',
         'inner-glow': 'inset 0 1px 0 rgba(255, 255, 255, 0.1)',
-        'card': '0 2px 8px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06)',
+        card: '0 2px 8px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06)',
         'card-hover': '0 4px 12px rgba(0, 0, 0, 0.06), 0 16px 40px rgba(0, 0, 0, 0.1)',
-        'floating': '0 20px 60px rgba(0, 0, 0, 0.15)',
+        floating: '0 20px 60px rgba(0, 0, 0, 0.15)',
       },
       backdropBlur: {
-        'glass': '20px',
+        glass: '20px',
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-out',
@@ -67,9 +67,9 @@ export default {
         'slide-up': 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
         'slide-down': 'slideDown 0.3s ease-out',
         'scale-in': 'scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-        'shimmer': 'shimmer 2s infinite linear',
+        shimmer: 'shimmer 2s infinite linear',
         'pulse-soft': 'pulseSoft 2s infinite ease-in-out',
-        'float': 'float 6s infinite ease-in-out',
+        float: 'float 6s infinite ease-in-out',
       },
       keyframes: {
         fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
@@ -92,4 +92,4 @@ export default {
     },
   },
   plugins: [typography],
-}
+};
