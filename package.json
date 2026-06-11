@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "start": "serve dist -s -l tcp://0.0.0.0:$PORT",
     "preview": "vite preview",
     "generate-icons": "node scripts/generate-icons.js"
   },
@@ -25,6 +26,7 @@
     "react-toastify": "^11.0.5",
     "recharts": "^2.12.7",
     "resend": "^4.0.0",
+    "serve": "^14.2.6",
     "swiper": "^11.1.0",
     "zod": "^3.23.8"
   },
