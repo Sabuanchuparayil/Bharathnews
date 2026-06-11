@@ -97,6 +97,7 @@ export const CATEGORY_ROUTES = {
   realestate: { path: '/real-estate', title: 'Real Estate' },
   lifestyle: { path: '/lifestyle', title: 'Lifestyle & Travel' },
   opinion: { path: '/opinion', title: 'Opinion & Editorial' },
+  world: { path: '/world', title: 'World News' },
 };
 
 export const getFeedForCategory = (category) => {
@@ -122,6 +123,7 @@ export const CATEGORIES = [
   { id: 'realestate', name: 'Real Estate', color: 'bg-amber-100 text-amber-700' },
   { id: 'lifestyle', name: 'Lifestyle', color: 'bg-rose-100 text-rose-700' },
   { id: 'opinion', name: 'Opinion', color: 'bg-slate-100 text-slate-700' },
+  { id: 'world', name: 'World', color: 'bg-violet-100 text-violet-700' },
 ];
 
 export const CREATOR_CONTENT_TYPES = [

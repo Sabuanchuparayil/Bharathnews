@@ -24,6 +24,7 @@ const CATEGORY_ICONS = {
   realestate: Home,
   lifestyle: Plane,
   opinion: MessageSquareQuote,
+  world: Globe2,
 };
 
 /** Resolve active category from the current route when not overridden. */

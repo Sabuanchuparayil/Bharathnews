@@ -10,29 +10,45 @@ const firebaseConfig = {
 };
 
 let client = null;
+let initPromise = null;
 
-/** Lazy-init Firebase client SDK (browser only). Auth must init before Firestore. */
-export function getClientFirebase() {
+/** Lazy-init Firebase client SDK (browser only). Returns a promise. */
+export async function initClientFirebase() {
   if (typeof window === 'undefined') return null;
   if (client) return client;
+  if (initPromise) return initPromise;
 
-  const { initializeApp, getApps } = require('firebase/app');
-  const { getAuth, GoogleAuthProvider } = require('firebase/auth');
-  const { getFirestore } = require('firebase/firestore');
+  initPromise = (async () => {
+    const { initializeApp, getApps } = await import('firebase/app');
+    const { getAuth, GoogleAuthProvider } = await import('firebase/auth');
+    const { getFirestore } = await import('firebase/firestore');
 
-  const app = getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  client = {
-    app,
-    auth,
-    db: getFirestore(app),
-    googleProvider: new GoogleAuthProvider(),
-  };
+    const app = getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    client = {
+      app,
+      auth,
+      db: getFirestore(app),
+      googleProvider: new GoogleAuthProvider(),
+    };
+    return client;
+  })();
+
+  return initPromise;
+}
+
+/** Sync access — returns cached client or null. */
+export function getClientFirebase() {
+  if (typeof window === 'undefined') return null;
+  if (!client) {
+    initClientFirebase();
+    return null;
+  }
   return client;
 }
 
 export const getMessagingInstance = async () => {
-  const fb = getClientFirebase();
+  const fb = await initClientFirebase();
   if (!fb) return null;
   const { getMessaging, isSupported } = await import('firebase/messaging');
   const supported = await isSupported();

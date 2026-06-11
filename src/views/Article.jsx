@@ -19,11 +19,14 @@ import { getCategoryColor } from '../utils/categoryColors';
 import { getArticleBySlug, trackArticleView } from '../services/firestore';
 import { useAuth } from '../context/AuthContext';
 import { useInterests } from '../context/InterestContext';
+import { useLanguage } from '../context/LanguageContext';
+import { localizeArticle } from '../utils/localizeArticle';
 
 const Article = ({ slug: slugProp, initialArticle = null }) => {
   const slug = slugProp;
   const { user, isBookmarked, isLiked, toggleBookmark, toggleLike } = useAuth();
   const { trackRead, trackBookmark } = useInterests();
+  const { language } = useLanguage();
   const [article, setArticle] = useState(initialArticle);
   const [loading, setLoading] = useState(!initialArticle);
   const startTime = useRef(Date.now());
@@ -113,13 +116,19 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
     ? article.publishedAt.seconds * 1000
     : article.publishedAt;
 
+  const localized = localizeArticle(article, language);
+  const displayTitle = localized.displayTitle;
+  const displaySummary = localized.displaySummary;
+  const displayContent = localized.displayContent;
+  const isRtl = localized.isRtl;
+
   return (
     <Layout>
       <ReadingProgress readTimeMinutes={readTime} />
-      <ArticleSchema article={article} />
+      <ArticleSchema article={{ ...article, title: displayTitle, summary: displaySummary }} />
       <ArticleFloatingBar
-        shareTitle={article.title}
-        shareText={article.summary}
+        shareTitle={displayTitle}
+        shareText={displaySummary}
         sharePath={`/article/${slug}`}
         onBookmark={handleBookmark}
         likes={article.likes || 0}
@@ -138,8 +147,8 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
             <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium mb-4 ${getCategoryColor(article.category)}`}>
               {article.category}
             </span>
-            <h1 className="font-display font-bold text-3xl md:text-4xl lg:text-5xl text-gray-900 dark:text-white mb-4 leading-tight text-balance">
-              {article.title}
+            <h1 className={`font-display font-bold text-3xl md:text-4xl lg:text-5xl text-gray-900 dark:text-white mb-4 leading-tight text-balance ${isRtl ? 'text-right' : ''}`}>
+              {displayTitle}
             </h1>
             <div className="flex items-center flex-wrap gap-4 text-sm text-gray-500 dark:text-gray-400">
               <span className="font-medium text-gray-700 dark:text-gray-300">{article.author}</span>
@@ -168,8 +177,8 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
 
           <AdSlot className="mb-8" />
 
-          <div className="article-drop-cap prose prose-lg dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 leading-relaxed mb-8">
-            {article.fullContent?.split('\n').filter(Boolean).map((paragraph, i) => (
+          <div className={`article-drop-cap prose prose-lg dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 leading-relaxed mb-8 ${isRtl ? 'text-right' : ''}`} dir={isRtl ? 'rtl' : 'ltr'}>
+            {displayContent?.split('\n').filter(Boolean).map((paragraph, i) => (
               <p key={i}>{paragraph}</p>
             ))}
           </div>
@@ -177,8 +186,8 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
           <div className="flex items-center justify-between py-4 border-t border-b border-gray-200 dark:border-gray-800 mb-8">
             <div className="flex items-center space-x-4">
               <ShareButton
-                title={article.title}
-                text={article.summary}
+                title={displayTitle}
+                text={displaySummary}
                 path={`/article/${slug}`}
                 contentType="article"
                 showLabel

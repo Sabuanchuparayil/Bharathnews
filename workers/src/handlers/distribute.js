@@ -1,8 +1,13 @@
-export async function handleDistribute(env, articleId) {
-  const url = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/articles/${articleId}`;
-  const response = await fetch(url);
-  const data = await response.json();
+import { getFirebaseToken } from '../lib/firebase-auth.js';
 
+export async function handleDistribute(env, articleId) {
+  const token = await getFirebaseToken(env);
+  const url = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/articles/${articleId}`;
+
+  const response = await fetch(url, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  const data = await response.json();
   if (!data.fields) return;
 
   const article = {
@@ -16,8 +21,8 @@ export async function handleDistribute(env, articleId) {
 
   const articleUrl = `https://thebharathnews.com/article/${article.slug}`;
 
-  if (article.score >= 5) {
-    const msg = `<b>${article.title}</b>\n\n${article.summary}\n\n📰 <a href="${articleUrl}">Read Full Story</a>`;
+  if (article.score >= 5 && env.TELEGRAM_BOT_TOKEN) {
+    const msg = `<b>${escapeHtml(article.title)}</b>\n\n${escapeHtml(article.summary)}\n\n📰 <a href="${articleUrl}">Read Full Story</a>`;
     await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -36,4 +41,8 @@ export async function handleDistribute(env, articleId) {
       }),
     });
   }
+}
+
+function escapeHtml(str) {
+  return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }

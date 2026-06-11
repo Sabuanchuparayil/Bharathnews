@@ -1,17 +1,28 @@
 name = "bharathnews-api"
 main = "src/index.js"
 compatibility_date = "2024-01-01"
+account_id = "911b68ad483550a94c3105c3a69df043"
 
 [triggers]
-crons = ["*/15 * * * *"]
+crons = ["*/15 * * * *", "0 8 * * *"]
 
 [vars]
 ENVIRONMENT = "production"
+MAIN_SITE_HOST = "thebharathnews.com"
+MAIN_SITE_URL = "https://thebharathnews.com"
 
 [ai]
 binding = "AI"
 
-# Add secrets via: wrangler secret put TELEGRAM_BOT_TOKEN
-# Add secrets via: wrangler secret put TELEGRAM_CHANNEL_ID
-# Add secrets via: wrangler secret put FIREBASE_PROJECT_ID
-# Add secrets via: wrangler secret put FIREBASE_TOKEN
+# Secrets (run from workers/ after wrangler login):
+#   npx wrangler secret put FIREBASE_PROJECT_ID                # thebharathnews-app
+#   npx wrangler secret put FIREBASE_SERVICE_ACCOUNT_JSON      # full JSON (preferred, auto-renews)
+#   npx wrangler secret put FIREBASE_TOKEN                     # OR static bearer token (expires 1h)
+#   npx wrangler secret put TELEGRAM_BOT_TOKEN
+#   npx wrangler secret put TELEGRAM_CHANNEL_ID
+#   npx wrangler secret put ANTHROPIC_API_KEY            # Claude Haiku for classification
+#   npx wrangler secret put CLAUDE_MODEL                 # optional, default claude-haiku-4-5-20251001
+#   npx wrangler secret put RESEND_API_KEY               # Newsletter digest
+# Optional:
+#   npx wrangler secret put FACEBOOK_PAGE_TOKEN
+#   npx wrangler secret put FACEBOOK_PAGE_ID

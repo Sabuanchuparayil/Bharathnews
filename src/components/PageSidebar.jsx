@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import TrendingSection from './TrendingSection';
 import WeatherMarketWidget from './WeatherMarketWidget';
 import ChannelFollowCTA from './ChannelFollowCTA';
@@ -11,17 +11,16 @@ import RSSFeed from './RSSFeed';
 import AdvertorialBanner from './AdvertorialBanner';
 import { useVideos } from '../hooks/useVideos';
 import { getFeedForCategory } from '../config/feeds.config';
-
-const SPONSORED_AD = {
-  title: 'GCC Business Summit 2026',
-  description: 'Connect with leaders across India and the Gulf. Register for early-bird access.',
-  imageUrl: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=100&h=100&fit=crop',
-  link: 'https://thebharathnews.com',
-  sponsoredBy: 'Bharath Events',
-};
+import { getActiveSponsors } from '../services/sponsors';
 
 const PageSidebar = ({ trendingArticles = [], category = null }) => {
   const { videos } = useVideos('all');
+  const [sponsors, setSponsors] = useState([]);
+
+  useEffect(() => {
+    getActiveSponsors('sidebar').then(setSponsors).catch(() => {});
+  }, []);
+
   const categoryVideos = useMemo(() => {
     const filtered = category
       ? videos.filter(v => v.category === category)
@@ -37,9 +36,17 @@ const PageSidebar = ({ trendingArticles = [], category = null }) => {
       {categoryVideos.length > 0 && <VideoColumn videos={categoryVideos} />}
       <WeatherMarketWidget />
       {rssFeed && <RSSFeed feedUrl={rssFeed.url} title={rssFeed.title} />}
-      <AdvertorialBanner ad={SPONSORED_AD} />
+      {sponsors.map(s => (
+        <AdvertorialBanner key={s.id} ad={{
+          title: s.title,
+          description: s.description,
+          imageUrl: s.imageUrl,
+          link: s.linkUrl,
+          sponsoredBy: s.sponsoredBy,
+        }} />
+      ))}
       <ChannelFollowCTA />
-      <AdSlot />
+      <AdSlot slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR} />
       <NewsletterSignup />
     </aside>
   );

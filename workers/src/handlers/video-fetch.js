@@ -1,49 +1,85 @@
-import { YOUTUBE_CHANNELS } from '../lib/feeds.js';
+import { loadEnabledSources, updateSourceHealth } from '../lib/sources-loader.js';
+import { fetchAndParseFeed } from '../lib/rss-parser.js';
+import { getFirebaseToken } from '../lib/firebase-auth.js';
+import { FIRESTORE_BASE } from '../lib/firestore-rest.js';
 
 export async function handleVideoFetch(env) {
+  const token = await getFirebaseToken(env);
+  const channels = await loadEnabledSources(env, 'youtube');
   const results = [];
 
-  for (const channel of YOUTUBE_CHANNELS) {
+  for (const channel of channels.slice(0, 5)) {
     try {
-      const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channel.channelId}`;
-      const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
-      const response = await fetch(apiUrl);
-      const data = await response.json();
+      const feedUrl = channel.url || `https://www.youtube.com/feeds/videos.xml?channel_id=${channel.channelId}`;
+      const items = await fetchAndParseFeed(feedUrl);
+      let stored = 0;
 
-      if (data.status !== 'ok') continue;
+      for (const item of items.slice(0, 2)) {
+        const videoId = extractVideoId(item.link);
+        if (!videoId) continue;
 
-      for (const item of data.items.slice(0, 3)) {
-        const videoId = item.link.split('v=')[1] || item.guid?.split(':').pop();
-        const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/videos`;
+        const ok = await storeVideo(env, {
+          title: item.title,
+          videoId,
+          channelName: channel.name,
+          channelId: channel.channelId || '',
+          thumbnail: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
+          publishedAt: item.pubDate || new Date().toISOString(),
+          category: channel.category || 'india',
+          language: channel.language || 'en',
+        }, token);
 
-        await fetch(firestoreUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${env.FIREBASE_TOKEN}`,
-          },
-          body: JSON.stringify({
-            fields: {
-              title: { stringValue: item.title },
-              videoId: { stringValue: videoId },
-              channelName: { stringValue: channel.name },
-              channelId: { stringValue: channel.channelId },
-              thumbnail: { stringValue: item.thumbnail || `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` },
-              publishedAt: { timestampValue: new Date(item.pubDate).toISOString() },
-              fetchedAt: { timestampValue: new Date().toISOString() },
-              category: { stringValue: channel.category },
-              embedUrl: { stringValue: `https://www.youtube.com/embed/${videoId}` },
-              views: { integerValue: '0' },
-            },
-          }),
-        });
-
-        results.push(item.title);
+        if (ok) { stored++; results.push(item.title); }
       }
+
+      await updateSourceHealth(env, channel.id, { itemCount: stored, lastError: '' }, token);
     } catch (error) {
       console.error(`Error fetching videos for ${channel.name}:`, error.message);
+      await updateSourceHealth(env, channel.id, { itemCount: 0, lastError: error.message.slice(0, 200) }, token);
     }
   }
 
+  console.log(`Video fetch complete: ${results.length} new videos`);
   return results;
+}
+
+function extractVideoId(link) {
+  if (!link) return null;
+  const match = link.match(/[?&]v=([^&]+)/) || link.match(/yt:video:([a-zA-Z0-9_-]+)/);
+  return match ? match[1] : null;
+}
+
+async function storeVideo(env, video, token) {
+  const docUrl = `${FIRESTORE_BASE(env.FIREBASE_PROJECT_ID)}/videos/${video.videoId}?currentDocument.exists=false`;
+
+  const res = await fetch(docUrl, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      fields: {
+        title: { stringValue: video.title },
+        videoId: { stringValue: video.videoId },
+        channelName: { stringValue: video.channelName },
+        channelId: { stringValue: video.channelId },
+        thumbnail: { stringValue: video.thumbnail },
+        publishedAt: { timestampValue: new Date(video.publishedAt).toISOString() },
+        fetchedAt: { timestampValue: new Date().toISOString() },
+        category: { stringValue: video.category },
+        language: { stringValue: video.language || 'en' },
+        embedUrl: { stringValue: `https://www.youtube.com/embed/${video.videoId}` },
+        views: { integerValue: '0' },
+      },
+    }),
+  });
+
+  if (res.status === 409) return false;
+  if (!res.ok) {
+    const err = await res.text();
+    console.error(`Video store failed "${video.title.slice(0, 40)}":`, err.slice(0, 150));
+    return false;
+  }
+  return true;
 }

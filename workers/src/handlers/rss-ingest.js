@@ -1,50 +1,63 @@
-import { RSS_FEEDS } from '../lib/feeds.js';
+import { loadEnabledSources, updateSourceHealth } from '../lib/sources-loader.js';
+import { fetchAndParseFeed } from '../lib/rss-parser.js';
+import { getFirebaseToken } from '../lib/firebase-auth.js';
+import { FIRESTORE_BASE } from '../lib/firestore-rest.js';
+
+const MAX_SOURCES_PER_RUN = 12;
+const ITEMS_PER_SOURCE = 2;
 
 export async function handleRSSIngest(env) {
+  const token = await getFirebaseToken(env);
+  const allSources = await loadEnabledSources(env, 'rss');
+  const googleSources = await loadEnabledSources(env, 'googlenews');
+  const sources = [...allSources, ...googleSources].slice(0, MAX_SOURCES_PER_RUN);
   const results = [];
 
-  for (const feed of RSS_FEEDS) {
+  for (const feed of sources) {
     try {
-      const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feed.url)}`;
-      const response = await fetch(apiUrl);
-      const data = await response.json();
+      const items = await fetchAndParseFeed(feed.url);
+      let stored = 0;
 
-      if (data.status !== 'ok') continue;
+      for (const item of items.slice(0, ITEMS_PER_SOURCE)) {
+        if (!item.title || !item.link) continue;
 
-      for (const item of data.items.slice(0, 5)) {
-        const article = {
+        const slug = item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 80);
+        const ok = await storeRawArticle(env, {
           title: item.title,
-          description: item.description?.replace(/<[^>]*>/g, '').slice(0, 500) || '',
+          description: item.description || '',
           sourceUrl: item.link,
           source: feed.name,
-          category: feed.category,
-          region: feed.region,
-          publishedAt: item.pubDate,
-          imageUrl: item.thumbnail || item.enclosure?.link || '',
-          status: 'pending_ai',
-        };
+          sourceId: feed.id,
+          category: feed.category || 'india',
+          region: feed.region || 'india',
+          language: feed.language || 'en',
+          publishedAt: item.pubDate || new Date().toISOString(),
+          imageUrl: item.imageUrl || '',
+          slug,
+        }, token);
 
-        await storeRawArticle(env, article);
-        results.push(article.title);
+        if (ok) { stored++; results.push(item.title); }
       }
+
+      await updateSourceHealth(env, feed.id, { itemCount: stored, lastError: '' }, token);
     } catch (error) {
       console.error(`Error fetching ${feed.name}:`, error.message);
+      await updateSourceHealth(env, feed.id, { itemCount: 0, lastError: error.message.slice(0, 200) }, token);
     }
   }
 
-  await triggerAIProcessing(env);
+  console.log(`RSS ingest complete: ${results.length} new articles from ${sources.length} sources`);
   return results;
 }
 
-async function storeRawArticle(env, article) {
-  const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/raw_articles`;
-  const slug = article.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 80);
+async function storeRawArticle(env, article, token) {
+  const docUrl = `${FIRESTORE_BASE(env.FIREBASE_PROJECT_ID)}/raw_articles/${article.slug}?currentDocument.exists=false`;
 
-  await fetch(firestoreUrl, {
-    method: 'POST',
+  const res = await fetch(docUrl, {
+    method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${env.FIREBASE_TOKEN}`,
+      'Authorization': `Bearer ${token}`,
     },
     body: JSON.stringify({
       fields: {
@@ -52,17 +65,24 @@ async function storeRawArticle(env, article) {
         description: { stringValue: article.description },
         sourceUrl: { stringValue: article.sourceUrl },
         source: { stringValue: article.source },
+        sourceId: { stringValue: article.sourceId || '' },
         category: { stringValue: article.category },
         region: { stringValue: article.region },
-        slug: { stringValue: slug },
+        language: { stringValue: article.language },
+        slug: { stringValue: article.slug },
         imageUrl: { stringValue: article.imageUrl },
         status: { stringValue: 'pending_ai' },
+        publishedAt: { timestampValue: new Date(article.publishedAt || Date.now()).toISOString() },
         createdAt: { timestampValue: new Date().toISOString() },
       },
     }),
   });
-}
 
-async function triggerAIProcessing(env) {
-  // AI process handler picks up pending articles
+  if (res.status === 409) return false;
+  if (!res.ok) {
+    const err = await res.text();
+    console.error(`Store failed for "${article.title.slice(0, 40)}":`, err.slice(0, 150));
+    return false;
+  }
+  return true;
 }

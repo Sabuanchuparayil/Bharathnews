@@ -6,6 +6,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider } from '@/context/AuthContext';
 import { InterestProvider } from '@/context/InterestContext';
+import { LanguageProvider } from '@/context/LanguageContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import InstallPWA from '@/components/InstallPWA';
 
@@ -26,6 +27,7 @@ export default function Providers({ children }) {
   return (
     <ThemeProvider>
       <AuthProvider>
+        <LanguageProvider>
         <InterestProvider>
           <MotionConfig reducedMotion={prefersReducedMotion ? 'always' : 'user'}>
             {children}
@@ -41,6 +43,7 @@ export default function Providers({ children }) {
             />
           </MotionConfig>
         </InterestProvider>
+        </LanguageProvider>
       </AuthProvider>
     </ThemeProvider>
   );

@@ -104,9 +104,33 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Raw articles (worker pipeline staging area)
+    match /raw_articles/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     // Videos
     match /videos/{videoId} {
       allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // News sources registry (worker reads via service account; admin manages)
+    match /sources/{sourceId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Site settings (ads, quality threshold, taxonomy)
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Sponsored content
+    match /sponsors/{sponsorId} {
+      allow read: if resource.data.active == true || isAdmin();
       allow write: if isAdmin();
     }
 

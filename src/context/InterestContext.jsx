@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useCallback } from 'react';
-import { getDb, firestoreOps } from '@/lib/firebase-client';
+import { getDbAsync, firestoreOps } from '@/lib/firebase-client';
 import { useAuth } from './AuthContext';
 import { updateInterests } from '../utils/interestScorer';
 import { trackUserInteraction } from '../services/firestore';
@@ -15,7 +15,7 @@ export const InterestProvider = ({ children }) => {
 
   const trackRead = useCallback(async (article, durationSeconds) => {
     if (!user) return;
-    const db = getDb();
+    const db = await getDbAsync();
     if (!db) return;
     const { doc, updateDoc } = await firestoreOps();
 
@@ -28,7 +28,7 @@ export const InterestProvider = ({ children }) => {
 
   const trackShare = useCallback(async (article) => {
     if (!user) return;
-    const db = getDb();
+    const db = await getDbAsync();
     if (!db) return;
     const { doc, updateDoc } = await firestoreOps();
     const newInterests = updateInterests(userProfile?.interests || {}, article, 'share');
@@ -38,7 +38,7 @@ export const InterestProvider = ({ children }) => {
 
   const trackBookmark = useCallback(async (article) => {
     if (!user) return;
-    const db = getDb();
+    const db = await getDbAsync();
     if (!db) return;
     const { doc, updateDoc } = await firestoreOps();
     const newInterests = updateInterests(userProfile?.interests || {}, article, 'bookmark');

@@ -10,6 +10,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { HEADER_NAV } from '../config/feeds.config';
+import LanguageSwitcher from './LanguageSwitcher';
 
 const NotificationsPanel = lazy(() => import('./NotificationsPanel'));
 
@@ -24,7 +25,7 @@ const Header = () => {
   const menuTrapRef = useFocusTrap(mobileMenuOpen);
   const profileTrapRef = useFocusTrap(profileOpen);
   useClickOutside(profileRef, profileOpen, () => setProfileOpen(false));
-  const { user, loginWithGoogle, logout } = useAuth();
+  const { user, loginWithGoogle, logout, isAdmin } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
@@ -88,6 +89,8 @@ const Header = () => {
                 <Search className="w-5 h-5" />
               </button>
 
+              <LanguageSwitcher />
+
               <button
                 onClick={toggleTheme}
                 className="btn-ghost p-2.5 rounded-xl"
@@ -136,12 +139,20 @@ const Header = () => {
                           <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{user.displayName}</p>
                           <p className="text-xs text-gray-500 truncate">{user.email}</p>
                         </div>
+                        <Link href="/dashboard" className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-surface-2 dark:hover:bg-dark-surface-2 text-sm text-gray-700 dark:text-gray-300">
+                          <BookmarkIcon className="w-4 h-4" /><span>My Dashboard</span>
+                        </Link>
                         <Link href="/bookmarks" className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-surface-2 dark:hover:bg-dark-surface-2 text-sm text-gray-700 dark:text-gray-300">
                           <BookmarkIcon className="w-4 h-4" /><span>Bookmarks</span>
                         </Link>
                         <Link href="/settings" className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-surface-2 dark:hover:bg-dark-surface-2 text-sm text-gray-700 dark:text-gray-300">
                           <SettingsIcon className="w-4 h-4" /><span>Settings</span>
                         </Link>
+                        {isAdmin && (
+                          <Link href="/admin" className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-950/30 text-sm text-brand-700 dark:text-brand-300">
+                            <SettingsIcon className="w-4 h-4" /><span>Admin</span>
+                          </Link>
+                        )}
                         <button onClick={logout} className="w-full flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/30 text-sm text-red-600">
                           <LogIn className="w-4 h-4" /><span>Sign Out</span>
                         </button>

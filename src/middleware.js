@@ -12,9 +12,19 @@ export function middleware(request) {
     }
   }
 
+  if (pathname.startsWith('/admin')) {
+    const auth = request.cookies.get('bn_auth')?.value;
+    if (!auth) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/';
+      url.searchParams.set('login', 'admin');
+      return NextResponse.redirect(url);
+    }
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/@(.*)'],
+  matcher: ['/@(.*)', '/admin/:path*'],
 };

@@ -1,6 +1,6 @@
 'use client';
 
-import { getDb, firestoreOps } from '@/lib/firebase-client';
+import { getDbAsync, firestoreOps } from '@/lib/firebase-client';
 
 const emptyPage = { articles: [], lastDoc: null, hasMore: false };
 
@@ -9,31 +9,44 @@ export const getArticles = async (category = null, lastDoc = null, pageSize = 20
   return articles;
 };
 
-export const getArticlesPage = async (category = null, lastDoc = null, pageSize = 20) => {
-  const db = getDb();
+export const getArticlesPage = async (category = null, lastDoc = null, pageSize = 20, language = null) => {
+  const db = await getDbAsync();
   if (!db) return emptyPage;
   const { collection, query, where, orderBy, limit, startAfter, getDocs } = await firestoreOps();
   let q;
+  const filters = [];
   if (category && category !== 'all') {
-    q = query(collection(db, 'articles'), where('category', '==', category), orderBy('publishedAt', 'desc'), limit(pageSize));
-  } else {
+    filters.push(where('category', '==', category));
+  }
+  if (language && language !== 'all') {
+    filters.push(where('language', '==', language));
+  }
+  if (filters.length === 0) {
     q = query(collection(db, 'articles'), orderBy('publishedAt', 'desc'), limit(pageSize));
+  } else if (filters.length === 1) {
+    q = query(collection(db, 'articles'), filters[0], orderBy('publishedAt', 'desc'), limit(pageSize));
+  } else {
+    q = query(collection(db, 'articles'), ...filters, orderBy('publishedAt', 'desc'), limit(pageSize));
   }
   if (lastDoc) {
-    if (category && category !== 'all') {
-      q = query(collection(db, 'articles'), where('category', '==', category), orderBy('publishedAt', 'desc'), startAfter(lastDoc), limit(pageSize));
-    } else {
+    if (filters.length === 0) {
       q = query(collection(db, 'articles'), orderBy('publishedAt', 'desc'), startAfter(lastDoc), limit(pageSize));
+    } else if (filters.length === 1) {
+      q = query(collection(db, 'articles'), filters[0], orderBy('publishedAt', 'desc'), startAfter(lastDoc), limit(pageSize));
+    } else {
+      q = query(collection(db, 'articles'), ...filters, orderBy('publishedAt', 'desc'), startAfter(lastDoc), limit(pageSize));
     }
   }
   const snapshot = await getDocs(q);
-  const articles = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+  const articles = snapshot.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .filter(a => !a.editorialStatus || a.editorialStatus === 'published');
   const lastVisible = snapshot.docs[snapshot.docs.length - 1] || null;
   return { articles, lastDoc: lastVisible, hasMore: snapshot.docs.length === pageSize };
 };
 
 export const getArticleBySlug = async (slug) => {
-  const db = getDb();
+  const db = await getDbAsync();
   if (!db) return null;
   const { collection, query, where, limit, getDocs } = await firestoreOps();
   const q = query(collection(db, 'articles'), where('slug', '==', slug), limit(1));
@@ -44,7 +57,7 @@ export const getArticleBySlug = async (slug) => {
 };
 
 export const getTrendingArticles = async (count = 5) => {
-  const db = getDb();
+  const db = await getDbAsync();
   if (!db) return [];
   const { collection, query, orderBy, limit, getDocs } = await firestoreOps();
   const q = query(collection(db, 'articles'), orderBy('views', 'desc'), limit(count));
@@ -60,7 +73,7 @@ export const getArticlesByInterests = async (interests, count = 10) => {
 
   if (topCategories.length === 0) return getTrendingArticles(count);
 
-  const db = getDb();
+  const db = await getDbAsync();
   if (!db) return [];
   const { collection, query, where, orderBy, limit, getDocs } = await firestoreOps();
   const q = query(
@@ -74,7 +87,7 @@ export const getArticlesByInterests = async (interests, count = 10) => {
 };
 
 export const trackArticleView = async (articleId) => {
-  const db = getDb();
+  const db = await getDbAsync();
   if (!db) return;
   const viewedKey = `viewed_${articleId}`;
   if (typeof window !== 'undefined' && sessionStorage.getItem(viewedKey)) return;
@@ -85,7 +98,7 @@ export const trackArticleView = async (articleId) => {
 };
 
 export const trackUserInteraction = async (userId, articleId, action, metadata = {}) => {
-  const db = getDb();
+  const db = await getDbAsync();
   if (!db) return;
   const { collection, addDoc, serverTimestamp } = await firestoreOps();
   await addDoc(collection(db, 'users', userId, 'history'), {
@@ -97,7 +110,7 @@ export const trackUserInteraction = async (userId, articleId, action, metadata =
 };
 
 export const addBookmark = async (userId, articleId) => {
-  const db = getDb();
+  const db = await getDbAsync();
   if (!db) return;
   const { doc, updateDoc, arrayUnion } = await firestoreOps();
   const ref = doc(db, 'users', userId);
@@ -105,7 +118,7 @@ export const addBookmark = async (userId, articleId) => {
 };
 
 export const removeBookmark = async (userId, articleId) => {
-  const db = getDb();
+  const db = await getDbAsync();
   if (!db) return;
   const { doc, updateDoc, arrayRemove } = await firestoreOps();
   const ref = doc(db, 'users', userId);
@@ -118,7 +131,7 @@ export const toggleBookmark = async (userId, articleId, isBookmarked) => {
 };
 
 export const getBookmarks = async (userId) => {
-  const db = getDb();
+  const db = await getDbAsync();
   if (!db) return [];
   const { doc, getDoc } = await firestoreOps();
   const ref = doc(db, 'users', userId);
@@ -127,7 +140,7 @@ export const getBookmarks = async (userId) => {
 };
 
 export const toggleLike = async (userId, articleId, isLiked) => {
-  const db = getDb();
+  const db = await getDbAsync();
   if (!db) return;
   const { doc, updateDoc, increment, arrayUnion, arrayRemove } = await firestoreOps();
   const userRef = doc(db, 'users', userId);
@@ -142,7 +155,7 @@ export const toggleLike = async (userId, articleId, isLiked) => {
 };
 
 export const subscribeNewsletter = async (email) => {
-  const db = getDb();
+  const db = await getDbAsync();
   if (!db) throw new Error('Firebase unavailable');
   const { collection, query, where, limit, getDocs, addDoc, serverTimestamp } = await firestoreOps();
   const normalized = email.toLowerCase().trim();
@@ -160,7 +173,7 @@ export const subscribeNewsletter = async (email) => {
 };
 
 export const getSubscriberCount = async () => {
-  const db = getDb();
+  const db = await getDbAsync();
   if (!db) return 0;
   const { collection, getDocs } = await firestoreOps();
   const snap = await getDocs(collection(db, 'subscribers'));
@@ -168,7 +181,7 @@ export const getSubscriberCount = async () => {
 };
 
 export const searchArticles = async (searchTerm, pageSize = 30) => {
-  const db = getDb();
+  const db = await getDbAsync();
   if (!db) return [];
   const { collection, query, where, orderBy, limit, getDocs } = await firestoreOps();
   const term = searchTerm.toLowerCase().trim();
@@ -203,7 +216,7 @@ export const searchArticles = async (searchTerm, pageSize = 30) => {
 };
 
 export const getArticlesByIds = async (articleIds) => {
-  const db = getDb();
+  const db = await getDbAsync();
   if (!db || !articleIds.length) return [];
   const { collection, query, where, getDocs } = await firestoreOps();
   const chunks = [];
@@ -219,7 +232,7 @@ export const getArticlesByIds = async (articleIds) => {
 };
 
 export const getVideoFeeds = async (category = null, count = 20) => {
-  const db = getDb();
+  const db = await getDbAsync();
   if (!db) return [];
   const { collection, query, where, orderBy, limit, getDocs } = await firestoreOps();
   let q = query(collection(db, 'videos'), orderBy('fetchedAt', 'desc'), limit(count));

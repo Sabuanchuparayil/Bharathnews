@@ -41,6 +41,8 @@ export const AuthProvider = ({ children }) => {
           const profileSnap = await getDoc(profileRef);
           if (profileSnap.exists()) {
             setUserProfile(profileSnap.data());
+            document.cookie = `bn_auth=1; path=/; max-age=86400; SameSite=Lax`;
+            document.cookie = `bn_role=${profileSnap.data().role || 'reader'}; path=/; max-age=86400; SameSite=Lax`;
           } else {
             await setDoc(profileRef, {
               displayName: firebaseUser.displayName,
@@ -60,10 +62,14 @@ export const AuthProvider = ({ children }) => {
             });
             const saved = await getDoc(profileRef);
             setUserProfile(saved.data());
+            document.cookie = `bn_auth=1; path=/; max-age=86400; SameSite=Lax`;
+            document.cookie = `bn_role=reader; path=/; max-age=86400; SameSite=Lax`;
           }
         } else {
           setUser(null);
           setUserProfile(null);
+          document.cookie = 'bn_auth=; path=/; max-age=0';
+          document.cookie = 'bn_role=; path=/; max-age=0';
         }
         setLoading(false);
       });

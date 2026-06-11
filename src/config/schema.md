@@ -6,8 +6,14 @@
   slug: string,
   summary: string,
   fullContent: string,
-  fullContent_ml: string,
-  fullContent_ar: string,
+  translations: {
+    ml: { title, summary, fullContent },
+    ta: { title, summary, fullContent },
+    te: { title, summary, fullContent },
+    kn: { title, summary, fullContent },
+    hi: { title, summary, fullContent },
+    ar: { title, summary, fullContent }
+  },
   imageUrl: string,
   category: string,
   topics: string[],
@@ -16,15 +22,62 @@
   author: string,
   publishedAt: timestamp,
   createdAt: timestamp,
-  score: number,
+  language: string,          // original language code: en|ml|ta|te|kn|hi|ar
+  region: string,            // india|gcc|kerala|uae|saudi|global|...
+  qualityScore: number,      // 0-10 from Claude Haiku
+  score: number,             // legacy display score
+  editorialStatus: string,   // published|rejected|duplicate
+  clusterId: string,         // dedup cluster key
   views: number,
   likes: number,
   comments: number,
   shares: number,
-  language: string,
   seo: { metaTitle, metaDescription, keywords, ogImage },
   distributed: { telegram, facebook, instagram, youtube, whatsapp },
   socialFormats: { whatsapp, telegram, instagram, facebook, pushNotification }
+}
+
+### raw_articles/{slug}
+{
+  title, description, sourceUrl, source, category, region, language,
+  slug, imageUrl, status,           // pending_ai|processing|classified|rejected|duplicate|processed
+  editorialStatus, qualityScore, topics[], clusterId, dedupKey,
+  detectedLanguage, publishedAt, createdAt
+}
+
+### sources/{sourceId}
+{
+  url: string,
+  name: string,
+  type: string,              // rss|googlenews|youtube
+  category: string,
+  region: string,
+  language: string,          // en|ml|ta|te|kn|hi|ar
+  enabled: boolean,
+  trustWeight: number,       // 0-1
+  channelId: string,         // for youtube type
+  lastFetchedAt: timestamp,
+  lastError: string,
+  itemCount: number
+}
+
+### settings/site
+{
+  headerText, footerText, logoUrl,
+  categories: string[],
+  topics: string[],
+  adSlots: { header, sidebar, articleTop, articleBottom },
+  qualityThreshold: number,  // default 6
+  targetLanguages: string[], // ml,ta,te,kn,hi,ar
+  monetization: { adsensePublisherId, resendEnabled }
+}
+
+### sponsors/{sponsorId}
+{
+  title, description, imageUrl, linkUrl, sponsoredBy,
+  category, placement,        // sidebar|article|hero
+  active: boolean,
+  startDate, endDate
 }
 
 ### users/{userId}
@@ -41,5 +94,5 @@
 ### videos/{videoId}
 { title, videoId, channelName, channelId, thumbnail, duration, publishedAt, fetchedAt, category, embedUrl, views }
 
-### settings/site
-{ headerText, footerText, logoUrl, categories, topics, adSlots }
+### subscribers/{subId}
+{ email, subscribedAt, source, language }

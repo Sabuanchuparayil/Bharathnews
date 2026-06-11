@@ -32,12 +32,18 @@ const StoriesCarousel = ({ articles = [] }) => {
                 className="group flex flex-col items-center w-[72px] sm:w-20"
               >
                 <div className="story-ring p-[3px] rounded-full">
-                  <img
-                    src={article.imageUrl}
-                    alt=""
-                    className="w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover ring-2 ring-white dark:ring-dark-surface-0"
-                    loading="lazy"
-                  />
+                  {article.imageUrl ? (
+                    <img
+                      src={article.imageUrl}
+                      alt=""
+                      className="w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover ring-2 ring-white dark:ring-dark-surface-0"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 ring-2 ring-white dark:ring-dark-surface-0 flex items-center justify-center">
+                      <span className="text-white text-lg font-bold">{(article.category || '?')[0].toUpperCase()}</span>
+                    </div>
+                  )}
                 </div>
                 <span className="mt-2 text-[10px] sm:text-xs font-medium text-gray-600 dark:text-gray-400 text-center line-clamp-2 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
                   {article.category}

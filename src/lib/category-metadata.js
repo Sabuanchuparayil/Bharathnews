@@ -10,7 +10,8 @@ const CATEGORIES = {
   health: 'Health & Wellness',
   education: 'Education News',
   jobs: 'Jobs & Careers',
-  'real-estate': 'Real Estate',
+  realestate: 'Real Estate',
+  world: 'World News',
   lifestyle: 'Lifestyle & Travel',
   opinion: 'Opinion & Editorial',
 };

@@ -6,7 +6,7 @@ import { Plus, PenLine, BarChart3, Clock, CheckCircle, XCircle } from 'lucide-re
 import ShareButton from '../components/ShareButton';
 import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
-import { getMyCreatorPosts, getCreatorProfileByUserId } from '../services/creator';
+import { getMyCreatorPosts, getCreatorProfileByUserId, checkRevenueShareEligibility } from '../services/creator';
 
 const STATUS_STYLES = {
   draft: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
@@ -25,9 +25,12 @@ const CreatorSpace = () => {
       Promise.all([
         getMyCreatorPosts(user.uid),
         getCreatorProfileByUserId(user.uid),
-      ]).then(([myPosts, myProfile]) => {
+      ]).then(async ([myPosts, myProfile]) => {
         setPosts(myPosts);
         setProfile(myProfile);
+        if (myProfile?.slug) {
+          await checkRevenueShareEligibility(myProfile.slug);
+        }
       }).catch(() => {});
     }
   }, [user, isCreator]);
@@ -109,6 +112,22 @@ const CreatorSpace = () => {
           </div>
         ))}
       </div>
+
+      {profile && (
+        <div className="glass-card-solid rounded-2xl p-5 mb-8 flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-500">Earnings Balance</p>
+            <p className="font-display font-bold text-2xl text-gray-900 dark:text-white">
+              ₹{(profile.earningsBalance || 0).toFixed(2)}
+            </p>
+          </div>
+          {profile.revenueShareEligible && (
+            <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium">
+              Revenue Share Eligible
+            </span>
+          )}
+        </div>
+      )}
 
       <h2 className="font-display font-bold text-xl mb-4">Your Content</h2>
       <div className="space-y-3">

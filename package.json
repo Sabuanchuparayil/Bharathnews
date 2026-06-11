@@ -7,7 +7,13 @@
     "build": "next build",
     "start": "next start --hostname 0.0.0.0 -p ${PORT:-3000}",
     "lint": "next lint",
-    "generate-icons": "node scripts/generate-icons.js"
+    "generate-icons": "node scripts/generate-icons.js",
+    "worker:dev": "npm run dev --prefix workers",
+    "worker:deploy": "npm run deploy --prefix workers",
+    "worker:secrets": "bash scripts/set-worker-secrets.sh",
+    "firebase:deploy": "firebase deploy --only firestore",
+    "firebase:db:mumbai": "firebase firestore:databases:create '(default)' --location asia-south1",
+    "seed:sources": "node scripts/seed-sources.mjs"
   },
   "dependencies": {
     "date-fns": "^3.6.0",
@@ -25,7 +31,9 @@
     "autoprefixer": "^10.4.19",
     "eslint": "^9.0.0",
     "eslint-config-next": "^15.1.0",
+    "firebase-tools": "^15.20.0",
     "postcss": "^8.4.38",
-    "tailwindcss": "^3.4.1"
+    "tailwindcss": "^3.4.1",
+    "wrangler": "^4.86.0"
   }
 }

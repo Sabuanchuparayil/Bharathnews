@@ -12,3 +12,4 @@ thebharathnews-*.json
 firebase-adminsdk-*.json
 .wrangler/
 .dev.vars
+workers/secrets.env
