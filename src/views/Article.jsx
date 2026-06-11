@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
 import { ArrowLeft, Bookmark, Heart, Clock, Eye, MessageCircle } from 'lucide-react';
 import ShareButton from '../components/ShareButton';
 import { formatDistanceToNow } from 'date-fns';
@@ -32,13 +32,14 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
   const startTime = useRef(Date.now());
   const heroRef = useRef(null);
   const articleRef = useRef(null);
+  const prefersReducedMotion = useReducedMotion();
 
   const { scrollYProgress } = useScroll({
     target: heroRef,
     offset: ['start start', 'end start'],
   });
-  const imageScale = useTransform(scrollYProgress, [0, 1], [1, 1.15]);
-  const imageY = useTransform(scrollYProgress, [0, 1], [0, 60]);
+  const imageScale = useTransform(scrollYProgress, [0, 1], prefersReducedMotion ? [1, 1] : [1, 1.15]);
+  const imageY = useTransform(scrollYProgress, [0, 1], prefersReducedMotion ? [0, 0] : [0, 60]);
 
   useEffect(() => {
     if (initialArticle) {
@@ -150,7 +151,12 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
             <h1 className={`font-display font-bold text-3xl md:text-4xl lg:text-5xl text-gray-900 dark:text-white mb-4 leading-tight text-balance ${isRtl ? 'text-right' : ''}`}>
               {displayTitle}
             </h1>
-            <div className="flex items-center flex-wrap gap-4 text-sm text-gray-500 dark:text-gray-400">
+            {displaySummary && (
+              <p className={`text-lg text-gray-600 dark:text-gray-300 mb-4 leading-relaxed line-clamp-3 ${isRtl ? 'text-right' : ''}`}>
+                {displaySummary}
+              </p>
+            )}
+            <div className="flex items-center flex-wrap gap-x-4 gap-y-2 text-sm text-gray-500 dark:text-gray-400">
               <span className="font-medium text-gray-700 dark:text-gray-300">{article.author}</span>
               <span className="flex items-center space-x-1">
                 <Clock className="w-4 h-4" />
@@ -183,8 +189,8 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
             ))}
           </div>
 
-          <div className="flex items-center justify-between py-4 border-t border-b border-gray-200 dark:border-gray-800 mb-8">
-            <div className="flex items-center space-x-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between py-4 border-t border-b border-gray-200 dark:border-gray-800 mb-8">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
               <ShareButton
                 title={displayTitle}
                 text={displaySummary}
@@ -193,11 +199,11 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
                 showLabel
                 size="lg"
               />
-              <button onClick={handleBookmark} className={`flex items-center space-x-2 transition-colors ${article.id && isBookmarked(article.id) ? 'text-brand-600 dark:text-brand-400' : 'text-gray-600 dark:text-gray-400 hover:text-brand-700 dark:hover:text-brand-400'}`}>
+              <button onClick={handleBookmark} className={`touch-target flex items-center space-x-2 transition-colors ${article.id && isBookmarked(article.id) ? 'text-brand-600 dark:text-brand-400' : 'text-gray-600 dark:text-gray-400 hover:text-brand-700 dark:hover:text-brand-400'}`}>
                 <Bookmark className={`w-5 h-5 ${article.id && isBookmarked(article.id) ? 'fill-current' : ''}`} />
                 <span>{article.id && isBookmarked(article.id) ? 'Saved' : 'Bookmark'}</span>
               </button>
-              <button onClick={handleLike} className={`flex items-center space-x-2 transition-colors ${article.id && isLiked(article.id) ? 'text-accent-rose' : 'text-gray-600 dark:text-gray-400 hover:text-accent-rose'}`}>
+              <button onClick={handleLike} className={`touch-target flex items-center space-x-2 transition-colors ${article.id && isLiked(article.id) ? 'text-accent-rose' : 'text-gray-600 dark:text-gray-400 hover:text-accent-rose'}`}>
                 <Heart className={`w-5 h-5 ${article.id && isLiked(article.id) ? 'fill-current' : ''}`} />
                 <span>Like</span>
               </button>

@@ -8,24 +8,7 @@ import {
 } from 'lucide-react';
 import { CATEGORIES, CATEGORY_ROUTES } from '../config/feeds.config';
 import { getCategoryPillClasses } from '../utils/categoryColors';
-
-const CATEGORY_ICONS = {
-  all: LayoutGrid,
-  breaking: Zap,
-  india: Globe2,
-  gcc: Building2,
-  business: Briefcase,
-  technology: Cpu,
-  sports: Trophy,
-  entertainment: Clapperboard,
-  health: HeartPulse,
-  education: GraduationCap,
-  jobs: UserSearch,
-  realestate: Home,
-  lifestyle: Plane,
-  opinion: MessageSquareQuote,
-  world: Globe2,
-};
+import { CATEGORY_ICONS } from '../utils/categoryIcons';
 
 /** Resolve active category from the current route when not overridden. */
 export function getActiveCategoryFromPath(pathname, override) {
@@ -76,7 +59,11 @@ const CategoryFilter = ({
         </p>
       )}
       <div className={`relative min-w-0 ${scrollPad}`}>
-        <div className="overflow-x-auto scrollbar-hide overscroll-x-contain pb-2 pt-0.5">
+        <div
+          className="overflow-x-auto scrollbar-hide overscroll-x-contain pb-2 pt-0.5"
+          role="tablist"
+          aria-label="Categories"
+        >
           <div className="flex gap-2 w-max pr-1">
             {categories.map(cat => {
               const Icon = CATEGORY_ICONS[cat.id] || LayoutGrid;
@@ -85,6 +72,8 @@ const CategoryFilter = ({
                 <button
                   key={cat.id}
                   type="button"
+                  role="tab"
+                  aria-selected={isActive}
                   onClick={() => handleClick(cat.id)}
                   className={`category-pill flex-shrink-0 whitespace-nowrap flex items-center gap-1.5 ${getCategoryPillClasses(cat.id, isActive)}`}
                 >
@@ -95,6 +84,8 @@ const CategoryFilter = ({
             })}
           </div>
         </div>
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-surface-1 dark:from-dark-surface-0 to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-surface-1 dark:from-dark-surface-0 to-transparent" />
       </div>
     </div>
   );

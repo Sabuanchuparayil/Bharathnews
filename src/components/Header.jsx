@@ -10,6 +10,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { HEADER_NAV } from '../config/feeds.config';
+import { getTrendingArticles } from '../services/firestore';
 import LanguageSwitcher from './LanguageSwitcher';
 
 const NotificationsPanel = lazy(() => import('./NotificationsPanel'));
@@ -20,6 +21,7 @@ const Header = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [hasTrending, setHasTrending] = useState(false);
   const profileRef = useRef(null);
   const searchTrapRef = useFocusTrap(searchOpen);
   const menuTrapRef = useFocusTrap(mobileMenuOpen);
@@ -29,6 +31,10 @@ const Header = () => {
   const { isDark, toggleTheme } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
+
+  useEffect(() => {
+    getTrendingArticles(1).then(articles => setHasTrending(articles.length > 0)).catch(() => setHasTrending(false));
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -46,10 +52,10 @@ const Header = () => {
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        className={`fixed top-0 left-0 right-0 z-50 safe-top transition-all duration-300 ${
           isScrolled
             ? 'bg-white/90 dark:bg-dark-surface-0/90 backdrop-blur-glass shadow-glass border-b border-gray-200/50 dark:border-gray-800/50'
-            : 'bg-transparent'
+            : 'bg-white/80 dark:bg-dark-surface-0/80 backdrop-blur-sm md:bg-transparent md:dark:bg-transparent'
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
@@ -59,7 +65,7 @@ const Header = () => {
                 <span className="text-white font-bold text-base">B</span>
               </div>
               <div className="hidden sm:block">
-                <span className="font-display font-bold text-lg text-gray-900 dark:text-white">Bharath</span>
+                <span className="font-display font-bold text-lg text-gray-900 dark:text-white">The Bharath </span>
                 <span className="font-display font-bold text-lg text-brand-600 dark:text-brand-400">News</span>
               </div>
             </Link>
@@ -80,33 +86,36 @@ const Header = () => {
               ))}
             </nav>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1 sm:space-x-2">
               <button
                 onClick={() => setSearchOpen(true)}
-                className="btn-ghost p-2.5 rounded-xl"
+                className="btn-ghost touch-target rounded-xl"
                 aria-label="Search"
               >
                 <Search className="w-5 h-5" />
               </button>
 
-              <LanguageSwitcher />
-
-              <button
-                onClick={toggleTheme}
-                className="btn-ghost p-2.5 rounded-xl"
-                aria-label="Toggle theme"
-              >
-                {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-              </button>
+              <div className="hidden md:flex items-center space-x-1">
+                <LanguageSwitcher />
+                <button
+                  onClick={toggleTheme}
+                  className="btn-ghost touch-target rounded-xl"
+                  aria-label="Toggle theme"
+                >
+                  {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                </button>
+              </div>
 
               <button
                 onClick={() => setNotificationsOpen(!notificationsOpen)}
-                className="btn-ghost p-2.5 rounded-xl relative"
-                aria-label="Notifications"
+                className="btn-ghost touch-target rounded-xl relative"
+                aria-label="Trending stories"
                 aria-expanded={notificationsOpen}
               >
                 <Bell className="w-5 h-5" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-accent-rose rounded-full" />
+                {hasTrending && (
+                  <span className="absolute top-2 right-2 w-2 h-2 bg-accent-rose rounded-full" />
+                )}
               </button>
               {notificationsOpen && (
                 <Suspense fallback={null}>
@@ -120,7 +129,7 @@ const Header = () => {
                     onClick={() => setProfileOpen(!profileOpen)}
                     aria-label="User menu"
                     aria-expanded={profileOpen}
-                    className="w-9 h-9 rounded-xl overflow-hidden ring-2 ring-transparent hover:ring-brand-500/50 transition-all"
+                    className="touch-target w-11 h-11 rounded-xl overflow-hidden ring-2 ring-transparent hover:ring-brand-500/50 transition-all p-0.5"
                   >
                     <img src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName}&background=4338ca&color=fff`} alt="" className="w-full h-full object-cover" />
                   </button>
@@ -149,7 +158,7 @@ const Header = () => {
                           <SettingsIcon className="w-4 h-4" /><span>Settings</span>
                         </Link>
                         {isAdmin && (
-                          <Link href="/admin" className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-950/30 text-sm text-brand-700 dark:text-brand-300">
+                          <Link href="/admin/dashboard" className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-950/30 text-sm text-brand-700 dark:text-brand-300">
                             <SettingsIcon className="w-4 h-4" /><span>Admin</span>
                           </Link>
                         )}
@@ -168,7 +177,7 @@ const Header = () => {
 
               <button
                 onClick={() => setMobileMenuOpen(true)}
-                className="lg:hidden btn-ghost p-2.5 rounded-xl"
+                className="lg:hidden btn-ghost touch-target rounded-xl"
                 aria-label="Open menu"
               >
                 <Menu className="w-5 h-5" />
@@ -184,7 +193,7 @@ const Header = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-start justify-center pt-24"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-end sm:items-start justify-center sm:pt-24"
             onClick={() => setSearchOpen(false)}
           >
             <motion.div
@@ -196,7 +205,7 @@ const Header = () => {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -20, scale: 0.95 }}
               onClick={e => e.stopPropagation()}
-              className="w-full max-w-2xl mx-4 bg-white dark:bg-dark-surface-1 rounded-2xl shadow-floating overflow-hidden"
+              className="w-full max-w-2xl mx-4 mb-0 sm:mb-auto bg-white dark:bg-dark-surface-1 rounded-t-2xl sm:rounded-2xl shadow-floating overflow-hidden safe-bottom"
             >
               <div className="flex items-center p-4 border-b border-gray-100 dark:border-gray-800">
                 <Search className="w-5 h-5 text-gray-400 mr-3" />
@@ -212,7 +221,7 @@ const Header = () => {
                     }
                   }}
                 />
-                <button onClick={() => setSearchOpen(false)} aria-label="Close search" className="p-1 hover:bg-surface-2 dark:hover:bg-dark-surface-2 rounded-lg">
+                <button onClick={() => setSearchOpen(false)} aria-label="Close search" className="touch-target hover:bg-surface-2 dark:hover:bg-dark-surface-2 rounded-lg">
                   <X className="w-5 h-5 text-gray-500" />
                 </button>
               </div>
@@ -254,11 +263,11 @@ const Header = () => {
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               onClick={e => e.stopPropagation()}
-              className="absolute right-0 top-0 bottom-0 w-72 bg-white dark:bg-dark-surface-0 shadow-floating p-6"
+              className="absolute right-0 top-0 bottom-0 w-72 max-w-[85vw] bg-white dark:bg-dark-surface-0 shadow-floating p-6 safe-top safe-bottom overflow-y-auto"
             >
               <div className="flex justify-between items-center mb-8">
                 <span className="font-display font-bold text-xl text-gray-900 dark:text-white">Menu</span>
-                <button onClick={() => setMobileMenuOpen(false)} className="p-2 hover:bg-surface-2 dark:hover:bg-dark-surface-2 rounded-xl">
+                <button onClick={() => setMobileMenuOpen(false)} className="touch-target hover:bg-surface-2 dark:hover:bg-dark-surface-2 rounded-xl">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -267,7 +276,7 @@ const Header = () => {
                   <Link
                     key={link.path}
                     href={link.path}
-                    className={`block px-4 py-3 rounded-xl font-medium transition-colors ${
+                    className={`block px-4 py-3 rounded-xl font-medium transition-colors min-h-[44px] flex items-center ${
                       isActive(link.path)
                         ? 'bg-brand-50 dark:bg-brand-950/50 text-brand-700 dark:text-brand-300'
                         : 'text-gray-700 dark:text-gray-300 hover:bg-surface-2 dark:hover:bg-dark-surface-2'
@@ -277,6 +286,20 @@ const Header = () => {
                   </Link>
                 ))}
               </nav>
+              <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800 space-y-3">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide px-1">Preferences</p>
+                <div className="flex items-center justify-between px-2">
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Language</span>
+                  <LanguageSwitcher />
+                </div>
+                <button
+                  onClick={toggleTheme}
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-surface-2 dark:hover:bg-dark-surface-2 min-h-[44px]"
+                >
+                  <span className="text-sm font-medium">Theme</span>
+                  {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                </button>
+              </div>
               {!user && (
                 <button onClick={loginWithGoogle} className="btn-primary w-full mt-6 flex items-center justify-center space-x-2">
                   <LogIn className="w-4 h-4" /><span>Sign In with Google</span>

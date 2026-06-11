@@ -6,6 +6,7 @@ import AdSlot from '../components/AdSlot';
 import NewsMasonryGrid from '../components/NewsMasonryGrid';
 import EmptyState from '../components/EmptyState';
 import PageSidebar from '../components/PageSidebar';
+import MobileSidebarExtras from '../components/MobileSidebarExtras';
 import TrendingHeroBanner from '../components/TrendingHeroBanner';
 import CategoryFilter from '../components/CategoryFilter';
 import { Newspaper } from 'lucide-react';
@@ -55,6 +56,8 @@ const CategoryPage = ({ category, title }) => {
           <CategoryFilter showLabel edgeToEdge />
         </div>
 
+        <MobileSidebarExtras trendingArticles={trendingArticles} />
+
         {!loading && leadArticle?.slug && (
           <div className="mb-8">
             <TrendingHeroBanner
@@ -77,7 +80,7 @@ const CategoryPage = ({ category, title }) => {
                 actionTo="/"
               />
             ) : (
-              <NewsMasonryGrid articles={leadArticle ? articles.slice(1) : articles} loading={loading} />
+              <NewsMasonryGrid articles={leadArticle ? articles.slice(1) : articles} loading={loading} showMobileNewsletter />
             )}
 
             <AdSlot className="mt-8" />

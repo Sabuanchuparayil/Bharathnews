@@ -16,7 +16,7 @@ const StatCard = ({ icon: Icon, label, value, color }) => (
       <Icon className="w-5 h-5 text-white" />
     </div>
     <p className="text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
-    <p className="text-sm text-gray-500 mt-0.5">{label}</p>
+    <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{label}</p>
   </div>
 );
 
@@ -71,9 +71,9 @@ const AdminDashboard = () => {
   return (
     <Layout showBottomNav={false} showChatbot={false}>
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <h1 className="font-display font-bold text-3xl text-gray-900 dark:text-white">Analytics Dashboard</h1>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Link href="/admin/sources" className="btn-secondary text-sm px-4 py-2 rounded-xl flex items-center gap-2">
               <Rss className="w-4 h-4" /> Sources
             </Link>
@@ -98,15 +98,15 @@ const AdminDashboard = () => {
             <h2 className="font-display font-bold text-lg mb-4">Pipeline Health</h2>
             <div className="grid grid-cols-3 gap-3 text-center">
               {[
-                ['Pending', pipeline.pending || 0, 'text-amber-600'],
-                ['Classified', pipeline.classified || 0, 'text-blue-600'],
-                ['Published', pipeline.processed || 0, 'text-green-600'],
-                ['Rejected', pipeline.rejected || 0, 'text-red-600'],
-                ['Duplicate', pipeline.duplicate || 0, 'text-gray-500'],
+                ['Pending', pipeline.pending || 0, 'text-amber-600 dark:text-amber-400'],
+                ['Classified', pipeline.classified || 0, 'text-blue-600 dark:text-blue-400'],
+                ['Published', pipeline.processed || 0, 'text-green-600 dark:text-green-400'],
+                ['Rejected', pipeline.rejected || 0, 'text-red-600 dark:text-red-400'],
+                ['Duplicate', pipeline.duplicate || 0, 'text-gray-500 dark:text-gray-400'],
               ].map(([label, val, color]) => (
                 <div key={label} className="p-3 rounded-xl bg-surface-2 dark:bg-dark-surface-2">
                   <p className={`text-2xl font-bold ${color}`}>{val}</p>
-                  <p className="text-xs text-gray-500">{label}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
                 </div>
               ))}
             </div>
@@ -132,8 +132,8 @@ const AdminDashboard = () => {
           <div className="space-y-2">
             {(stats?.topArticles || []).map(a => (
               <div key={a.id} className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-800 last:border-0">
-                <span className="text-sm truncate flex-1 mr-4">{a.title}</span>
-                <span className="text-xs text-gray-500">{a.views || 0} views</span>
+                <span className="text-sm text-gray-900 dark:text-white truncate flex-1 mr-4">{a.title}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">{a.views || 0} views</span>
               </div>
             ))}
           </div>

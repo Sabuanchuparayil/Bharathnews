@@ -31,7 +31,7 @@ const ForYouSection = () => {
     return (
       <section className="py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="glass-card-solid rounded-2xl p-6 flex items-center justify-between">
+          <div className="glass-card-solid rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center space-x-3">
               <Sparkles className="w-5 h-5 text-accent-amber" />
               <div>
@@ -102,7 +102,7 @@ const ForYouSection = () => {
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
                 <div className="absolute top-2 left-2">
-                  <span className="text-[10px] font-bold uppercase bg-white/90 dark:bg-dark-surface-1/90 backdrop-blur-sm px-2 py-0.5 rounded-md text-brand-700 dark:text-brand-300">{getCategoryLabel(article.category)}</span>
+                  <span className="text-xs font-bold uppercase bg-white/90 dark:bg-dark-surface-1/90 backdrop-blur-sm px-2 py-0.5 rounded-md text-brand-700 dark:text-brand-300">{getCategoryLabel(article.category)}</span>
                 </div>
               </div>
               <div className="p-3.5">

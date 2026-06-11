@@ -105,7 +105,7 @@ const NewsCard = ({ article, variant = 'default', index = 0 }) => {
         <Link href={`/article/${slug}`} className="group flex space-x-4 p-3 rounded-2xl hover:bg-surface-2 dark:hover:bg-dark-surface-2 transition-colors">
           <SafeImage src={imageUrl} alt={title} category={category} className="w-20 h-20 object-cover rounded-xl flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <span className={`text-[11px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full ${getCategoryColor(category)}`}>{getCategoryLabel(category)}</span>
+            <span className={`text-xs font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full ${getCategoryColor(category)}`}>{getCategoryLabel(category)}</span>
             <h3 className="font-display font-bold text-sm text-gray-900 dark:text-white line-clamp-2 mt-0.5 group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors">{title}</h3>
             <div className="flex items-center space-x-3 mt-2 text-xs text-gray-400">
               <span>{source || author}</span>
@@ -165,7 +165,7 @@ const NewsCard = ({ article, variant = 'default', index = 0 }) => {
             )}
             <button
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); setQuickRead(true); }}
-              className="md:hidden absolute bottom-3 right-3 p-2 bg-black/50 backdrop-blur-sm rounded-xl text-white"
+              className="md:hidden absolute bottom-3 right-3 touch-target bg-black/50 backdrop-blur-sm rounded-xl text-white"
               aria-label="Quick read preview"
             >
               <ChevronUp className="w-4 h-4" />
@@ -200,7 +200,7 @@ const NewsCard = ({ article, variant = 'default', index = 0 }) => {
                 onClick={handleLike}
                 whileTap={{ scale: 1.3 }}
                 aria-label={liked ? 'Unlike article' : 'Like article'}
-                className={`p-2 rounded-xl transition-colors ${liked ? 'text-accent-rose bg-red-50 dark:bg-red-950/30' : 'text-gray-400 hover:text-accent-rose hover:bg-red-50 dark:hover:bg-red-950/30'}`}
+                className={`touch-target rounded-xl transition-colors ${liked ? 'text-accent-rose bg-red-50 dark:bg-red-950/30' : 'text-gray-400 hover:text-accent-rose hover:bg-red-50 dark:hover:bg-red-950/30'}`}
               >
                 <Heart className={`w-4 h-4 ${liked ? 'fill-current' : ''}`} />
               </motion.button>
@@ -218,7 +218,7 @@ const NewsCard = ({ article, variant = 'default', index = 0 }) => {
               onClick={handleBookmark}
               whileTap={{ scale: 0.9 }}
               aria-label={bookmarked ? 'Remove bookmark' : 'Bookmark article'}
-              className={`p-2 rounded-xl transition-colors ${bookmarked ? 'text-brand-600 bg-brand-50 dark:bg-brand-950/30' : 'text-gray-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-950/30'}`}
+              className={`touch-target rounded-xl transition-colors ${bookmarked ? 'text-brand-600 bg-brand-50 dark:bg-brand-950/30' : 'text-gray-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-950/30'}`}
             >
               <Bookmark className={`w-4 h-4 ${bookmarked ? 'fill-current' : ''}`} />
             </motion.button>

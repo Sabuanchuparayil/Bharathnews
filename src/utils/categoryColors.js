@@ -7,7 +7,8 @@ const COLOR_MAP = {
   'bg-green-100 text-green-700': 'bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-300',
   'bg-blue-100 text-blue-700': 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300',
   'bg-purple-100 text-purple-700': 'bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300',
-  'bg-yellow-100 text-yellow-700': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950/50 dark:text-yellow-300',
+  'bg-yellow-100 text-yellow-700': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-300',
+  'bg-violet-100 text-violet-700': 'bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300',
   'bg-pink-100 text-pink-700': 'bg-pink-100 text-pink-700 dark:bg-pink-950/50 dark:text-pink-300',
   'bg-emerald-100 text-emerald-700': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300',
   'bg-cyan-100 text-cyan-700': 'bg-cyan-100 text-cyan-700 dark:bg-cyan-950/50 dark:text-cyan-300',
@@ -78,7 +79,7 @@ export const getCategoryPillClasses = (categoryId, isActive) => {
 
   const color = getCategoryColor(categoryId);
   if (isActive) {
-    return `${color} ring-2 ring-offset-1 ring-current/25 font-semibold shadow-sm`;
+    return `${color} ring-2 ring-offset-1 ring-offset-white dark:ring-offset-dark-surface-0 ring-current/25 font-semibold shadow-sm`;
   }
   return `${color} opacity-90 hover:opacity-100`;
 };

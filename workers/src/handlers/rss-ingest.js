@@ -6,7 +6,7 @@ import { FIRESTORE_BASE } from '../lib/firestore-rest.js';
 
 /** One source per category (13 cats); keeps HTTP /api/ingest under Worker time limits. */
 const MAX_SOURCES_PER_RUN = 13;
-const ITEMS_PER_SOURCE = 3;
+const ITEMS_PER_SOURCE = 5;
 const PARALLEL_BATCH = 4;
 
 /** Pick at least one source per category, then fill remaining slots. */
@@ -49,7 +49,10 @@ async function ingestOneFeed(env, feed, token) {
       if (!item.title || !item.link) continue;
 
       const slug = item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 80);
-      const resolvedImage = item.imageUrl || getCategoryFallbackImage(feed.category || 'india');
+      const category = feed.category || 'india';
+      // RSS media when present; category placeholder otherwise. og:image is resolved at
+      // publish time in ai-process when imageUrl is empty or a category fallback.
+      const imageUrl = item.imageUrl || getCategoryFallbackImage(category);
       const ok = await storeRawArticle(env, {
         title: item.title,
         description: item.description || '',
@@ -60,7 +63,7 @@ async function ingestOneFeed(env, feed, token) {
         region: feed.region || 'india',
         language: feed.language || 'en',
         publishedAt: item.pubDate || new Date().toISOString(),
-        imageUrl: resolvedImage,
+        imageUrl,
         slug,
       }, token);
 

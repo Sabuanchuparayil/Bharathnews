@@ -2,8 +2,9 @@
 
 import React from 'react';
 import NewsCard from './NewsCard';
+import NewsletterSignup from './NewsletterSignup';
 
-const NewsMasonryGrid = ({ articles = [], loading = false }) => {
+const NewsMasonryGrid = ({ articles = [], loading = false, showMobileNewsletter = false }) => {
   if (loading) {
     return (
       <div className="masonry-grid">
@@ -23,19 +24,27 @@ const NewsMasonryGrid = ({ articles = [], loading = false }) => {
     );
   }
 
-  return (
-    <div className="masonry-grid">
-      {articles.map((article, index) => (
-        <div key={article.id || index} className="masonry-item">
-          <NewsCard
-            article={article}
-            index={index}
-            variant={index % 5 === 0 ? 'featured' : 'default'}
-          />
+  const items = [];
+  articles.forEach((article, index) => {
+    items.push(
+      <div key={article.id || index} className="masonry-item">
+        <NewsCard
+          article={article}
+          index={index}
+          variant={index % 5 === 0 ? 'featured' : 'default'}
+        />
+      </div>
+    );
+    if (showMobileNewsletter && (index + 1) % 6 === 0) {
+      items.push(
+        <div key={`newsletter-${index}`} className="masonry-item lg:hidden">
+          <NewsletterSignup />
         </div>
-      ))}
-    </div>
-  );
+      );
+    }
+  });
+
+  return <div className="masonry-grid">{items}</div>;
 };
 
 export default NewsMasonryGrid;

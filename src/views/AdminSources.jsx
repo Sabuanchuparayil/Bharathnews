@@ -21,18 +21,35 @@ const AdminSources = () => {
     setSources(prev => prev.map(s => s.id === id ? { ...s, enabled: !enabled } : s));
   };
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <Layout showBottomNav={false}>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="w-8 h-8 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      </Layout>
+    );
+  }
   if (!user) {
     return (
       <Layout showBottomNav={false}>
-        <div className="text-center py-20"><button onClick={loginWithGoogle} className="btn-primary">Sign in</button></div>
+        <div className="flex items-center justify-center min-h-[60vh] px-4">
+          <div className="glass-card-solid rounded-2xl p-8 text-center max-w-md">
+            <h1 className="font-display font-bold text-2xl text-gray-900 dark:text-white mb-4">Sign In Required</h1>
+            <button onClick={loginWithGoogle} className="btn-primary">Sign in with Google</button>
+          </div>
+        </div>
       </Layout>
     );
   }
   if (!isAdmin) {
     return (
       <Layout showBottomNav={false}>
-        <div className="text-center py-20"><p>Admin access required</p></div>
+        <div className="flex items-center justify-center min-h-[60vh] px-4">
+          <div className="glass-card-solid rounded-2xl p-8 text-center max-w-md">
+            <p className="text-gray-600 dark:text-gray-400">Admin access required</p>
+          </div>
+        </div>
       </Layout>
     );
   }
@@ -50,8 +67,8 @@ const AdminSources = () => {
         <Link href="/admin/dashboard" className="inline-flex items-center gap-2 text-gray-500 mb-6 hover:text-brand-600">
           <ArrowLeft className="w-4 h-4" /> Back to Dashboard
         </Link>
-        <h1 className="font-display font-bold text-3xl mb-2">Source Manager</h1>
-        <p className="text-gray-500 mb-8">{sources.length} sources configured</p>
+        <h1 className="font-display font-bold text-3xl text-gray-900 dark:text-white mb-2">Source Manager</h1>
+        <p className="text-gray-500 dark:text-gray-400 mb-8">{sources.length} sources configured</p>
 
         {Object.entries(grouped).sort().map(([lang, items]) => (
           <div key={lang} className="mb-8">

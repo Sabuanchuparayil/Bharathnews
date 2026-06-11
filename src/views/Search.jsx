@@ -65,7 +65,7 @@ const Search = () => {
   return (
     <Layout mainClassName="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <h1 className="font-display font-bold text-3xl text-gray-900 dark:text-white mb-6">Search News</h1>
-      <form onSubmit={handleSearch} className="flex gap-3 mb-8">
+      <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3 mb-8">
         <input
           type="search"
           value={query}

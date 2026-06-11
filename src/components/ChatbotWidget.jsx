@@ -67,7 +67,7 @@ const ChatbotWidget = () => {
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            className="fixed bottom-20 right-4 md:bottom-8 md:right-8 w-[340px] sm:w-[380px] h-[500px] bg-white dark:bg-dark-surface-1 rounded-3xl shadow-floating border border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden z-50"
+            className="fixed bottom-20 right-4 md:bottom-8 md:right-8 w-[calc(100vw-2rem)] max-w-[380px] h-[min(500px,calc(100vh-6rem))] bg-white dark:bg-dark-surface-1 rounded-3xl shadow-floating border border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden z-50 safe-bottom"
           >
             <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
               <div className="flex items-center space-x-2">
@@ -79,7 +79,7 @@ const ChatbotWidget = () => {
                   <p className="text-[10px] text-accent-emerald font-medium">Online</p>
                 </div>
               </div>
-              <button onClick={() => setIsOpen(false)} aria-label="Close chat" className="p-2 hover:bg-surface-2 dark:hover:bg-dark-surface-2 rounded-xl transition-colors">
+              <button onClick={() => setIsOpen(false)} aria-label="Close chat" className="touch-target hover:bg-surface-2 dark:hover:bg-dark-surface-2 rounded-xl transition-colors">
                 <X className="w-4 h-4 text-gray-500" />
               </button>
             </div>
@@ -118,13 +118,13 @@ const ChatbotWidget = () => {
                   onKeyDown={e => e.key === 'Enter' && handleSend()}
                   placeholder="Ask about today's news..."
                   aria-label="Chat message"
-                  className="flex-1 input-field py-2.5 text-sm rounded-xl"
+                  className="flex-1 input-field py-2.5 rounded-xl"
                 />
                 <button
                   onClick={handleSend}
                   disabled={!input.trim() || loading}
                   aria-label="Send message"
-                  className="p-2.5 bg-brand-600 hover:bg-brand-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-xl transition-colors"
+                  className="touch-target bg-brand-600 hover:bg-brand-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-xl transition-colors"
                 >
                   <Send className="w-4 h-4" />
                 </button>

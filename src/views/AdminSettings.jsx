@@ -31,12 +31,29 @@ const AdminSettings = () => {
     setUsers(prev => prev.map(u => u.id === userId ? { ...u, role } : u));
   };
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <Layout showBottomNav={false}>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="w-8 h-8 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      </Layout>
+    );
+  }
   if (!user || !isAdmin) {
     return (
       <Layout showBottomNav={false}>
-        <div className="text-center py-20">
-          {!user ? <button onClick={loginWithGoogle} className="btn-primary">Sign in</button> : <p>Admin access required</p>}
+        <div className="flex items-center justify-center min-h-[60vh] px-4">
+          <div className="glass-card-solid rounded-2xl p-8 text-center max-w-md">
+            {!user ? (
+              <>
+                <h1 className="font-display font-bold text-2xl text-gray-900 dark:text-white mb-4">Sign In Required</h1>
+                <button onClick={loginWithGoogle} className="btn-primary">Sign in with Google</button>
+              </>
+            ) : (
+              <p className="text-gray-600 dark:text-gray-400">Admin access required</p>
+            )}
+          </div>
         </div>
       </Layout>
     );

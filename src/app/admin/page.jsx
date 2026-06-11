@@ -1,2 +1,5 @@
-import Admin from '@/views/Admin';
-export default function Page() { return <Admin />; }
+import { redirect } from 'next/navigation';
+
+export default function Page() {
+  redirect('/admin/dashboard');
+}

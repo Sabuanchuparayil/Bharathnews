@@ -86,7 +86,8 @@ const CreatorProfile = ({ username: usernameProp, initialProfile = null }) => {
   if (!profile) {
     return (
       <Layout mainClassName="max-w-xl mx-auto px-4 py-12 text-center">
-        <h1 className="font-display font-bold text-2xl">Creator not found</h1>
+        <h1 className="font-display font-bold text-2xl text-gray-900 dark:text-white">Creator not found</h1>
+        <p className="text-gray-500 dark:text-gray-400 mt-2">This profile may have been removed or the handle is incorrect.</p>
         <p className="text-gray-500 mt-2">{'@' + username} doesn&apos;t exist yet.</p>
         <Link href="/creator/apply" className="btn-primary inline-block mt-6 px-6 py-2.5 rounded-xl">Become a Creator</Link>
       </Layout>
@@ -121,7 +122,7 @@ const CreatorProfile = ({ username: usernameProp, initialProfile = null }) => {
               <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
                 <span><strong>{profile.followerCount || 0}</strong> followers</span>
                 <span><strong>{profile.postCount || 0}</strong> posts</span>
-                {profile.revenueShareEligible && <span className="text-green-600 font-semibold">Revenue Share Eligible</span>}
+                {profile.revenueShareEligible && <span className="text-green-600 dark:text-green-400 font-semibold">Revenue Share Eligible</span>}
               </div>
             </div>
             <div className="flex gap-2 pb-2">

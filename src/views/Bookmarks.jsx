@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { Bookmark as BookmarkIcon } from 'lucide-react';
-import Link from 'next/link';
 import Layout from '../components/Layout';
 import NewsCard from '../components/NewsCard';
+import EmptyState from '../components/EmptyState';
 import { useAuth } from '../context/AuthContext';
 import { getBookmarks, getArticlesByIds } from '../services/firestore';
 
 const Bookmarks = () => {
-  const { user } = useAuth();
+  const { user, loginWithGoogle } = useAuth();
   const [bookmarkedArticles, setBookmarkedArticles] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -38,10 +38,13 @@ const Bookmarks = () => {
         <h1 className="font-display font-bold text-3xl text-gray-900 dark:text-white">Bookmarks</h1>
       </div>
       {!user ? (
-        <div className="glass-card-solid rounded-2xl p-8 text-center">
-          <p className="text-gray-500 dark:text-gray-400 mb-4">Please sign in to view your bookmarks.</p>
-          <Link href="/settings" className="btn-primary inline-flex">Go to Settings</Link>
-        </div>
+        <EmptyState
+          icon={BookmarkIcon}
+          title="Sign in to view bookmarks"
+          description="Save articles to read later once you're signed in."
+          actionLabel="Sign in with Google"
+          onAction={loginWithGoogle}
+        />
       ) : loading ? (
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
@@ -55,9 +58,13 @@ const Bookmarks = () => {
           {bookmarkedArticles.map((article, i) => <NewsCard key={article.id} article={article} index={i} />)}
         </div>
       ) : (
-        <div className="glass-card-solid rounded-2xl p-8 text-center">
-          <p className="text-gray-500 dark:text-gray-400">No bookmarked articles yet.</p>
-        </div>
+        <EmptyState
+          icon={BookmarkIcon}
+          title="No bookmarks yet"
+          description="Tap the bookmark icon on any article to save it here."
+          actionLabel="Browse news"
+          actionTo="/"
+        />
       )}
     </Layout>
   );

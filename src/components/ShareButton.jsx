@@ -36,8 +36,8 @@ const ShareButton = ({
   const shareUrl = urlProp || buildShareUrl(path, contentType);
   const socialUrls = getSocialShareUrls({ title, text, url: shareUrl });
 
-  const iconSize = size === 'sm' ? 'w-3.5 h-3.5' : size === 'lg' ? 'w-5 h-5' : 'w-4 h-4';
-  const btnPadding = size === 'sm' ? 'p-1.5' : size === 'lg' ? 'p-3' : 'p-2';
+  const iconSize = size === 'sm' ? 'w-4 h-4' : size === 'lg' ? 'w-5 h-5' : 'w-4 h-4';
+  const btnPadding = size === 'sm' ? 'touch-target p-2' : size === 'lg' ? 'touch-target px-4 py-2' : 'touch-target p-2';
 
   const handleNativeShare = async (e) => {
     e.stopPropagation();

@@ -19,15 +19,22 @@ const CATEGORY_IMAGES = {
 
 const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=800&h=450&fit=crop';
 
+const ALL_FALLBACK_IMAGES = new Set([DEFAULT_IMAGE, ...Object.values(CATEGORY_IMAGES)]);
+
 export function getCategoryFallbackImage(category) {
   const key = (category || '').toLowerCase().replace(/[\s-]/g, '');
   return CATEGORY_IMAGES[key] || DEFAULT_IMAGE;
 }
 
-async function fetchOgImage(url) {
+/** True when URL is one of our Unsplash category placeholders (not a real article image). */
+export function isCategoryFallbackImage(url) {
+  return !url || ALL_FALLBACK_IMAGES.has(url);
+}
+
+async function fetchOgImage(url, timeoutMs = 4000) {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 4000);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     const res = await fetch(url, {
       headers: { 'User-Agent': 'TheBharathNews/1.0 (Image Resolver)' },
       signal: controller.signal,
@@ -50,10 +57,10 @@ async function fetchOgImage(url) {
 }
 
 /** Resolve the best available image URL for an article. */
-export async function resolveArticleImage({ imageUrl, sourceUrl, category }) {
-  if (imageUrl) return imageUrl;
+export async function resolveArticleImage({ imageUrl, sourceUrl, category, ogTimeoutMs = 4000 }) {
+  if (imageUrl && !isCategoryFallbackImage(imageUrl)) return imageUrl;
   if (sourceUrl) {
-    const og = await fetchOgImage(sourceUrl);
+    const og = await fetchOgImage(sourceUrl, ogTimeoutMs);
     if (og) return og;
   }
   return getCategoryFallbackImage(category);

@@ -2,8 +2,9 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Heart } from 'lucide-react';
+import { Heart, Mail } from 'lucide-react';
 import { SOCIAL_CHANNELS } from '../config/channels.config';
+import NewsletterSignup from './NewsletterSignup';
 
 const FOOTER_NEWS_LINKS = [
   { path: '/explore', title: 'All Categories' },
@@ -17,13 +18,21 @@ const Footer = () => {
   return (
     <footer className="bg-surface-1 dark:bg-dark-surface-0 border-t border-gray-100 dark:border-gray-800 pb-20 md:pb-0">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
+        <div className="lg:hidden mb-10">
+          <div className="flex items-center gap-2 mb-3">
+            <Mail className="w-4 h-4 text-brand-600 dark:text-brand-400" />
+            <h4 className="font-display font-bold text-sm text-gray-900 dark:text-white">Daily Newsletter</h4>
+          </div>
+          <NewsletterSignup />
+        </div>
+
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="flex items-center space-x-2 mb-4">
               <div className="w-8 h-8 bg-gradient-to-br from-brand-500 to-brand-700 rounded-xl flex items-center justify-center">
                 <span className="text-white font-bold text-sm">B</span>
               </div>
-              <span className="font-display font-bold text-lg text-gray-900 dark:text-white">BharathNews</span>
+              <span className="font-display font-bold text-lg text-gray-900 dark:text-white">The Bharath News</span>
             </Link>
             <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
               AI-powered news for the India-GCC community. Breaking news, business, technology — in English and Malayalam.
@@ -36,7 +45,7 @@ const Footer = () => {
               {FOOTER_NEWS_LINKS.map(link => (
                 <li key={link.path}>
                   <Link href={link.path} className="text-sm text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
-                    {link.title.replace(' News', '')}
+                    {link.title}
                   </Link>
                 </li>
               ))}

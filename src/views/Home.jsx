@@ -10,6 +10,7 @@ import StoriesCarousel from '../components/StoriesCarousel';
 import ForYouSection from '../components/ForYouSection';
 import CategoryFilter from '../components/CategoryFilter';
 import PageSidebar from '../components/PageSidebar';
+import MobileSidebarExtras from '../components/MobileSidebarExtras';
 import AdSlot from '../components/AdSlot';
 import NewsMasonryGrid from '../components/NewsMasonryGrid';
 import EmptyState from '../components/EmptyState';
@@ -19,6 +20,19 @@ import { getHomeCategories } from '../config/feeds.config';
 import { getArticlesPage, getTrendingArticles } from '../services/firestore';
 
 const PAGE_SIZE = 12;
+const STORY_RING_COUNT = 12;
+
+function mergeStoryPool(primary, fallback, count) {
+  const seen = new Set();
+  const out = [];
+  for (const article of [...primary, ...fallback]) {
+    if (!article?.slug || seen.has(article.slug)) continue;
+    seen.add(article.slug);
+    out.push(article);
+    if (out.length >= count) break;
+  }
+  return out;
+}
 
 const Home = () => {
   const searchParams = useSearchParams();
@@ -41,13 +55,13 @@ const Home = () => {
       const category = activeCategory === 'all' ? null : activeCategory;
       const [page, trending] = await Promise.all([
         getArticlesPage(category, null, PAGE_SIZE + 4),
-        getTrendingArticles(5),
+        getTrendingArticles(STORY_RING_COUNT),
       ]);
       setFeaturedArticles(page.articles.slice(0, 4));
       setArticles(page.articles.slice(4));
       setLastDoc(page.lastDoc);
       setHasMore(page.hasMore);
-      setTrendingArticles(trending);
+      setTrendingArticles(mergeStoryPool(trending, page.articles, STORY_RING_COUNT));
     } catch (err) {
       console.error('Error fetching articles:', err);
       setError('Unable to load stories. Please try again.');
@@ -91,6 +105,7 @@ const Home = () => {
       <OnboardingModal />
       <BreakingTicker articles={trendingArticles} />
       <StoriesCarousel articles={trendingArticles} />
+      <MobileSidebarExtras trendingArticles={trendingArticles} />
       {featuredArticles.length > 0 ? (
         <HeroSection featured={featuredArticles} />
       ) : showFallbackHero ? (
@@ -135,7 +150,7 @@ const Home = () => {
                 actionTo="/india"
               />
             ) : (
-              <NewsMasonryGrid articles={articles} loading={loading} />
+              <NewsMasonryGrid articles={articles} loading={loading} showMobileNewsletter />
             )}
 
             <AdSlot className="my-8" />

@@ -47,7 +47,7 @@ const BottomNav = () => {
                 }`}
               />
               <span
-                className={`text-[10px] mt-1 font-medium transition-colors duration-200 ${
+                className={`text-[11px] mt-1 font-medium transition-colors duration-200 ${
                   active ? 'text-brand-600 dark:text-brand-400' : 'text-gray-400 dark:text-gray-500'
                 }`}
               >
