@@ -66,7 +66,7 @@ const Community = () => {
               { title: 'GCC Community', desc: 'Expat life & opportunities', to: '/gcc' },
               { title: 'Opinion & Editorial', desc: 'Perspectives & analysis', to: '/opinion' },
             ].map(forum => (
-              <Link key={forum.title} to={forum.to} className="glass-card-solid rounded-2xl p-5 card-lift block">
+              <Link key={forum.title} href={forum.to} className="glass-card-solid rounded-2xl p-5 card-lift block">
                 <h2 className="font-display font-bold text-base text-gray-900 dark:text-white hover:text-brand-600 dark:hover:text-brand-400 transition-colors">{forum.title}</h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{forum.desc}</p>
               </Link>

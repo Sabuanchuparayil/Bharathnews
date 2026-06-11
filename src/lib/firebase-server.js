@@ -1,4 +1,5 @@
 import { initializeApp, getApps } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -11,7 +12,9 @@ const firebaseConfig = {
 };
 
 function getFirebaseApp() {
-  return getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+  const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+  getAuth(app);
+  return app;
 }
 
 export function getServerDb() {

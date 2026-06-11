@@ -1,10 +1,5 @@
 'use client';
 
-import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-import { getMessaging, isSupported } from 'firebase/messaging';
-
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -14,17 +9,38 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
-export const db = getFirestore(app);
+let client = null;
+
+/** Lazy-init Firebase client SDK (browser only). Auth must init before Firestore. */
+export function getClientFirebase() {
+  if (typeof window === 'undefined') return null;
+  if (client) return client;
+
+  const { initializeApp, getApps } = require('firebase/app');
+  const { getAuth, GoogleAuthProvider } = require('firebase/auth');
+  const { getFirestore } = require('firebase/firestore');
+
+  const app = getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  client = {
+    app,
+    auth,
+    db: getFirestore(app),
+    googleProvider: new GoogleAuthProvider(),
+  };
+  return client;
+}
+
+export const auth = null;
+export const db = null;
+export const googleProvider = null;
 
 export const getMessagingInstance = async () => {
+  const fb = getClientFirebase();
+  if (!fb) return null;
+  const { getMessaging, isSupported } = await import('firebase/messaging');
   const supported = await isSupported();
-  if (supported) {
-    return getMessaging(app);
-  }
-  return null;
+  return supported ? getMessaging(fb.app) : null;
 };
 
-export default app;
+export default null;

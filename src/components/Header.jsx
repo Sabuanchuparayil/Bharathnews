@@ -37,7 +37,7 @@ const Header = () => {
   useEffect(() => {
     setMobileMenuOpen(false);
     setSearchOpen(false);
-  }, [location]);
+  }, [pathname]);
 
   const navLinks = [
     { to: '/', label: 'Home' },
@@ -77,7 +77,7 @@ const Header = () => {
               {navLinks.map(link => (
                 <Link
                   key={link.to}
-                  to={link.to}
+                  href={link.to}
                   className={`px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
                     isActive(link.to)
                       ? 'bg-brand-50 dark:bg-brand-950/50 text-brand-700 dark:text-brand-300'
@@ -265,7 +265,7 @@ const Header = () => {
                 {navLinks.map(link => (
                   <Link
                     key={link.to}
-                    to={link.to}
+                    href={link.to}
                     className={`block px-4 py-3 rounded-xl font-medium transition-colors ${
                       isActive(link.to)
                         ? 'bg-brand-50 dark:bg-brand-950/50 text-brand-700 dark:text-brand-300'

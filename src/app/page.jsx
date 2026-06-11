@@ -1,2 +1,5 @@
-import Home from '@/views/Home';
-export default function Page() { return <Home />; }
+import HomeClient from '@/components/HomeClient';
+
+export default function Page() {
+  return <HomeClient />;
+}

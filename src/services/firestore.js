@@ -1,11 +1,8 @@
 'use client';
 
-import {
-  collection, doc, getDoc, getDocs, addDoc, updateDoc,
-  query, where, orderBy, limit, startAfter, serverTimestamp,
-  increment, arrayUnion, arrayRemove
-} from 'firebase/firestore';
-import { db } from '../config/firebase.config';
+import { getDb, firestoreOps } from '@/lib/firebase-client';
+
+const emptyPage = { articles: [], lastDoc: null, hasMore: false };
 
 export const getArticles = async (category = null, lastDoc = null, pageSize = 20) => {
   const { articles } = await getArticlesPage(category, lastDoc, pageSize);
@@ -13,6 +10,9 @@ export const getArticles = async (category = null, lastDoc = null, pageSize = 20
 };
 
 export const getArticlesPage = async (category = null, lastDoc = null, pageSize = 20) => {
+  const db = getDb();
+  if (!db) return emptyPage;
+  const { collection, query, where, orderBy, limit, startAfter, getDocs } = await firestoreOps();
   let q;
   if (category && category !== 'all') {
     q = query(collection(db, 'articles'), where('category', '==', category), orderBy('publishedAt', 'desc'), limit(pageSize));
@@ -33,6 +33,9 @@ export const getArticlesPage = async (category = null, lastDoc = null, pageSize 
 };
 
 export const getArticleBySlug = async (slug) => {
+  const db = getDb();
+  if (!db) return null;
+  const { collection, query, where, limit, getDocs } = await firestoreOps();
   const q = query(collection(db, 'articles'), where('slug', '==', slug), limit(1));
   const snapshot = await getDocs(q);
   if (snapshot.empty) return null;
@@ -41,6 +44,9 @@ export const getArticleBySlug = async (slug) => {
 };
 
 export const getTrendingArticles = async (count = 5) => {
+  const db = getDb();
+  if (!db) return [];
+  const { collection, query, orderBy, limit, getDocs } = await firestoreOps();
   const q = query(collection(db, 'articles'), orderBy('views', 'desc'), limit(count));
   const snapshot = await getDocs(q);
   return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -54,6 +60,9 @@ export const getArticlesByInterests = async (interests, count = 10) => {
 
   if (topCategories.length === 0) return getTrendingArticles(count);
 
+  const db = getDb();
+  if (!db) return [];
+  const { collection, query, where, orderBy, limit, getDocs } = await firestoreOps();
   const q = query(
     collection(db, 'articles'),
     where('category', 'in', topCategories),
@@ -65,14 +74,20 @@ export const getArticlesByInterests = async (interests, count = 10) => {
 };
 
 export const trackArticleView = async (articleId) => {
+  const db = getDb();
+  if (!db) return;
   const viewedKey = `viewed_${articleId}`;
   if (typeof window !== 'undefined' && sessionStorage.getItem(viewedKey)) return;
+  const { doc, updateDoc, increment } = await firestoreOps();
   const ref = doc(db, 'articles', articleId);
   await updateDoc(ref, { views: increment(1) });
   if (typeof window !== 'undefined') sessionStorage.setItem(viewedKey, '1');
 };
 
 export const trackUserInteraction = async (userId, articleId, action, metadata = {}) => {
+  const db = getDb();
+  if (!db) return;
+  const { collection, addDoc, serverTimestamp } = await firestoreOps();
   await addDoc(collection(db, 'users', userId, 'history'), {
     articleId,
     action,
@@ -82,11 +97,17 @@ export const trackUserInteraction = async (userId, articleId, action, metadata =
 };
 
 export const addBookmark = async (userId, articleId) => {
+  const db = getDb();
+  if (!db) return;
+  const { doc, updateDoc, arrayUnion } = await firestoreOps();
   const ref = doc(db, 'users', userId);
   await updateDoc(ref, { bookmarks: arrayUnion(articleId) });
 };
 
 export const removeBookmark = async (userId, articleId) => {
+  const db = getDb();
+  if (!db) return;
+  const { doc, updateDoc, arrayRemove } = await firestoreOps();
   const ref = doc(db, 'users', userId);
   await updateDoc(ref, { bookmarks: arrayRemove(articleId) });
 };
@@ -97,12 +118,18 @@ export const toggleBookmark = async (userId, articleId, isBookmarked) => {
 };
 
 export const getBookmarks = async (userId) => {
+  const db = getDb();
+  if (!db) return [];
+  const { doc, getDoc } = await firestoreOps();
   const ref = doc(db, 'users', userId);
   const snap = await getDoc(ref);
   return snap.data()?.bookmarks || [];
 };
 
 export const toggleLike = async (userId, articleId, isLiked) => {
+  const db = getDb();
+  if (!db) return;
+  const { doc, updateDoc, increment, arrayUnion, arrayRemove } = await firestoreOps();
   const userRef = doc(db, 'users', userId);
   const articleRef = doc(db, 'articles', articleId);
   if (isLiked) {
@@ -115,6 +142,9 @@ export const toggleLike = async (userId, articleId, isLiked) => {
 };
 
 export const subscribeNewsletter = async (email) => {
+  const db = getDb();
+  if (!db) throw new Error('Firebase unavailable');
+  const { collection, query, where, limit, getDocs, addDoc, serverTimestamp } = await firestoreOps();
   const normalized = email.toLowerCase().trim();
   const existing = await getDocs(
     query(collection(db, 'subscribers'), where('email', '==', normalized), limit(1))
@@ -130,12 +160,17 @@ export const subscribeNewsletter = async (email) => {
 };
 
 export const getSubscriberCount = async () => {
+  const db = getDb();
+  if (!db) return 0;
+  const { collection, getDocs } = await firestoreOps();
   const snap = await getDocs(collection(db, 'subscribers'));
   return snap.size;
 };
 
-// For production full-text search, consider Algolia or Typesense synced from Firestore.
 export const searchArticles = async (searchTerm, pageSize = 30) => {
+  const db = getDb();
+  if (!db) return [];
+  const { collection, query, where, orderBy, limit, getDocs } = await firestoreOps();
   const term = searchTerm.toLowerCase().trim();
   if (!term) return [];
 
@@ -168,7 +203,9 @@ export const searchArticles = async (searchTerm, pageSize = 30) => {
 };
 
 export const getArticlesByIds = async (articleIds) => {
-  if (!articleIds.length) return [];
+  const db = getDb();
+  if (!db || !articleIds.length) return [];
+  const { collection, query, where, getDocs } = await firestoreOps();
   const chunks = [];
   for (let i = 0; i < articleIds.length; i += 30) {
     chunks.push(articleIds.slice(i, i + 30));
@@ -182,6 +219,9 @@ export const getArticlesByIds = async (articleIds) => {
 };
 
 export const getVideoFeeds = async (category = null, count = 20) => {
+  const db = getDb();
+  if (!db) return [];
+  const { collection, query, where, orderBy, limit, getDocs } = await firestoreOps();
   let q = query(collection(db, 'videos'), orderBy('fetchedAt', 'desc'), limit(count));
   if (category) {
     q = query(collection(db, 'videos'), where('category', '==', category), orderBy('fetchedAt', 'desc'), limit(count));
