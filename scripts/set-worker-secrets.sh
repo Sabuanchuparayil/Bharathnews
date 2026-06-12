@@ -45,6 +45,7 @@ put_secret CLAUDE_MODEL "${CLAUDE_MODEL:-}"
 put_secret RESEND_API_KEY "${RESEND_API_KEY:-}"
 put_secret FACEBOOK_PAGE_TOKEN "${FACEBOOK_PAGE_TOKEN:-}"
 put_secret FACEBOOK_PAGE_ID "${FACEBOOK_PAGE_ID:-}"
+put_secret WORKER_API_SECRET "${WORKER_API_SECRET:-}"
 
 echo ""
 echo "Current secrets:"

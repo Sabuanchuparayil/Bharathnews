@@ -23,6 +23,7 @@ binding = "AI"
 #   npx wrangler secret put ANTHROPIC_API_KEY            # Claude Haiku for classification
 #   npx wrangler secret put CLAUDE_MODEL                 # optional, default claude-haiku-4-5-20251001
 #   npx wrangler secret put RESEND_API_KEY               # Newsletter digest
+#   npx wrangler secret put WORKER_API_SECRET            # Protect POST /api/* manual triggers
 # Optional:
 #   npx wrangler secret put FACEBOOK_PAGE_TOKEN
 #   npx wrangler secret put FACEBOOK_PAGE_ID

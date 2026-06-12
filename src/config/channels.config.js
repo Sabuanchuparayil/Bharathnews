@@ -1,29 +1,17 @@
-export const SOCIAL_CHANNELS = {
-  telegram: {
-    name: 'Telegram',
-    url: 'https://t.me/TheBharathNews',
-    icon: 'Send',
+import { mergeSiteSettings, buildSocialChannels } from './site-settings';
+
+/** Static fallback when Firestore settings are not loaded yet. */
+export const SOCIAL_CHANNELS = buildSocialChannels(mergeSiteSettings({
+  integrations: {
+    whatsapp: {
+      channelUrl: process.env.NEXT_PUBLIC_WHATSAPP_CHANNEL_URL || '',
+    },
+    telegram: {
+      channelUrl: 'https://t.me/TheBharathNews',
+    },
   },
-  whatsapp: {
-    name: 'WhatsApp Channel',
-    url: process.env.NEXT_PUBLIC_WHATSAPP_CHANNEL_URL || 'https://whatsapp.com/channel/0029VaXXXXXXXX',
-    icon: 'MessageCircle',
-  },
-  youtube: {
-    name: 'YouTube',
-    url: 'https://youtube.com/@TheBharathNews',
-    icon: 'Youtube',
-  },
-  instagram: {
-    name: 'Instagram',
-    url: 'https://instagram.com/thebharathnews',
-    icon: 'Instagram',
-  },
-  facebook: {
-    name: 'Facebook',
-    url: 'https://facebook.com/thebharathnews',
-    icon: 'Facebook',
-  },
-};
+}));
+
+export { buildSocialChannels };
 
 export const TELEGRAM_CHANNEL_ID = process.env.NEXT_PUBLIC_TELEGRAM_CHANNEL_ID || '@TheBharathNews';

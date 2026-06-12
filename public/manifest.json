@@ -1,12 +1,14 @@
 {
-  "name": "The Bharath News",
+  "name": "The Bharath News — Breaking News from India & GCC",
   "short_name": "BharathNews",
-  "description": "AI-Powered News for India and GCC regions",
+  "description": "Breaking news from India and GCC regions. Business, technology, sports, entertainment, and community stories in English and regional languages.",
   "start_url": "/",
+  "id": "/",
   "display": "standalone",
   "background_color": "#f9fafb",
   "theme_color": "#4338ca",
   "orientation": "portrait",
+  "scope": "/",
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
@@ -20,19 +22,33 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["news", "business"],
+  "categories": ["news", "business", "entertainment", "sports"],
   "lang": "en",
   "dir": "ltr",
   "screenshots": [],
   "shortcuts": [
     {
       "name": "India News",
+      "short_name": "India",
       "url": "/india",
       "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "GCC News",
+      "short_name": "GCC",
       "url": "/gcc",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Videos",
+      "short_name": "Videos",
+      "url": "/videos",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Explore Topics",
+      "short_name": "Explore",
+      "url": "/explore",
       "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     }
   ]

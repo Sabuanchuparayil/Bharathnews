@@ -99,9 +99,15 @@ function slugify(str) {
 function toFields(obj) {
   const fields = {};
   for (const [k, v] of Object.entries(obj)) {
+    if (v === null || v === undefined) continue;
     if (typeof v === 'string') fields[k] = { stringValue: v };
     else if (typeof v === 'number') fields[k] = Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
     else if (typeof v === 'boolean') fields[k] = { booleanValue: v };
+    else if (Array.isArray(v)) {
+      fields[k] = { arrayValue: { values: v.map(item => ({ stringValue: String(item) })) } };
+    } else if (typeof v === 'object') {
+      fields[k] = { mapValue: { fields: toFields(v) } };
+    }
   }
   return fields;
 }
@@ -262,9 +268,17 @@ async function seed() {
     body: JSON.stringify({
       fields: toFields({
         qualityThreshold: 6,
-        targetLanguages: 'ml,hi,ar',
+        targetLanguages: 'ml,hi,ta,te,kn,bn',
         headerText: 'The Bharath News',
         footerText: 'India-GCC News for the Global Indian',
+        siteName: 'The Bharath News',
+        tagline: 'Breaking news from India and GCC regions',
+        integrations: {
+          telegram: { enabled: true, channelId: '@TheBharathNews', channelUrl: 'https://t.me/TheBharathNews', minScoreToPost: 7 },
+          whatsapp: { enabled: true, channelUrl: '', showFollowCta: true },
+          email: { enabled: true, newsletterFrom: 'The Bharath News <news@thebharathnews.com>', digestEnabled: true },
+        },
+        pipeline: { rssIngestEnabled: true, videoFetchEnabled: true },
       }),
     }),
   });

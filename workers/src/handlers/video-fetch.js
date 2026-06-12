@@ -1,4 +1,4 @@
-import { loadEnabledSources, updateSourceHealth } from '../lib/sources-loader.js';
+import { loadEnabledSources, updateSourceHealth, loadSiteSettings } from '../lib/sources-loader.js';
 import { fetchAndParseFeed } from '../lib/rss-parser.js';
 import { getFirebaseToken } from '../lib/firebase-auth.js';
 import { FIRESTORE_BASE } from '../lib/firestore-rest.js';
@@ -9,6 +9,12 @@ function safeISODate(value) {
 }
 
 export async function handleVideoFetch(env) {
+  const settings = await loadSiteSettings(env);
+  if (settings.pipeline?.videoFetchEnabled === false) {
+    console.log('Video fetch skipped: disabled in site settings');
+    return [];
+  }
+
   const token = await getFirebaseToken(env);
   const channels = await loadEnabledSources(env, 'youtube');
   const results = [];

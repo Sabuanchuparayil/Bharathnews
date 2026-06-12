@@ -5,6 +5,7 @@ import { MotionConfig } from 'framer-motion';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider } from '@/context/AuthContext';
+import { SiteSettingsProvider } from '@/context/SiteSettingsContext';
 import { InterestProvider } from '@/context/InterestContext';
 import { LanguageProvider } from '@/context/LanguageContext';
 import { ThemeProvider } from '@/context/ThemeContext';
@@ -27,6 +28,7 @@ export default function Providers({ children }) {
   return (
     <ThemeProvider>
       <AuthProvider>
+        <SiteSettingsProvider>
         <LanguageProvider>
         <InterestProvider>
           <MotionConfig reducedMotion={prefersReducedMotion ? 'always' : 'user'}>
@@ -44,6 +46,7 @@ export default function Providers({ children }) {
           </MotionConfig>
         </InterestProvider>
         </LanguageProvider>
+        </SiteSettingsProvider>
       </AuthProvider>
     </ThemeProvider>
   );

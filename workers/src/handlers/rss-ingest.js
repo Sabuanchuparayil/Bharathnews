@@ -1,4 +1,4 @@
-import { loadEnabledSources, updateSourceHealth } from '../lib/sources-loader.js';
+import { loadEnabledSources, updateSourceHealth, loadSiteSettings } from '../lib/sources-loader.js';
 import { getCategoryFallbackImage } from '../lib/image-resolver.js';
 import { fetchAndParseFeed } from '../lib/rss-parser.js';
 import { getFirebaseToken } from '../lib/firebase-auth.js';
@@ -176,6 +176,12 @@ async function ingestOneFeed(env, feed, token) {
 }
 
 export async function handleRSSIngest(env) {
+  const settings = await loadSiteSettings(env);
+  if (settings.pipeline?.rssIngestEnabled === false) {
+    console.log('RSS ingest skipped: disabled in site settings');
+    return [];
+  }
+
   const token = await getFirebaseToken(env);
   const [allSources, googleSources, emptyCategories] = await Promise.all([
     loadEnabledSources(env, 'rss'),

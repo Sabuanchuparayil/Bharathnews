@@ -1,0 +1,38 @@
+# The Bharath News
+
+> Breaking news from India and GCC regions. Business, technology, sports, entertainment, and community stories in English, Hindi, Malayalam, Tamil, Kannada, Telugu, and Bengali.
+
+## About
+
+The Bharath News is a multilingual digital news platform covering India and the Gulf Cooperation Council (GCC) regions. We aggregate, curate, and deliver news across multiple categories and regional languages.
+
+## Content Categories
+
+- India News: Politics, economy, and social affairs in India
+- GCC News: News from UAE, Saudi Arabia, Qatar, Kuwait, Bahrain, and Oman
+- Business: Stock markets, economy, corporate news, startups
+- Technology: Tech industry, AI, gadgets, startups, digital trends
+- Sports: Cricket, football, Olympics, IPL, and other sports
+- Entertainment: Bollywood, movies, TV, celebrities, OTT
+- Health & Wellness: Medical news, fitness, mental health
+- Education: Exams, universities, scholarships, education policy
+- Jobs & Careers: Government jobs, private sector, recruitment
+- Real Estate: Property market, housing, real estate investment
+- World News: International affairs, global politics
+- Lifestyle & Travel: Food, fashion, travel destinations
+
+## Languages
+
+Content is available in: English, Hindi, Malayalam, Tamil, Kannada, Telugu, Bengali
+
+## Website
+
+URL: https://thebharathnews.com
+
+## API
+
+Articles are available via the website. Each article has a canonical URL at /article/{slug}.
+
+## Contact
+
+Visit https://thebharathnews.com for more information.

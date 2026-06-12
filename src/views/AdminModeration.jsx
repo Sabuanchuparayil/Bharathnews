@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { Check, X, Users, FileText } from 'lucide-react';
 import Layout from '../components/Layout';
+import LoginPrompt from '../components/LoginPrompt';
 import { useAuth } from '../context/AuthContext';
 import {
   getPendingApplications, reviewRoleApplication,
@@ -13,7 +14,7 @@ import { getDbAsync, firestoreOps } from '@/lib/firebase-client';
 import { getCategoryLabel } from '../utils/categoryColors';
 
 const AdminModeration = () => {
-  const { user, loading, isAdmin, loginWithGoogle } = useAuth();
+  const { user, loading, isAdmin } = useAuth();
   const [tab, setTab] = useState('posts');
   const [applications, setApplications] = useState([]);
   const [posts, setPosts] = useState([]);
@@ -77,18 +78,12 @@ const AdminModeration = () => {
     );
   }
 
-  if (!user) {
+  if (!user || !isAdmin) {
     return (
-      <Layout showBottomNav={false} mainClassName="max-w-xl mx-auto px-4 py-12 text-center">
-        <button onClick={loginWithGoogle} className="btn-primary px-6 py-2.5 rounded-xl">Sign in</button>
-      </Layout>
-    );
-  }
-
-  if (!isAdmin) {
-    return (
-      <Layout showBottomNav={false} mainClassName="max-w-xl mx-auto px-4 py-12 text-center">
-        <p className="text-red-600">Access denied. Admin only.</p>
+      <Layout showBottomNav={false}>
+        <div className="flex items-center justify-center min-h-[60vh] px-4">
+          <LoginPrompt nextPath="/admin/moderation" showAdminHint />
+        </div>
       </Layout>
     );
   }

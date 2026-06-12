@@ -9,7 +9,6 @@ import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'react-toastify';
 import Layout from '../components/Layout';
 import AdSlot from '../components/AdSlot';
-import ArticleSchema from '../components/ArticleSchema';
 import ChannelFollowCTA from '../components/ChannelFollowCTA';
 import ReadingProgress from '../components/ReadingProgress';
 import ArticleFloatingBar from '../components/ArticleFloatingBar';
@@ -121,7 +120,6 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
   return (
     <Layout>
       <ReadingProgress readTimeMinutes={readTime} />
-      <ArticleSchema article={{ ...article, title: displayTitle, summary: displaySummary }} />
       <ArticleFloatingBar
         shareTitle={displayTitle}
         shareText={displaySummary}

@@ -2,6 +2,7 @@ import { getFirebaseToken } from './firebase-auth.js';
 import { runQuery, FIRESTORE_BASE } from './firestore-rest.js';
 import { FALLBACK_RSS_FEEDS, FALLBACK_YOUTUBE_CHANNELS } from './feeds.js';
 import { REGIONAL_RSS_SOURCES } from './regional-feeds.js';
+import { DEFAULT_SITE_SETTINGS, mergeSiteSettings, parseTargetLanguages } from './site-settings.js';
 
 let cachedSources = null;
 let cacheTime = 0;
@@ -90,21 +91,14 @@ export async function loadSiteSettings(env) {
       `${FIRESTORE_BASE(env.FIREBASE_PROJECT_ID)}/settings/site`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
-    if (!res.ok) return DEFAULT_SETTINGS;
+    if (!res.ok) return mergeSiteSettings();
     const data = await res.json();
     const { parseFirestoreFields } = await import('./firestore-rest.js');
     const parsed = parseFirestoreFields(data.fields || {});
-    if (typeof parsed.targetLanguages === 'string') {
-      parsed.targetLanguages = parsed.targetLanguages.split(',').map(s => s.trim());
-    }
-    return { ...DEFAULT_SETTINGS, ...parsed };
+    return mergeSiteSettings(parsed);
   } catch {
-    return DEFAULT_SETTINGS;
+    return mergeSiteSettings();
   }
 }
 
-export const DEFAULT_SETTINGS = {
-  qualityThreshold: 6,
-  targetLanguages: ['ml', 'hi', 'ar'],
-  adSlots: {},
-};
+export { DEFAULT_SITE_SETTINGS, mergeSiteSettings, parseTargetLanguages };

@@ -6,6 +6,7 @@ import { handleVideoFetch } from './handlers/video-fetch.js';
 import { handleNewsletterDigest } from './handlers/newsletter-digest.js';
 import { handleSitemap } from './handlers/sitemap.js';
 import { handleSubdomainRedirect } from './handlers/subdomain.js';
+import { isProtectedApiPath, requireApiSecret } from './lib/api-auth.js';
 import { getFirebaseToken } from './lib/firebase-auth.js';
 import { runQuery, FIRESTORE_BASE } from './lib/firestore-rest.js';
 
@@ -40,14 +41,48 @@ export default {
   },
 
   async fetch(request, env, ctx) {
+    try {
+      return await this._handleFetch(request, env, ctx);
+    } catch (err) {
+      console.error('[fetch] unhandled error:', err.message, err.stack);
+      return new Response(JSON.stringify({ error: 'Internal server error' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+  },
+
+  async _handleFetch(request, env, ctx) {
     const subdomainRedirect = handleSubdomainRedirect(request, env);
     if (subdomainRedirect) return subdomainRedirect;
 
     const url = new URL(request.url);
+    const origin = request.headers.get('Origin') || '';
+    const mainHost = env.MAIN_SITE_URL || 'https://thebharathnews.com';
+    const allowedOrigins = [mainHost, 'http://localhost:3000', 'http://localhost:3001'];
+    const corsOrigin = allowedOrigins.includes(origin) ? origin : mainHost;
     const cors = {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': corsOrigin,
+      'Vary': 'Origin',
     };
+
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        headers: {
+          'Access-Control-Allow-Origin': corsOrigin,
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key',
+          'Access-Control-Max-Age': '86400',
+          'Vary': 'Origin',
+        },
+      });
+    }
+
+    if (isProtectedApiPath(url.pathname) && request.method === 'POST') {
+      const denied = requireApiSecret(request, env);
+      if (denied) return denied;
+    }
 
     if (url.pathname === '/api/ingest' && request.method === 'POST') {
       const results = await handleRSSIngest(env);
@@ -65,8 +100,15 @@ export default {
     }
 
     if (url.pathname === '/api/distribute' && request.method === 'POST') {
-      const body = await request.json();
-      await handleDistribute(env, body.articleId);
+      let body;
+      try { body = await request.json(); } catch {
+        return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400, headers: cors });
+      }
+      const articleId = typeof body.articleId === 'string' ? body.articleId.trim() : '';
+      if (!articleId || articleId.length > 200 || /[\/\.\#\[\]\*]/.test(articleId)) {
+        return new Response(JSON.stringify({ error: 'Invalid articleId' }), { status: 400, headers: cors });
+      }
+      await handleDistribute(env, articleId);
       return new Response(JSON.stringify({ status: 'ok' }), { headers: cors });
     }
 
@@ -86,9 +128,27 @@ export default {
     }
 
     if (url.pathname === '/api/test-feed') {
-      const feedUrl = url.searchParams.get('url');
+      const authDenied = requireApiSecret(request, env);
+      if (authDenied) return authDenied;
+
+      const feedUrl = (url.searchParams.get('url') || '').trim();
+      if (!feedUrl) {
+        return new Response(JSON.stringify({ error: 'Missing ?url= parameter' }), { status: 400, headers: cors });
+      }
+
+      let parsed;
+      try { parsed = new URL(feedUrl); } catch {
+        return new Response(JSON.stringify({ error: 'Invalid URL' }), { status: 400, headers: cors });
+      }
+      if (!['http:', 'https:'].includes(parsed.protocol)) {
+        return new Response(JSON.stringify({ error: 'Only http/https URLs allowed' }), { status: 400, headers: cors });
+      }
+      const blockedHosts = ['localhost', '127.0.0.1', '0.0.0.0', '[::1]', 'metadata.google.internal', '169.254.169.254'];
+      if (blockedHosts.some(h => parsed.hostname === h) || /^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)/.test(parsed.hostname)) {
+        return new Response(JSON.stringify({ error: 'Internal addresses not allowed' }), { status: 403, headers: cors });
+      }
+
       const isGN = feedUrl.includes('news.google.com/');
-      // For Google News, test the rss2json proxy directly here
       if (isGN) {
         const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
         const res = await fetch(apiUrl);
@@ -107,6 +167,8 @@ export default {
     }
 
     if (url.pathname === '/api/pipeline-status') {
+      const authDenied = requireApiSecret(request, env);
+      if (authDenied) return authDenied;
       const result = await getPipelineStatus(env);
       return new Response(JSON.stringify(result), { headers: cors });
     }

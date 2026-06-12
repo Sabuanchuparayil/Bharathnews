@@ -8,6 +8,8 @@
  * Note: /api/process runs Llama AI (multilingual) and can take 1–3 minutes per call.
  */
 
+import { workerAuthHeaders } from './lib/worker-api.mjs';
+
 const WORKER_URL = (process.argv[2] || process.env.WORKER_URL || 'https://bharathnews-api.bharathnewsweb.workers.dev').replace(/\/$/, '');
 const CYCLES = Math.max(1, parseInt(process.argv[3] || process.env.SEED_CYCLES || '3', 10));
 const DELAY_MS = 5000;
@@ -31,6 +33,7 @@ async function post(path, retries = 3) {
       }
       const res = await fetch(`${WORKER_URL}${path}`, {
         method: 'POST',
+        headers: workerAuthHeaders(),
         signal: controller.signal,
       });
       const text = await res.text();

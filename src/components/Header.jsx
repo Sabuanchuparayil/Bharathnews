@@ -27,7 +27,7 @@ const Header = () => {
   const menuTrapRef = useFocusTrap(mobileMenuOpen);
   const profileTrapRef = useFocusTrap(profileOpen);
   useClickOutside(profileRef, profileOpen, () => setProfileOpen(false));
-  const { user, loginWithGoogle, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
@@ -170,9 +170,9 @@ const Header = () => {
                   </AnimatePresence>
                 </div>
               ) : (
-                <button onClick={loginWithGoogle} className="btn-primary text-sm hidden sm:flex items-center space-x-1.5">
+                <Link href="/login" className="btn-primary text-sm hidden sm:flex items-center space-x-1.5">
                   <LogIn className="w-4 h-4" /><span>Sign In</span>
-                </button>
+                </Link>
               )}
 
               <button
@@ -301,9 +301,9 @@ const Header = () => {
                 </button>
               </div>
               {!user && (
-                <button onClick={loginWithGoogle} className="btn-primary w-full mt-6 flex items-center justify-center space-x-2">
+                <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="btn-primary w-full mt-6 flex items-center justify-center space-x-2">
                   <LogIn className="w-4 h-4" /><span>Sign In with Google</span>
-                </button>
+                </Link>
               )}
             </motion.div>
           </motion.div>

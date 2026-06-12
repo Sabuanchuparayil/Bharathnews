@@ -1,10 +1,13 @@
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://thebharathnews.com';
 const SITE_NAME = 'The Bharath News';
 
-export function siteMetadata({ title, description, path = '', image, type = 'website' }) {
+const DEFAULT_OG_IMAGE = `${SITE_URL}/og-default.png`;
+
+export function siteMetadata({ title, description, path = '', image, type = 'website', keywords, publishedTime, modifiedTime }) {
   const url = `${SITE_URL}${path}`;
-  return {
-    title: title ? `${title} | ${SITE_NAME}` : SITE_NAME,
+  const ogImage = image || DEFAULT_OG_IMAGE;
+  const meta = {
+    title: title || SITE_NAME,
     description: description || 'Breaking news from India and GCC. Business, technology, and community stories.',
     alternates: { canonical: url },
     openGraph: {
@@ -13,33 +16,73 @@ export function siteMetadata({ title, description, path = '', image, type = 'web
       url,
       siteName: SITE_NAME,
       type,
-      images: image ? [{ url: image }] : [],
+      locale: 'en_IN',
+      images: [{ url: ogImage, width: 1200, height: 630, alt: title || SITE_NAME }],
     },
     twitter: {
-      card: image ? 'summary_large_image' : 'summary',
+      card: 'summary_large_image',
       title: title || SITE_NAME,
       description: description || 'Breaking news from India and GCC regions',
-      images: image ? [image] : [],
+      images: [ogImage],
     },
   };
+  if (keywords?.length) meta.keywords = keywords;
+  if (type === 'article') {
+    if (publishedTime) meta.openGraph.publishedTime = publishedTime;
+    if (modifiedTime) meta.openGraph.modifiedTime = modifiedTime;
+    meta.openGraph.authors = ['The Bharath News'];
+  }
+  return meta;
 }
 
+const LANG_MAP = { en: 'en', hi: 'hi', ml: 'ml', ta: 'ta', kn: 'kn', te: 'te', bn: 'bn' };
+
 export function articleJsonLd(article) {
+  const publishDate = article.publishedAt?.seconds
+    ? new Date(article.publishedAt.seconds * 1000).toISOString()
+    : new Date().toISOString();
+  const modifiedDate = article.updatedAt?.seconds
+    ? new Date(article.updatedAt.seconds * 1000).toISOString()
+    : publishDate;
   return {
     '@context': 'https://schema.org',
     '@type': 'NewsArticle',
     headline: article.title,
     description: article.summary,
-    image: article.imageUrl,
-    datePublished: article.publishedAt?.seconds
-      ? new Date(article.publishedAt.seconds * 1000).toISOString()
-      : new Date().toISOString(),
-    author: { '@type': 'Person', name: article.author || 'The Bharath News' },
-    publisher: {
+    image: article.imageUrl ? [article.imageUrl] : [],
+    datePublished: publishDate,
+    dateModified: modifiedDate,
+    author: {
       '@type': 'Organization',
+      name: article.source || 'The Bharath News',
+      url: SITE_URL,
+    },
+    publisher: {
+      '@type': 'NewsMediaOrganization',
       name: 'The Bharath News',
-      logo: { '@type': 'ImageObject', url: `${SITE_URL}/icons/icon-512x512.png` },
+      logo: { '@type': 'ImageObject', url: `${SITE_URL}/icons/icon-512x512.png`, width: 512, height: 512 },
     },
     mainEntityOfPage: { '@type': 'WebPage', '@id': `${SITE_URL}/article/${article.slug}` },
+    articleSection: article.category || 'News',
+    inLanguage: LANG_MAP[article.language] || 'en',
+    isAccessibleForFree: true,
+    keywords: article.tags?.join(', ') || undefined,
   };
+}
+
+export function breadcrumbJsonLd(items) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: item.name,
+      item: item.url ? `${SITE_URL}${item.url}` : undefined,
+    })),
+  };
+}
+
+export function safeJsonLd(data) {
+  return JSON.stringify(data).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026');
 }

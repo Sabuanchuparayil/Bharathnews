@@ -8,6 +8,8 @@
  *   node scripts/bulk-publish.mjs 40
  */
 
+import { workerAuthHeaders } from './lib/worker-api.mjs';
+
 const WORKER_URL = (process.env.WORKER_URL || 'https://bharathnews-api.bharathnewsweb.workers.dev').replace(/\/$/, '');
 const TARGET = Math.max(1, parseInt(process.argv[2] || process.env.TARGET || '40', 10));
 const MAX_ROUNDS = Math.max(1, parseInt(process.argv[3] || process.env.MAX_ROUNDS || '30', 10));
@@ -24,7 +26,11 @@ async function post(path) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(`${WORKER_URL}${path}`, { method: 'POST', signal: controller.signal });
+    const res = await fetch(`${WORKER_URL}${path}`, {
+      method: 'POST',
+      headers: workerAuthHeaders(),
+      signal: controller.signal,
+    });
     const text = await res.text();
     let body;
     try {

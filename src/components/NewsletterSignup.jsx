@@ -5,8 +5,10 @@ import { motion } from 'framer-motion';
 import { Mail, CheckCircle, ArrowRight, Users } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { subscribeNewsletter, getSubscriberCount } from '../services/firestore';
+import { useSiteSettings } from '../context/SiteSettingsContext';
 
 const NewsletterSignup = () => {
+  const { email: emailSettings } = useSiteSettings();
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -15,6 +17,8 @@ const NewsletterSignup = () => {
   useEffect(() => {
     getSubscriberCount().then(count => setSubscriberCount(count)).catch(() => {});
   }, []);
+
+  if (emailSettings?.enabled === false) return null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();

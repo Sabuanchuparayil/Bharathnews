@@ -1,0 +1,72 @@
+# The Bharath News — Complete Documentation
+
+## Overview
+
+The Bharath News (https://thebharathnews.com) is a multilingual AI-powered news aggregation platform. We source articles from leading news publishers across India and the GCC region, curate them using AI-assisted classification, and deliver them to readers in their preferred language.
+
+## Content Structure
+
+### Article Schema
+Each article contains:
+- Title (headline)
+- Summary (2-3 sentence overview)
+- Full content (complete article body)
+- Category (india, gcc, business, technology, sports, entertainment, health, education, jobs, realestate, world, lifestyle, opinion)
+- Language (en, hi, ml, ta, kn, te, bn)
+- Published date
+- Source attribution
+- Featured image
+- URL slug for canonical linking
+
+### Categories with Descriptions
+
+1. **India** (/india) — Domestic news covering politics, governance, economy, infrastructure, social issues, and significant events across Indian states.
+
+2. **GCC** (/gcc) — News from Gulf Cooperation Council countries including UAE, Saudi Arabia, Qatar, Kuwait, Bahrain, and Oman. Focus on Indian diaspora, labor, business, and regional developments.
+
+3. **Business** (/business) — Corporate news, stock markets (NSE/BSE), economic policy, startups, banking, and financial markets.
+
+4. **Technology** (/technology) — Tech industry updates, AI/ML developments, smartphone launches, startup ecosystem, digital policy, and cybersecurity.
+
+5. **Sports** (/sports) — Cricket (IPL, international), football, hockey, Olympics, tennis, and other sports.
+
+6. **Entertainment** (/entertainment) — Bollywood, regional cinema (Tollywood, Mollywood, Kollywood, Sandalwood), OTT content, music, celebrities.
+
+7. **Health & Wellness** (/health) — Medical research, public health, fitness, nutrition, mental health, and healthcare policy.
+
+8. **Education** (/education) — Competitive exams (JEE, NEET, UPSC), university admissions, scholarship programs, education policy (NEP).
+
+9. **Jobs & Careers** (/jobs) — Government job notifications, private sector hiring, career guidance, and skill development.
+
+10. **Real Estate** (/real-estate) — Property markets across Indian cities, RERA regulations, housing trends, commercial real estate.
+
+11. **World** (/world) — International affairs, geopolitics, diplomacy, global economy, and climate.
+
+12. **Lifestyle & Travel** (/lifestyle) — Travel destinations, food culture, fashion, wellness retreats, festivals.
+
+13. **Opinion** (/opinion) — Analysis, editorials, expert commentary on current affairs.
+
+### Languages Supported
+
+| Code | Language | Script |
+|------|----------|--------|
+| en | English | Latin |
+| hi | Hindi | Devanagari |
+| ml | Malayalam | Malayalam |
+| ta | Tamil | Tamil |
+| kn | Kannada | Kannada |
+| te | Telugu | Telugu |
+| bn | Bengali | Bengali |
+
+## URL Structure
+
+- Homepage: https://thebharathnews.com
+- Category: https://thebharathnews.com/{category}
+- Article: https://thebharathnews.com/article/{slug}
+- Videos: https://thebharathnews.com/videos
+- Search: https://thebharathnews.com/search?q={query}
+- Explore: https://thebharathnews.com/explore
+
+## Publishing
+
+Articles are published continuously throughout the day, sourced from verified RSS feeds of established news publishers. Content is classified and quality-scored using AI before publication.

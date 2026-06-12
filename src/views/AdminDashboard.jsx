@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Users, Eye, TrendingUp, Rss, Settings, Shield } from 'lucide-react';
+import { Users, Eye, TrendingUp, Rss, Settings, Shield, Mail, Video } from 'lucide-react';
 import Layout from '../components/Layout';
+import LoginPrompt from '../components/LoginPrompt';
 import { useAuth } from '../context/AuthContext';
 import { getAdminStats } from '../services/admin';
 
@@ -21,7 +22,7 @@ const StatCard = ({ icon: Icon, label, value, color }) => (
 );
 
 const AdminDashboard = () => {
-  const { user, isAdmin, loading, loginWithGoogle } = useAuth();
+  const { user, isAdmin, loading } = useAuth();
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
@@ -40,27 +41,16 @@ const AdminDashboard = () => {
     );
   }
 
-  if (!user) {
+  if (!user || !isAdmin) {
     return (
       <Layout showBottomNav={false} showChatbot={false}>
         <div className="flex items-center justify-center min-h-[60vh] px-4">
-          <div className="glass-card-solid rounded-2xl p-8 text-center max-w-md">
-            <h1 className="font-display font-bold text-3xl text-gray-900 dark:text-white mb-4">Sign In Required</h1>
-            <button onClick={loginWithGoogle} className="btn-primary">Sign in with Google</button>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
-  if (!isAdmin) {
-    return (
-      <Layout showBottomNav={false} showChatbot={false}>
-        <div className="flex items-center justify-center min-h-[60vh] px-4">
-          <div className="glass-card-solid rounded-2xl p-8 text-center max-w-md">
-            <h1 className="font-display font-bold text-3xl text-gray-900 dark:text-white mb-4">Access Denied</h1>
-            <p className="text-gray-600 dark:text-gray-400">Admin role required.</p>
-          </div>
+          <LoginPrompt
+            title={!user ? 'Sign In Required' : 'Access Denied'}
+            description={!user ? 'Sign in with an admin Google account to access the dashboard.' : 'Admin role required.'}
+            nextPath="/admin/dashboard"
+            showAdminHint
+          />
         </div>
       </Layout>
     );
@@ -79,6 +69,12 @@ const AdminDashboard = () => {
             </Link>
             <Link href="/admin/moderation" className="btn-secondary text-sm px-4 py-2 rounded-xl flex items-center gap-2">
               <Shield className="w-4 h-4" /> Moderation
+            </Link>
+            <Link href="/admin/subscribers" className="btn-secondary text-sm px-4 py-2 rounded-xl flex items-center gap-2">
+              <Mail className="w-4 h-4" /> Subscribers
+            </Link>
+            <Link href="/admin/videos" className="btn-secondary text-sm px-4 py-2 rounded-xl flex items-center gap-2">
+              <Video className="w-4 h-4" /> Videos
             </Link>
             <Link href="/admin/settings" className="btn-secondary text-sm px-4 py-2 rounded-xl flex items-center gap-2">
               <Settings className="w-4 h-4" /> Settings

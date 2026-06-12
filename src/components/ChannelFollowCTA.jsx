@@ -2,16 +2,22 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, MessageCircle, Send } from 'lucide-react';
-import { SOCIAL_CHANNELS } from '../config/channels.config';
+import { useSiteSettings } from '../context/SiteSettingsContext';
 
 const ChannelFollowCTA = () => {
+  const { socialChannels, showWhatsAppCta, telegram } = useSiteSettings();
   const [dismissed, setDismissed] = useState(true);
 
   useEffect(() => {
     setDismissed(localStorage.getItem('channelCTAdismissed') === 'true');
   }, []);
 
-  if (dismissed) return null;
+  const whatsappUrl = socialChannels.whatsapp?.url;
+  const telegramUrl = socialChannels.telegram?.url || telegram?.channelUrl;
+  const showWhatsApp = showWhatsAppCta && whatsappUrl;
+  const showTelegram = telegram?.enabled !== false && telegramUrl;
+
+  if (dismissed || (!showWhatsApp && !showTelegram)) return null;
 
   const handleDismiss = () => {
     setDismissed(true);
@@ -36,24 +42,28 @@ const ChannelFollowCTA = () => {
       </p>
 
       <div className="flex flex-wrap gap-3">
-        <a
-          href={SOCIAL_CHANNELS.whatsapp.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
-        >
-          <MessageCircle className="w-4 h-4" />
-          <span>WhatsApp</span>
-        </a>
-        <a
-          href={SOCIAL_CHANNELS.telegram.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center space-x-2 bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
-        >
-          <Send className="w-4 h-4" />
-          <span>Telegram</span>
-        </a>
+        {showWhatsApp && (
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+          >
+            <MessageCircle className="w-4 h-4" />
+            <span>WhatsApp</span>
+          </a>
+        )}
+        {showTelegram && (
+          <a
+            href={telegramUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center space-x-2 bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
+          >
+            <Send className="w-4 h-4" />
+            <span>Telegram</span>
+          </a>
+        )}
       </div>
     </div>
   );

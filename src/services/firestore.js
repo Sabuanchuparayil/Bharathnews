@@ -244,6 +244,9 @@ export const subscribeNewsletter = async (email) => {
   if (!db) throw new Error('Firebase unavailable');
   const { collection, query, where, limit, getDocs, addDoc, serverTimestamp } = await firestoreOps();
   const normalized = email.toLowerCase().trim();
+  if (!normalized || normalized.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+    throw new Error('Invalid email address');
+  }
   const existing = await getDocs(
     query(collection(db, 'subscribers'), where('email', '==', normalized), limit(1))
   );

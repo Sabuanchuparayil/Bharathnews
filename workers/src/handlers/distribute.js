@@ -1,6 +1,9 @@
 import { getFirebaseToken } from '../lib/firebase-auth.js';
+import { loadSiteSettings } from '../lib/sources-loader.js';
+import { resolveTelegramConfig, resolveFacebookConfig } from '../lib/site-settings.js';
 
 export async function handleDistribute(env, articleId) {
+  const settings = await loadSiteSettings(env);
   const token = await getFirebaseToken(env);
   const url = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/articles/${articleId}`;
 
@@ -16,21 +19,24 @@ export async function handleDistribute(env, articleId) {
     slug: data.fields.slug?.stringValue || '',
     category: data.fields.category?.stringValue || '',
     imageUrl: data.fields.imageUrl?.stringValue || '',
-    score: parseInt(data.fields.score?.integerValue || '5'),
+    score: parseInt(data.fields.score?.integerValue || '5', 10),
   };
 
-  const articleUrl = `https://thebharathnews.com/article/${article.slug}`;
+  const siteUrl = env.MAIN_SITE_URL || 'https://thebharathnews.com';
+  const articleUrl = `${siteUrl}/article/${encodeURIComponent(article.slug)}`;
 
-  if (article.score >= 5 && env.TELEGRAM_BOT_TOKEN) {
+  const tg = resolveTelegramConfig(settings, env);
+  if (tg.enabled && tg.hasBotToken && article.score >= tg.minScore) {
     const msg = `<b>${escapeHtml(article.title)}</b>\n\n${escapeHtml(article.summary)}\n\n📰 <a href="${articleUrl}">Read Full Story</a>`;
     await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: env.TELEGRAM_CHANNEL_ID, text: msg, parse_mode: 'HTML' }),
+      body: JSON.stringify({ chat_id: tg.channelId, text: msg, parse_mode: 'HTML' }),
     });
   }
 
-  if (article.score >= 7 && env.FACEBOOK_PAGE_TOKEN) {
+  const fb = resolveFacebookConfig(settings, env);
+  if (fb.enabled && fb.hasToken && article.score >= fb.minScore) {
     await fetch(`https://graph.facebook.com/v18.0/${env.FACEBOOK_PAGE_ID}/feed`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
