@@ -47,9 +47,10 @@ const VideoEmbed = ({ video, compact = false }) => {
           title={title}
           className="w-full h-full"
           frameBorder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           allowFullScreen
           loading="lazy"
+          referrerPolicy="strict-origin-when-cross-origin"
         />
       </div>
       <div className="p-4">

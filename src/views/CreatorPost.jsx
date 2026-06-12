@@ -102,8 +102,9 @@ const CreatorPost = ({ postId: postIdProp, initialPost = null }) => {
                 src={`https://www.youtube.com/embed/${extractYouTubeId(post.videoUrl)}`}
                 title={post.title}
                 className="w-full h-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
+                referrerPolicy="strict-origin-when-cross-origin"
               />
             </div>
           ) : (
