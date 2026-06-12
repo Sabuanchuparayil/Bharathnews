@@ -9,6 +9,7 @@ import { handleSubdomainRedirect } from './handlers/subdomain.js';
 import { isProtectedApiPath, requireApiSecret } from './lib/api-auth.js';
 import { getFirebaseToken } from './lib/firebase-auth.js';
 import { runQuery, FIRESTORE_BASE } from './lib/firestore-rest.js';
+import { runScheduledPipeline } from './lib/pipeline-scheduler.js';
 
 export default {
   async scheduled(event, env, ctx) {
@@ -19,25 +20,7 @@ export default {
       return;
     }
 
-    // Workers free tier caps each invocation at 50 subrequests, so we cannot run the
-    // whole pipeline in one go. Rotate ONE stage per 15-min run. A full cycle
-    // (ingest → classify → process → video) completes each hour and then repeats,
-    // keeping new content flowing continuously.
-    const slot = Math.floor(Date.now() / (15 * 60 * 1000)) % 4;
-    const stages = [
-      ['ingest', () => handleRSSIngest(env)],
-      ['classify', () => handleClassify(env)],
-      ['process', () => handleAIProcess(env)],
-      ['video', () => handleVideoFetch(env)],
-    ];
-    const [name, run] = stages[slot];
-    console.log(`[cron] ${cron} → stage "${name}" at ${new Date().toISOString()}`);
-    try {
-      const result = await run();
-      console.log(`[cron] stage "${name}" done:`, Array.isArray(result) ? result.length : result);
-    } catch (err) {
-      console.error(`[cron] stage "${name}" failed:`, err.message);
-    }
+    await runScheduledPipeline(env);
   },
 
   async fetch(request, env, ctx) {

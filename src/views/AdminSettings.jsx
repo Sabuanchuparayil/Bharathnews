@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { toast } from 'react-toastify';
 import {
   ArrowLeft, ChevronLeft, ChevronRight, Search, Rss, Settings2,
-  MessageCircle, Send, Mail, Facebook, Youtube, Instagram, KeyRound,
+  MessageCircle, Send, Mail, Facebook, Youtube, Instagram, KeyRound, Users, UserPlus,
 } from 'lucide-react';
 import Layout from '../components/Layout';
 import LoginPrompt from '../components/LoginPrompt';
@@ -21,8 +23,16 @@ const TABS = [
   { id: 'general', label: 'General', icon: Settings2 },
   { id: 'integrations', label: 'Integrations', icon: MessageCircle },
   { id: 'sources', label: 'Sources', icon: Rss },
-  { id: 'users', label: 'Users', icon: Search },
+  { id: 'users', label: 'Users & RBAC', icon: Users },
 ];
+
+const ROLE_LABELS = {
+  reader: 'Reader',
+  contributor: 'Contributor',
+  vlogger: 'Vlogger',
+  content_writer: 'Content Writer',
+  admin: 'Admin',
+};
 
 const WORKER_SECRETS = [
   { key: 'TELEGRAM_BOT_TOKEN', label: 'Telegram bot token', note: 'Required for auto-posting to Telegram' },
@@ -63,8 +73,12 @@ function Field({ label, hint, children }) {
 const inputClass = 'w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent text-sm';
 
 const AdminSettings = () => {
+  const searchParams = useSearchParams();
   const { isAdmin, loading, user, refreshUserProfile } = useAuth();
-  const [tab, setTab] = useState('general');
+  const [tab, setTab] = useState(() => {
+    const initial = searchParams.get('tab');
+    return TABS.some(t => t.id === initial) ? initial : 'general';
+  });
   const [settings, setSettings] = useState(() => mergeSiteSettings());
   const [users, setUsers] = useState([]);
   const [sourceStats, setSourceStats] = useState({ total: 0, enabled: 0 });
@@ -74,6 +88,13 @@ const AdminSettings = () => {
   const [lastDoc, setLastDoc] = useState(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [creatingUser, setCreatingUser] = useState(false);
+  const [newUser, setNewUser] = useState({
+    email: '',
+    password: '',
+    displayName: '',
+    role: 'reader',
+  });
 
   const patchIntegration = (platform, patch) => {
     setSettings(prev => ({
@@ -126,11 +147,32 @@ const AdminSettings = () => {
 
   const changeRole = async (userId, role) => {
     if (!ROLES.includes(role)) return;
-    await setUserRole(userId, role);
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, role } : u));
-    if (user?.uid === userId) {
-      const profile = await refreshUserProfile();
-      if (profile) setAuthCookies(profile.role || 'reader');
+    try {
+      await setUserRole(userId, role);
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, role } : u));
+      if (user?.uid === userId) {
+        const profile = await refreshUserProfile();
+        if (profile) setAuthCookies(profile.role || 'reader');
+      }
+      toast.success('Role updated');
+    } catch {
+      toast.error('Failed to update role');
+    }
+  };
+
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+    setCreatingUser(true);
+    try {
+      const { createAdminUser } = await import('../services/admin');
+      const created = await createAdminUser(newUser);
+      toast.success(`Created ${created.email} as ${ROLE_LABELS[created.role] || created.role}`);
+      setNewUser({ email: '', password: '', displayName: '', role: 'reader' });
+      await loadUsers(null, true);
+    } catch (err) {
+      toast.error(err.message || 'Failed to create user');
+    } finally {
+      setCreatingUser(false);
     }
   };
 
@@ -417,9 +459,72 @@ const AdminSettings = () => {
         )}
 
         {tab === 'users' && (
+          <div className="space-y-6">
+          <div className="glass-card-solid rounded-2xl p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <UserPlus className="w-5 h-5 text-brand-600" />
+              <h2 className="font-display font-bold text-lg">Create User</h2>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Create a Firebase account with email/password and assign an RBAC role. The user can sign in immediately at /login.
+            </p>
+            <form onSubmit={handleCreateUser} className="grid sm:grid-cols-2 gap-4">
+              <Field label="Email">
+                <input
+                  type="email"
+                  required
+                  value={newUser.email}
+                  onChange={e => setNewUser(prev => ({ ...prev, email: e.target.value }))}
+                  className={inputClass}
+                  placeholder="user@example.com"
+                />
+              </Field>
+              <Field label="Password" hint="Minimum 8 characters">
+                <input
+                  type="password"
+                  required
+                  minLength={8}
+                  value={newUser.password}
+                  onChange={e => setNewUser(prev => ({ ...prev, password: e.target.value }))}
+                  className={inputClass}
+                  placeholder="••••••••"
+                />
+              </Field>
+              <Field label="Display name">
+                <input
+                  type="text"
+                  value={newUser.displayName}
+                  onChange={e => setNewUser(prev => ({ ...prev, displayName: e.target.value }))}
+                  className={inputClass}
+                  placeholder="Optional"
+                />
+              </Field>
+              <Field label="Role">
+                <select
+                  value={newUser.role}
+                  onChange={e => setNewUser(prev => ({ ...prev, role: e.target.value }))}
+                  className={inputClass}
+                >
+                  {ROLES.map(r => (
+                    <option key={r} value={r}>{ROLE_LABELS[r] || r}</option>
+                  ))}
+                </select>
+              </Field>
+              <div className="sm:col-span-2">
+                <button
+                  type="submit"
+                  disabled={creatingUser}
+                  className="btn-primary px-5 py-2 rounded-xl text-sm disabled:opacity-60"
+                >
+                  {creatingUser ? 'Creating…' : 'Create user'}
+                </button>
+              </div>
+            </form>
+          </div>
+
           <div className="glass-card-solid rounded-2xl p-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-              <h2 className="font-display font-bold text-lg">User Roles</h2>
+              <h2 className="font-display font-bold text-lg">Manage Roles</h2>
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
@@ -448,7 +553,7 @@ const AdminSettings = () => {
                     onChange={e => changeRole(u.id, e.target.value)}
                     className="text-sm px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-transparent flex-shrink-0"
                   >
-                    {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                    {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r] || r}</option>)}
                   </select>
                 </div>
               ))}
@@ -461,6 +566,7 @@ const AdminSettings = () => {
                 Next <ChevronRight className="w-4 h-4" />
               </button>
             </div>
+          </div>
           </div>
         )}
       </div>

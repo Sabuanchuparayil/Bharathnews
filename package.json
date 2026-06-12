@@ -18,11 +18,13 @@
     "firebase:db:mumbai": "firebase firestore:databases:create '(default)' --location asia-south1",
     "seed:sources": "node scripts/seed-sources.mjs",
     "set-first-admin": "node scripts/set-first-admin.mjs",
-    "create-admin-user": "node scripts/create-admin-user.mjs"
+    "create-admin-user": "node scripts/create-admin-user.mjs",
+    "pipeline:status": "node scripts/pipeline-status.mjs"
   },
   "dependencies": {
     "date-fns": "^3.6.0",
     "firebase": "^11.0.0",
+    "firebase-admin": "^13.10.0",
     "framer-motion": "^12.12.2",
     "lucide-react": "^0.462.0",
     "next": "^15.1.0",

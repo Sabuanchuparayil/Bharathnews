@@ -2,6 +2,11 @@ import { loadEnabledSources, updateSourceHealth, loadSiteSettings } from '../lib
 import { fetchAndParseFeed } from '../lib/rss-parser.js';
 import { getFirebaseToken } from '../lib/firebase-auth.js';
 import { FIRESTORE_BASE } from '../lib/firestore-rest.js';
+import { rotateSourcePick } from '../lib/regional-rotation.js';
+
+/** Channels per run — 6 × (1 fetch + 3 stores + 1 health) ≈ 30 subrequests. */
+const MAX_CHANNELS_PER_RUN = 6;
+const ITEMS_PER_CHANNEL = 3;
 
 function safeISODate(value) {
   const d = value ? new Date(value) : new Date();
@@ -16,23 +21,17 @@ export async function handleVideoFetch(env) {
   }
 
   const token = await getFirebaseToken(env);
-  const channels = await loadEnabledSources(env, 'youtube');
+  const allChannels = await loadEnabledSources(env, 'youtube');
+  const channels = rotateSourcePick(allChannels, MAX_CHANNELS_PER_RUN);
   const results = [];
 
-  const sorted = [...channels].sort((a, b) => {
-    const aTime = a.lastFetchedAt ? new Date(a.lastFetchedAt).getTime() : 0;
-    const bTime = b.lastFetchedAt ? new Date(b.lastFetchedAt).getTime() : 0;
-    return aTime - bTime;
-  });
-
-  // Process up to 9 channels × 3 items = ~45 subrequests, under the 50 free-tier cap.
-  for (const channel of sorted.slice(0, 9)) {
+  for (const channel of channels) {
     try {
       const feedUrl = channel.url || `https://www.youtube.com/feeds/videos.xml?channel_id=${channel.channelId}`;
       const items = await fetchAndParseFeed(feedUrl);
       let stored = 0;
 
-      for (const item of items.slice(0, 3)) {
+      for (const item of items.slice(0, ITEMS_PER_CHANNEL)) {
         const videoId = extractVideoId(item.link);
         if (!videoId) continue;
 

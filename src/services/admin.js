@@ -194,7 +194,31 @@ export async function getUsersLegacy(limitCount = 50) {
   return users;
 }
 
-const ALLOWED_ROLES = ['reader', 'contributor', 'vlogger', 'content_writer', 'admin'];
+export const ALLOWED_ROLES = ['reader', 'contributor', 'vlogger', 'content_writer', 'admin'];
+
+async function getAdminIdToken() {
+  const { initClientFirebase } = await import('@/config/firebase.config');
+  const fb = await initClientFirebase();
+  const currentUser = fb?.auth?.currentUser;
+  if (!currentUser) throw new Error('You must be signed in as admin.');
+  return currentUser.getIdToken();
+}
+
+export async function createAdminUser({ email, password, displayName, role }) {
+  if (!ALLOWED_ROLES.includes(role)) throw new Error(`Invalid role: ${role}`);
+  const token = await getAdminIdToken();
+  const res = await fetch('/api/admin/users', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ email, password, displayName, role }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Failed to create user.');
+  return data.user;
+}
 
 export async function setUserRole(userId, role) {
   if (!userId || typeof userId !== 'string') throw new Error('Invalid userId');

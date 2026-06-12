@@ -3,7 +3,7 @@ import { getCategoryFallbackImage } from '../lib/image-resolver.js';
 import { fetchAndParseFeed } from '../lib/rss-parser.js';
 import { getFirebaseToken } from '../lib/firebase-auth.js';
 import { runQuery, FIRESTORE_BASE } from '../lib/firestore-rest.js';
-import { REGIONAL_LANGUAGES } from '../lib/regional-feeds.js';
+import { rotateSourcePick } from '../lib/regional-rotation.js';
 
 /** Sources fetched per cron run. Kept low because Workers free tier allows only 50
  * subrequests per invocation (1 fetch + up to ITEMS_PER_SOURCE stores + 1 health each).
@@ -64,73 +64,10 @@ async function findEmptyCategories(env, token) {
 }
 
 /**
- * Pick sources for this run. Sources belonging to categories with zero
- * published articles are always placed first so empty sections fill quickly.
- * Remaining slots use the original staleness-based rotation with language
- * interleaving.
+ * Pick sources for this run — see regional-rotation.js (65% regional weight).
  */
-function rotateSourcePick(sources, maxTotal, priorityCategories = new Set()) {
-  const ts = (s) => (s.lastFetchedAt ? new Date(s.lastFetchedAt).getTime() : 0);
-
-  const isRegional = (s) => REGIONAL_LANGUAGES.includes(s.language);
-  const priority = [];
-  const regional = [];
-  const general = [];
-
-  for (const s of sources) {
-    if (priorityCategories.has(s.category)) priority.push(s);
-    else if (isRegional(s)) regional.push(s);
-    else general.push(s);
-  }
-
-  priority.sort((a, b) => ts(a) - ts(b));
-  regional.sort((a, b) => ts(a) - ts(b));
-  general.sort((a, b) => ts(a) - ts(b));
-
-  const picked = [];
-  const seenCats = new Set();
-
-  // Phase 1: one source per empty category
-  for (const s of priority) {
-    if (picked.length >= maxTotal) break;
-    if (!seenCats.has(s.category)) {
-      picked.push(s);
-      seenCats.add(s.category);
-    }
-  }
-
-  // Phase 2: fill ~67% of remaining slots with regional language sources (round-robin by lang)
-  const regionalQuota = Math.min(regional.length, Math.max(1, Math.ceil(maxTotal * 0.67) - picked.length));
-  const byLang = {};
-  for (const s of regional) {
-    const lang = s.language || 'en';
-    (byLang[lang] = byLang[lang] || []).push(s);
-  }
-  const langs = Object.keys(byLang);
-  let added = true;
-  while (picked.length < maxTotal && picked.filter(p => isRegional(p)).length < regionalQuota && added) {
-    added = false;
-    for (const lang of langs) {
-      const next = byLang[lang].shift();
-      if (next && !picked.includes(next)) {
-        picked.push(next);
-        added = true;
-        if (picked.filter(p => isRegional(p)).length >= regionalQuota) break;
-      }
-    }
-  }
-
-  // Phase 3: fill rest from general pool
-  for (const s of general) {
-    if (picked.length >= maxTotal) break;
-    if (!picked.includes(s)) picked.push(s);
-  }
-
-  if (priorityCategories.size > 0 || regional.length) {
-    console.log(`[rotation] picked ${picked.length}: ${picked.map(s => `${s.name}(${s.language || 'en'})`).join(', ')}`);
-  }
-
-  return picked;
+function pickSources(sources, maxTotal, priorityCategories = new Set()) {
+  return rotateSourcePick(sources, maxTotal, priorityCategories);
 }
 
 async function ingestOneFeed(env, feed, token) {
@@ -188,7 +125,7 @@ export async function handleRSSIngest(env) {
     loadEnabledSources(env, 'googlenews'),
     findEmptyCategories(env, token),
   ]);
-  const sources = rotateSourcePick([...allSources, ...googleSources], MAX_SOURCES_PER_RUN, emptyCategories);
+  const sources = pickSources([...allSources, ...googleSources], MAX_SOURCES_PER_RUN, emptyCategories);
   const results = [];
 
   for (let i = 0; i < sources.length; i += PARALLEL_BATCH) {

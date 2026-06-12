@@ -76,6 +76,9 @@ const AdminDashboard = () => {
             <Link href="/admin/videos" className="btn-secondary text-sm px-4 py-2 rounded-xl flex items-center gap-2">
               <Video className="w-4 h-4" /> Videos
             </Link>
+            <Link href="/admin/settings?tab=users" className="btn-secondary text-sm px-4 py-2 rounded-xl flex items-center gap-2">
+              <Users className="w-4 h-4" /> Users
+            </Link>
             <Link href="/admin/settings" className="btn-secondary text-sm px-4 py-2 rounded-xl flex items-center gap-2">
               <Settings className="w-4 h-4" /> Settings
             </Link>
