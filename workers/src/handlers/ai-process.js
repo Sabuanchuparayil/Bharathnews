@@ -5,9 +5,9 @@ import { runQuery, FIRESTORE_BASE } from '../lib/firestore-rest.js';
 import { loadSiteSettings } from '../lib/sources-loader.js';
 import { onArticlePublished } from '../lib/on-article-published.js';
 
-// Each article costs ~6 subrequests (status, image, AI gen, publish, status, telegram);
-// kept low for the 50-subrequest free-tier limit per invocation.
-const BATCH_SIZE = 5;
+// Each article costs ~6 subrequests (status, image, AI gen, publish, status, telegram).
+// Native-language articles skip AI and cost ~4 subrequests.
+const BATCH_SIZE = 8;
 
 export async function handleAIProcess(env) {
   const token = await getFirebaseToken(env);
@@ -27,7 +27,8 @@ export async function handleAIProcess(env) {
         value: { stringValue: 'processing' },
       },
     },
-      limit: 5,
+    orderBy: [{ field: { fieldPath: 'createdAt' }, direction: 'ASCENDING' }],
+    limit: 5,
   }, token);
   for (const doc of stuck) {
     const slug = doc.slug || doc.id;
@@ -45,6 +46,7 @@ export async function handleAIProcess(env) {
         value: { stringValue: 'classified' },
       },
     },
+    orderBy: [{ field: { fieldPath: 'createdAt' }, direction: 'ASCENDING' }],
     limit: BATCH_SIZE,
   }, token);
 

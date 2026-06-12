@@ -31,8 +31,12 @@ export async function runScheduledPipeline(env) {
 
   try {
     if (name === 'ingest' && tick % 24 === 0) {
-      console.log('[cron] scheduled video fetch (every 6h, 65% regional)');
-      await handleVideoFetch(env).catch(err => console.error('[cron] video failed:', err.message));
+      console.log('[cron] scheduled video fetch (every 6h, 65% regional) — skipping ingest to stay under subrequest limit');
+      const videoResult = await handleVideoFetch(env).catch(err => {
+        console.error('[cron] video failed:', err.message);
+        return [];
+      });
+      return { stage: 'video', slot, result: Array.isArray(videoResult) ? videoResult.length : 0 };
     }
     const result = await run();
     const summary = Array.isArray(result)

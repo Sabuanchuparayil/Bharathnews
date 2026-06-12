@@ -3,7 +3,7 @@ import { getFirebaseToken } from '../lib/firebase-auth.js';
 import { runQuery, FIRESTORE_BASE } from '../lib/firestore-rest.js';
 import { loadSiteSettings } from '../lib/sources-loader.js';
 
-const BATCH_SIZE = 10;
+const BATCH_SIZE = 15;
 
 export async function handleClassify(env) {
   const token = await getFirebaseToken(env);
@@ -20,6 +20,7 @@ export async function handleClassify(env) {
         value: { stringValue: 'pending_ai' },
       },
     },
+    orderBy: [{ field: { fieldPath: 'createdAt' }, direction: 'ASCENDING' }],
     limit: BATCH_SIZE,
   }, token);
 
@@ -124,9 +125,13 @@ async function patchRaw(docPath, token, data) {
     else if (Array.isArray(val)) fields[key] = { arrayValue: { values: val.map(v => ({ stringValue: String(v) })) } };
   }
 
-  await fetch(`https://firestore.googleapis.com/v1/${docPath}?${mask.join('&')}`, {
+  const res = await fetch(`https://firestore.googleapis.com/v1/${docPath}?${mask.join('&')}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({ fields }),
   });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`patchRaw failed (${res.status}): ${err.slice(0, 150)}`);
+  }
 }

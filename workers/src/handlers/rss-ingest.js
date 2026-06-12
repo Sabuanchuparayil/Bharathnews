@@ -45,9 +45,9 @@ async function findEmptyCategories(env, token) {
       from: [{ collectionId: 'articles' }],
       where: {
         fieldFilter: {
-          field: { fieldPath: 'status' },
+          field: { fieldPath: 'editorialStatus' },
           op: 'EQUAL',
-          value: { stringValue: 'processed' },
+          value: { stringValue: 'published' },
         },
       },
       select: { fields: [{ fieldPath: 'category' }] },

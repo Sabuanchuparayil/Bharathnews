@@ -112,26 +112,61 @@ export const getArticleBySlug = async (slug) => {
 export const getTrendingArticles = async (count = 5, language = null) => {
   const db = await getDbAsync();
   if (!db) return [];
-  const { collection, query, orderBy, limit, getDocs } = await firestoreOps();
-  const fetchLimit = language ? count + 120 : count + 30;
-  const q = query(collection(db, 'articles'), orderBy('views', 'desc'), limit(fetchLimit));
-  const snapshot = await getDocs(q);
+  const { collection, query, where, orderBy, limit, getDocs, Timestamp } = await firestoreOps();
+
+  // First try: recent articles (last 48h) ranked by views — keeps trending fresh
+  const cutoff = Timestamp.fromDate(new Date(Date.now() - 48 * 60 * 60 * 1000));
+  const fetchLimit = language ? count + 120 : count + 50;
+  const recentQ = query(
+    collection(db, 'articles'),
+    where('publishedAt', '>=', cutoff),
+    orderBy('publishedAt', 'desc'),
+    limit(fetchLimit),
+  );
+  const recentSnap = await getDocs(recentQ);
+
   const seen = new Set();
-  const articles = [];
-  for (const d of snapshot.docs) {
+  const candidates = recentSnap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .filter(data => {
+      if (!matchesLanguage(data, language)) return false;
+      if (!data.slug || seen.has(data.slug)) return false;
+      seen.add(data.slug);
+      return true;
+    });
+
+  // Rank by views within the fresh pool
+  candidates.sort((a, b) => (b.views || 0) - (a.views || 0));
+
+  if (candidates.length >= count) {
+    return candidates.slice(0, count);
+  }
+
+  // Fallback: widen to 7 days if not enough recent articles
+  const widerCutoff = Timestamp.fromDate(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+  const widerQ = query(
+    collection(db, 'articles'),
+    where('publishedAt', '>=', widerCutoff),
+    orderBy('publishedAt', 'desc'),
+    limit(fetchLimit),
+  );
+  const widerSnap = await getDocs(widerQ);
+  for (const d of widerSnap.docs) {
     const data = { id: d.id, ...d.data() };
     if (!matchesLanguage(data, language)) continue;
     if (!data.slug || seen.has(data.slug)) continue;
     seen.add(data.slug);
-    articles.push(data);
-    if (articles.length >= count) break;
+    candidates.push(data);
+  }
+  candidates.sort((a, b) => (b.views || 0) - (a.views || 0));
+
+  if (candidates.length > 0) {
+    return candidates.slice(0, count);
   }
 
-  if (articles.length === 0 && language) {
-    return getTrendingArticles(count, null);
-  }
-
-  return articles;
+  // Last resort fallback (empty DB or language mismatch)
+  if (language) return getTrendingArticles(count, null);
+  return [];
 };
 
 export const getArticlesByInterests = async (interests, count = 10, language = null) => {
