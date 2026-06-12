@@ -73,9 +73,13 @@ const Header = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center space-x-2.5 group">
-              <div className="w-9 h-9 bg-gradient-to-br from-brand-500 to-brand-700 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200">
-                <span className="text-white font-bold text-base">B</span>
-              </div>
+              <img
+                src="/logo-mark.png"
+                alt="The Bharath News"
+                width={36}
+                height={36}
+                className="w-9 h-9 rounded-xl shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200"
+              />
               <div className="hidden sm:block">
                 <span className="font-display font-bold text-lg text-gray-900 dark:text-white">The Bharath </span>
                 <span className="font-display font-bold text-lg text-brand-600 dark:text-brand-400">News</span>

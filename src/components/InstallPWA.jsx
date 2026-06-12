@@ -68,9 +68,13 @@ const InstallPWA = () => {
   return (
     <div className="fixed bottom-20 md:bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 glass-card-solid rounded-2xl shadow-floating p-4 z-50 animate-slide-up border border-gray-100 dark:border-gray-800">
       <div className="flex items-start space-x-3">
-        <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center flex-shrink-0">
-          <span className="text-white font-bold">B</span>
-        </div>
+        <img
+          src="/logo-mark.png"
+          alt="The Bharath News"
+          width={40}
+          height={40}
+          className="w-10 h-10 rounded-xl flex-shrink-0"
+        />
         <div className="flex-1">
           <h3 className="font-display font-bold text-gray-900 dark:text-white">Install The Bharath News</h3>
           {iosMode ? (

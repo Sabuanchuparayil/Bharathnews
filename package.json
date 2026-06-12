@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start --hostname 0.0.0.0 -p ${PORT:-3000}",
     "lint": "next lint",
-    "generate-icons": "node scripts/generate-icons.js",
+    "generate-icons": "python3 scripts/generate-brand-icons.py",
     "worker:dev": "npm run dev --prefix workers",
     "worker:deploy": "npm run deploy --prefix workers",
     "worker:secrets": "bash scripts/set-worker-secrets.sh",

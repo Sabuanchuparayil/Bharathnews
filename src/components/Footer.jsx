@@ -34,9 +34,13 @@ const Footer = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="flex items-center space-x-2 mb-4">
-              <div className="w-8 h-8 bg-gradient-to-br from-brand-500 to-brand-700 rounded-xl flex items-center justify-center">
-                <span className="text-white font-bold text-sm">B</span>
-              </div>
+              <img
+                src="/logo-mark.png"
+                alt="The Bharath News"
+                width={32}
+                height={32}
+                className="w-8 h-8 rounded-xl"
+              />
               <span className="font-display font-bold text-lg text-gray-900 dark:text-white">{siteName || 'The Bharath News'}</span>
             </Link>
             <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">

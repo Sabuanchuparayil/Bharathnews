@@ -25,7 +25,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const viewport = {
-  themeColor: '#4338ca',
+  themeColor: '#101223',
   viewportFit: 'cover',
   width: 'device-width',
   initialScale: 1,
@@ -86,9 +86,11 @@ export const metadata = {
   },
   icons: {
     icon: [
+      { url: '/favicon.ico', sizes: 'any' },
       { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
       { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
     ],
+    shortcut: ['/favicon.ico'],
     apple: [{ url: '/icons/apple-touch-icon.png' }],
   },
   verification: {

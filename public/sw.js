@@ -1,10 +1,12 @@
 /* BharathNews PWA service worker — required for Android/iOS installability. */
-const CACHE = 'bharathnews-v1';
+const CACHE = 'bharathnews-v2';
 const SHELL = [
   '/offline.html',
   '/manifest.json',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
+  '/icons/icon-maskable-192x192.png',
+  '/icons/icon-maskable-512x512.png',
   '/icons/apple-touch-icon.png',
 ];
 
