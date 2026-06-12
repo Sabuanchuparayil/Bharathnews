@@ -4,7 +4,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Clock, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
-import { formatDistanceToNow } from 'date-fns';
+import RelativeTime from './RelativeTime';
 import SafeImage from './SafeImage';
 import ShareButton from './ShareButton';
 import { getCategoryColor, getCategoryLabel } from '../utils/categoryColors';
@@ -61,7 +61,7 @@ const QuickReadSheet = ({ article, onClose }) => {
             <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-4 mb-4">{article.summary}</p>
             <div className="flex items-center space-x-2 text-xs text-gray-400 mb-5">
               <Clock className="w-3.5 h-3.5" />
-              <span>{publishedDate ? formatDistanceToNow(new Date(publishedDate), { addSuffix: true }) : ''}</span>
+              <RelativeTime date={publishedDate} />
               <span>·</span>
               <span>{article.readTime || 3}m read</span>
             </div>

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, Heart, Bookmark, Eye, ChevronUp } from 'lucide-react';
 import ShareButton from './ShareButton';
 import Link from 'next/link';
-import { formatDistanceToNow } from 'date-fns';
+import RelativeTime from './RelativeTime';
 import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
 import { useInterests } from '../context/InterestContext';
@@ -152,7 +152,7 @@ const NewsCard = ({ article, variant = 'default', index = 0 }) => {
                 <span className="font-medium text-gray-600 dark:text-gray-300">{source || author}</span>
                 <span className="flex items-center space-x-1">
                   <Clock className="w-3 h-3" />
-                  <span>{publishedAt ? formatDistanceToNow(new Date(publishedAt?.seconds ? publishedAt.seconds * 1000 : publishedAt), { addSuffix: true }) : ''}</span>
+                  <RelativeTime date={publishedAt} />
                 </span>
               </div>
             </div>

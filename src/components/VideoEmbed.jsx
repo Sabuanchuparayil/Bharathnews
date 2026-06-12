@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Clock, ExternalLink } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import RelativeTime from './RelativeTime';
 import ShareButton from './ShareButton';
 
 const VideoEmbed = ({ video, compact = false }) => {
@@ -31,7 +31,7 @@ const VideoEmbed = ({ video, compact = false }) => {
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{channelName}</p>
           {publishedAt && (
             <p className="text-xs text-gray-400 mt-1">
-              {formatDistanceToNow(new Date(publishedAt), { addSuffix: true })}
+              <RelativeTime date={publishedAt} />
             </p>
           )}
         </div>
@@ -60,7 +60,7 @@ const VideoEmbed = ({ video, compact = false }) => {
           {publishedAt && (
             <span className="flex items-center space-x-1">
               <Clock className="w-3 h-3" />
-              <span>{formatDistanceToNow(new Date(publishedAt), { addSuffix: true })}</span>
+              <RelativeTime date={publishedAt} />
             </span>
           )}
         </div>

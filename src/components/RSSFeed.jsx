@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Rss } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import RelativeTime from './RelativeTime';
 import { getCategoryLabel } from '../utils/categoryColors';
 
 const stripHtml = (html) => {
@@ -117,7 +117,7 @@ const RSSFeed = ({ feedUrl, title, fallbackUrls = [] }) => {
             </p>
             <div className="flex items-center justify-between text-xs text-gray-500">
               <span>{getCategoryLabel(item.category)}</span>
-              <span>{formatDistanceToNow(new Date(item.pubDate), { addSuffix: true })}</span>
+              <RelativeTime date={item.pubDate} />
             </div>
           </article>
         ))}

@@ -4,7 +4,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Clock } from 'lucide-react';
 import Link from 'next/link';
-import { formatDistanceToNow } from 'date-fns';
+import RelativeTime from './RelativeTime';
 import SafeImage from './SafeImage';
 import ShareButton from './ShareButton';
 import { getCategoryColor, getCategoryLabel } from '../utils/categoryColors';
@@ -58,7 +58,7 @@ const HeroSection = ({ featured = [] }) => {
                     <span>{main.author}</span>
                     <span className="flex items-center space-x-1">
                       <Clock className="w-3 h-3" />
-                      <span>{main.publishedAt ? formatDistanceToNow(new Date(main.publishedAt?.seconds ? main.publishedAt.seconds * 1000 : main.publishedAt), { addSuffix: true }) : ''}</span>
+                      <RelativeTime date={main.publishedAt} />
                     </span>
                   </div>
                 </div>
@@ -106,7 +106,7 @@ const HeroSection = ({ featured = [] }) => {
                     </div>
                     <div className="flex items-center space-x-2 text-xs text-gray-500 mt-2">
                       <Clock className="w-3 h-3" />
-                      <span>{article.publishedAt ? formatDistanceToNow(new Date(article.publishedAt?.seconds ? article.publishedAt.seconds * 1000 : article.publishedAt), { addSuffix: true }) : ''}</span>
+                      <RelativeTime date={article.publishedAt} />
                     </div>
                   </div>
                 </Link>

@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, X, Zap } from 'lucide-react';
 import Link from 'next/link';
-import { formatDistanceToNow } from 'date-fns';
+import RelativeTime from './RelativeTime';
 import { getTrendingArticles } from '../services/firestore';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 
@@ -82,7 +82,7 @@ const NotificationsPanel = ({ isOpen, onClose }) => {
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2">{article.title}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {article.publishedAt ? formatDistanceToNow(new Date(article.publishedAt?.seconds ? article.publishedAt.seconds * 1000 : article.publishedAt), { addSuffix: true }) : 'Just now'}
+                        <RelativeTime date={article.publishedAt} fallback="Just now" />
                       </p>
                     </div>
                   </Link>

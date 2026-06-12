@@ -6,7 +6,7 @@ import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion
 import { ArrowLeft, Bookmark, Heart, Clock, Eye, MessageCircle } from 'lucide-react';
 import ShareButton from '../components/ShareButton';
 import ArticleReadLanguage from '../components/ArticleReadLanguage';
-import { formatDistanceToNow } from 'date-fns';
+import RelativeTime from '../components/RelativeTime';
 import { toast } from 'react-toastify';
 import Layout from '../components/Layout';
 import AdSlot from '../components/AdSlot';
@@ -182,7 +182,7 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
               <span className="font-medium text-gray-700 dark:text-gray-300">{article.author}</span>
               <span className="flex items-center space-x-1">
                 <Clock className="w-4 h-4" />
-                <span>{publishedDate ? formatDistanceToNow(new Date(publishedDate), { addSuffix: true }) : ''}</span>
+                <span><RelativeTime date={publishedDate} /></span>
               </span>
               <span className="flex items-center space-x-1">
                 <Eye className="w-4 h-4" />
