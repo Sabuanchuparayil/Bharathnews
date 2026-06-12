@@ -14,7 +14,7 @@ function hasTelegramPosted(article) {
 async function markTelegramPosted(env, articleId, token) {
   const now = new Date().toISOString();
   await fetch(
-    `${FIRESTORE_BASE(env.FIREBASE_PROJECT_ID)}/articles/${encodeURIComponent(articleId)}?updateMask.fieldPaths=telegramPostedAt&updateMask.fieldPaths=distributed`,
+    `${FIRESTORE_BASE(env.FIREBASE_PROJECT_ID)}/articles/${encodeURIComponent(articleId)}?updateMask.fieldPaths=telegramPostedAt&updateMask.fieldPaths=distributed.telegram`,
     {
       method: 'PATCH',
       headers: {

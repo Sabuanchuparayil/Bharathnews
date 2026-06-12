@@ -129,8 +129,8 @@ export async function saveArticleTranslation(articleId, langCode, translation) {
 
 export async function markArticleTelegramPosted(articleId) {
   const db = getFirestore(getAdminApp());
-  await db.collection('articles').doc(articleId).set({
+  await db.collection('articles').doc(articleId).update({
     telegramPostedAt: FieldValue.serverTimestamp(),
-    distributed: { telegram: true },
-  }, { merge: true });
+    'distributed.telegram': true,
+  });
 }

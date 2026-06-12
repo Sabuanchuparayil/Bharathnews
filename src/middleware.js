@@ -18,10 +18,19 @@ function sanitizeNext(nextPath) {
 
 export function middleware(request) {
   const host = request.headers.get('host')?.split(':')[0]?.toLowerCase();
+
   if (host === SITE_APEX_HOST) {
     const url = request.nextUrl.clone();
     url.hostname = SITE_CANONICAL_HOST;
     url.protocol = 'https:';
+    return NextResponse.redirect(url, 301);
+  }
+
+  if (host && host !== SITE_CANONICAL_HOST && host !== 'localhost' && !host.startsWith('192.168.') && !host.startsWith('127.')) {
+    const url = request.nextUrl.clone();
+    url.hostname = SITE_CANONICAL_HOST;
+    url.protocol = 'https:';
+    url.port = '';
     return NextResponse.redirect(url, 301);
   }
 

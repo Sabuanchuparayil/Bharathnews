@@ -27,7 +27,15 @@ export async function POST(request, { params }) {
   }
 
   try {
-    const article = await getArticleBySlugAdmin(slug);
+    let article;
+    try {
+      article = await getArticleBySlugAdmin(slug);
+    } catch (adminErr) {
+      return NextResponse.json(
+        { error: 'Translation service is temporarily unavailable. Please try again later.' },
+        { status: 503 },
+      );
+    }
     if (!article) {
       return NextResponse.json({ error: 'Article not found.' }, { status: 404 });
     }
