@@ -22,7 +22,7 @@ export function parseJsonFromAI(text) {
 }
 
 const LANG_NAMES = {
-  ml: 'Malayalam', ta: 'Tamil', te: 'Telugu', kn: 'Kannada', hi: 'Hindi', ar: 'Arabic',
+  ml: 'Malayalam', ta: 'Tamil', te: 'Telugu', kn: 'Kannada', hi: 'Hindi', bn: 'Bengali', ar: 'Arabic',
 };
 
 export async function generateMultilingualArticle(env, { title, description, source, category, topics, targetLangs = ['ml', 'hi', 'ar'] }) {

@@ -6,6 +6,8 @@ import { handleVideoFetch } from './handlers/video-fetch.js';
 import { handleNewsletterDigest } from './handlers/newsletter-digest.js';
 import { handleSitemap } from './handlers/sitemap.js';
 import { handleSubdomainRedirect } from './handlers/subdomain.js';
+import { handleContactEmail } from './handlers/contact-email.js';
+import { translateArticleContent } from './handlers/article-translate.js';
 import { isProtectedApiPath, requireApiSecret } from './lib/api-auth.js';
 import { getFirebaseToken } from './lib/firebase-auth.js';
 import { runQuery, FIRESTORE_BASE } from './lib/firestore-rest.js';
@@ -156,6 +158,46 @@ export default {
       return new Response(JSON.stringify(result), { headers: cors });
     }
 
+    if (url.pathname === '/api/contact' && request.method === 'POST') {
+      const denied = requireAllowedSiteCaller(request, env);
+      if (denied) return denied;
+      let body;
+      try { body = await request.json(); } catch {
+        return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400, headers: cors });
+      }
+      try {
+        const result = await handleContactEmail(env, body);
+        return new Response(JSON.stringify(result), { headers: cors });
+      } catch (err) {
+        return new Response(JSON.stringify({ error: err.message || 'Failed to send' }), { status: 400, headers: cors });
+      }
+    }
+
+    if (url.pathname === '/api/article-translate' && request.method === 'POST') {
+      const denied = requireAllowedSiteCaller(request, env);
+      if (denied) return denied;
+      let body;
+      try { body = await request.json(); } catch {
+        return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400, headers: cors });
+      }
+      const targetLang = typeof body.targetLang === 'string' ? body.targetLang.trim() : '';
+      if (!targetLang) {
+        return new Response(JSON.stringify({ error: 'targetLang required' }), { status: 400, headers: cors });
+      }
+      try {
+        const translation = await translateArticleContent(env, {
+          title: body.title,
+          summary: body.summary,
+          fullContent: body.fullContent,
+          targetLang,
+          sourceLang: body.sourceLang || 'en',
+        });
+        return new Response(JSON.stringify({ translation }), { headers: cors });
+      } catch (err) {
+        return new Response(JSON.stringify({ error: err.message || 'Translation failed' }), { status: 500, headers: cors });
+      }
+    }
+
     if (url.pathname === '/sitemap.xml') {
       return handleSitemap(env);
     }
@@ -222,4 +264,34 @@ async function getPipelineStatus(env) {
   counts.published_articles = articles.length > 0 ? '1+' : '0';
 
   return { pipeline: counts, timestamp: new Date().toISOString() };
+}
+
+/** Allow calls from the main site (browser or Next.js server proxy). */
+function requireAllowedSiteCaller(request, env) {
+  const mainHost = env.MAIN_SITE_URL || 'https://www.thebharathnews.com';
+  const allowedHosts = new Set([
+    new URL(mainHost).host,
+    'www.thebharathnews.com',
+    'thebharathnews.com',
+    'localhost:3000',
+    'localhost:3001',
+  ]);
+  const origin = request.headers.get('Origin') || '';
+  const referer = request.headers.get('Referer') || '';
+  try {
+    if (origin) {
+      const host = new URL(origin).host;
+      if (allowedHosts.has(host)) return null;
+    }
+    if (referer) {
+      const host = new URL(referer).host;
+      if (allowedHosts.has(host)) return null;
+    }
+  } catch {
+    /* invalid URL */
+  }
+  return new Response(JSON.stringify({ error: 'Forbidden' }), {
+    status: 403,
+    headers: { 'Content-Type': 'application/json' },
+  });
 }

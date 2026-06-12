@@ -100,3 +100,29 @@ export async function createUserWithRole({ email, password, displayName, role })
 
   return { uid: userRecord.uid, email: normalizedEmail, displayName: name, role };
 }
+
+const TRANSLATION_LANGS = new Set(['ml', 'hi', 'ta', 'te', 'kn', 'bn', 'en']);
+
+export async function getArticleBySlugAdmin(slug) {
+  const db = getFirestore(getAdminApp());
+  const snap = await db.collection('articles').where('slug', '==', slug).limit(1).get();
+  if (snap.empty) return null;
+  const doc = snap.docs[0];
+  return { id: doc.id, ...doc.data() };
+}
+
+export async function saveArticleTranslation(articleId, langCode, translation) {
+  if (!TRANSLATION_LANGS.has(langCode)) throw new Error(`Invalid language: ${langCode}`);
+  const db = getFirestore(getAdminApp());
+  await db.collection('articles').doc(articleId).set({
+    translations: {
+      [langCode]: {
+        title: translation.title || '',
+        summary: translation.summary || '',
+        fullContent: translation.fullContent || '',
+        machineAssisted: translation.machineAssisted !== false,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+    },
+  }, { merge: true });
+}

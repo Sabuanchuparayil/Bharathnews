@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
 import { ArrowLeft, Bookmark, Heart, Clock, Eye, MessageCircle } from 'lucide-react';
 import ShareButton from '../components/ShareButton';
+import ArticleReadLanguage from '../components/ArticleReadLanguage';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'react-toastify';
 import Layout from '../components/Layout';
@@ -18,12 +19,17 @@ import { getCategoryColor, getCategoryLabel } from '../utils/categoryColors';
 import { getArticleBySlug, trackArticleView } from '../services/firestore';
 import { useAuth } from '../context/AuthContext';
 import { useInterests } from '../context/InterestContext';
+import { getArticleSourceLang, resolveArticleDisplay } from '../lib/article-translations';
+import { useLanguage } from '../context/LanguageContext';
 
 const Article = ({ slug: slugProp, initialArticle = null }) => {
   const slug = slugProp;
   const { user, isBookmarked, isLiked, toggleBookmark, toggleLike } = useAuth();
   const { trackRead, trackBookmark } = useInterests();
+  const { language: siteLanguage } = useLanguage();
   const [article, setArticle] = useState(initialArticle);
+  const [runtimeTranslations, setRuntimeTranslations] = useState({});
+  const [readLang, setReadLang] = useState(() => getArticleSourceLang(initialArticle));
   const [loading, setLoading] = useState(!initialArticle);
   const startTime = useRef(Date.now());
   const heroRef = useRef(null);
@@ -64,6 +70,28 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
       }
     };
   }, [slug]);
+
+  useEffect(() => {
+    if (!article || !siteLanguage || siteLanguage === 'all') return;
+    const src = getArticleSourceLang(article);
+    if (siteLanguage !== src) setReadLang(siteLanguage);
+  }, [article, siteLanguage]);
+
+  const mergedArticle = useMemo(() => {
+    if (!article) return null;
+    return {
+      ...article,
+      translations: { ...(article.translations || {}), ...runtimeTranslations },
+    };
+  }, [article, runtimeTranslations]);
+
+  const handleTranslationLoaded = (langCode, translation) => {
+    setRuntimeTranslations(prev => ({ ...prev, [langCode]: translation }));
+    setArticle(prev => prev ? {
+      ...prev,
+      translations: { ...(prev.translations || {}), [langCode]: translation },
+    } : prev);
+  };
 
   const handleBookmark = async () => {
     if (!user) { toast.info('Please sign in to bookmark articles'); return; }
@@ -113,9 +141,10 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
     ? article.publishedAt.seconds * 1000
     : article.publishedAt;
 
-  const displayTitle = article.title;
-  const displaySummary = article.summary;
-  const displayContent = article.fullContent;
+  const resolved = resolveArticleDisplay(mergedArticle || article, readLang);
+  const displayTitle = resolved?.title || article.title;
+  const displaySummary = resolved?.summary || article.summary;
+  const displayContent = resolved?.fullContent || article.fullContent;
 
   return (
     <Layout>
@@ -163,6 +192,15 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
               {article.source && <span>Source: {article.source}</span>}
             </div>
           </header>
+
+          {mergedArticle && (
+            <ArticleReadLanguage
+              article={mergedArticle}
+              readLang={readLang}
+              onReadLangChange={setReadLang}
+              onTranslationLoaded={handleTranslationLoaded}
+            />
+          )}
 
           <div ref={heroRef} className="relative h-64 md:h-96 rounded-2xl overflow-hidden mb-8">
             <motion.img

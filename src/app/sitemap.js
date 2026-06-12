@@ -19,6 +19,7 @@ export default async function sitemap() {
     { url: `${SITE_URL}/privacy`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.3 },
     { url: `${SITE_URL}/terms`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.3 },
     { url: `${SITE_URL}/editorial`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.3 },
+    { url: `${SITE_URL}/contact`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.4 },
   ];
 
   const categoryPages = CATEGORIES.map(cat => ({

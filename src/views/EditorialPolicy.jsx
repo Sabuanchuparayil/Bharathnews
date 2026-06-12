@@ -182,6 +182,8 @@ const EditorialPolicy = () => (
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-400 pt-2">
             See also our{' '}
+            <Link href="/contact" className="text-brand-600 dark:text-brand-400 hover:underline">Contact page</Link>
+            ,{' '}
             <Link href="/privacy" className="text-brand-600 dark:text-brand-400 hover:underline">Privacy Policy</Link>
             {' '}and{' '}
             <Link href="/terms" className="text-brand-600 dark:text-brand-400 hover:underline">Terms of Service</Link>.
