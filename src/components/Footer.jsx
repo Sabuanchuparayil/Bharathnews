@@ -33,13 +33,13 @@ const Footer = () => {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
           <div className="col-span-2 md:col-span-1">
-            <Link href="/" className="flex items-center space-x-2 mb-4">
+            <Link href="/" className="flex items-center space-x-2.5 mb-4">
               <img
                 src="/logo-mark.png"
                 alt="The Bharath News"
-                width={32}
-                height={32}
-                className="w-8 h-8 rounded-xl"
+                width={44}
+                height={44}
+                className="w-11 h-11 rounded-xl"
               />
               <span className="font-display font-bold text-lg text-gray-900 dark:text-white">{siteName || 'The Bharath News'}</span>
             </Link>

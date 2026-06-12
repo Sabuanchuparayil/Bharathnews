@@ -76,9 +76,13 @@ export default function Login() {
       <div className="min-h-[70vh] flex items-center justify-center px-4 py-12">
         <div className="glass-card-solid rounded-2xl p-8 sm:p-10 max-w-md w-full">
           <div className="text-center mb-6">
-            <div className="w-14 h-14 rounded-2xl bg-brand-600 flex items-center justify-center mx-auto mb-6">
-              {isAdminFlow ? <Shield className="w-7 h-7 text-white" /> : <LogIn className="w-7 h-7 text-white" />}
-            </div>
+            <img
+              src="/logo-mark.png"
+              alt="The Bharath News"
+              width={64}
+              height={64}
+              className="w-16 h-16 rounded-2xl mx-auto mb-6 shadow-lg"
+            />
             <h1 className="font-display font-bold text-3xl text-gray-900 dark:text-white mb-2">
               {isAdminFlow ? 'Admin Sign In' : 'Sign In'}
             </h1>

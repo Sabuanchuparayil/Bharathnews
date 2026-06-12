@@ -71,14 +71,17 @@ def main():
         out.save(os.path.join(PUB, rel))
         print(f"  wrote public/{rel} ({size}x{size})")
 
-    # favicon.ico — full logo, multi-resolution
-    any_sq.save(
+    # favicon.ico — full logo, multi-resolution (ensure source is large enough)
+    ico_src = any_sq if any_sq.width >= 256 else any_sq.resize((256, 256), Image.LANCZOS)
+    ico_src.save(
         os.path.join(PUB, "favicon.ico"),
         sizes=[(16, 16), (32, 32), (48, 48), (64, 64)],
     )
     print("  wrote public/favicon.ico (16/32/48/64)")
 
     # og-default.png — 1200x630 social card, logo centered on navy
+    if logo.width == 0 or logo.height == 0:
+        raise ValueError(f"Source image has invalid dimensions: {logo.size}")
     og = Image.new("RGBA", (1200, 630), bg)
     target_h = 540
     ratio = target_h / logo.height
