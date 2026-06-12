@@ -4,6 +4,20 @@ import { getDbAsync, firestoreOps } from '@/lib/firebase-client';
 
 const emptyPage = { articles: [], lastDoc: null, hasMore: false };
 
+function articleLanguage(article) {
+  return article?.language || 'en';
+}
+
+function matchesLanguage(article, language) {
+  if (!language || language === 'all') return true;
+  return articleLanguage(article) === language;
+}
+
+function filterByLanguage(articles, language) {
+  if (!language || language === 'all') return articles;
+  return articles.filter(a => matchesLanguage(a, language));
+}
+
 export const getArticles = async (category = null, lastDoc = null, pageSize = 20, language = null) => {
   const { articles } = await getArticlesPage(category, lastDoc, pageSize, language);
   return articles;
@@ -18,21 +32,14 @@ export const getArticlesPage = async (category = null, lastDoc = null, pageSize 
   if (category && category !== 'all') {
     filters.push(where('category', '==', category));
   }
-  if (language && language !== 'all') {
-    filters.push(where('language', '==', language));
-  }
   if (filters.length === 0) {
     q = query(collection(db, 'articles'), orderBy('publishedAt', 'desc'), limit(pageSize));
-  } else if (filters.length === 1) {
-    q = query(collection(db, 'articles'), filters[0], orderBy('publishedAt', 'desc'), limit(pageSize));
   } else {
     q = query(collection(db, 'articles'), ...filters, orderBy('publishedAt', 'desc'), limit(pageSize));
   }
   if (lastDoc) {
     if (filters.length === 0) {
       q = query(collection(db, 'articles'), orderBy('publishedAt', 'desc'), startAfter(lastDoc), limit(pageSize));
-    } else if (filters.length === 1) {
-      q = query(collection(db, 'articles'), filters[0], orderBy('publishedAt', 'desc'), startAfter(lastDoc), limit(pageSize));
     } else {
       q = query(collection(db, 'articles'), ...filters, orderBy('publishedAt', 'desc'), startAfter(lastDoc), limit(pageSize));
     }
@@ -43,7 +50,7 @@ export const getArticlesPage = async (category = null, lastDoc = null, pageSize 
     .filter(a => !a.editorialStatus || a.editorialStatus === 'published');
 
   const seenSlugs = new Set();
-  const articles = allArticles.filter(a => {
+  const articles = filterByLanguage(allArticles, language).filter(a => {
     if (!a.slug || seenSlugs.has(a.slug)) return false;
     seenSlugs.add(a.slug);
     return true;
@@ -56,22 +63,37 @@ export const getArticlesPage = async (category = null, lastDoc = null, pageSize 
 /** Paginate until enough unique-by-slug articles are collected (duplicate-heavy datasets). */
 export const fetchUniqueArticles = async (category = null, minCount = 12, startAfterDoc = null, language = null) => {
   const seenSlugs = new Set();
-  const articles = [];
+  const matched = [];
+  const unfiltered = [];
   let lastDoc = startAfterDoc;
   let hasMore = true;
+  let pagesScanned = 0;
+  const maxPages = language ? 10 : 4;
 
-  while (articles.length < minCount && hasMore) {
-    const page = await getArticlesPage(category, lastDoc, 24, language);
+  while (
+    (matched.length < minCount || (language && unfiltered.length < minCount)) &&
+    hasMore &&
+    pagesScanned < maxPages
+  ) {
+    const page = await getArticlesPage(category, lastDoc, 24, null);
+    pagesScanned++;
     for (const article of page.articles) {
       if (!article?.slug || seenSlugs.has(article.slug)) continue;
       seenSlugs.add(article.slug);
-      articles.push(article);
-      if (articles.length >= minCount) break;
+      unfiltered.push(article);
+      if (matchesLanguage(article, language)) {
+        matched.push(article);
+      }
+      if (matched.length >= minCount) break;
     }
     lastDoc = page.lastDoc;
     hasMore = page.hasMore;
     if (!page.articles.length) break;
   }
+
+  const articles = matched.length > 0
+    ? matched.slice(0, minCount)
+    : unfiltered.slice(0, minCount);
 
   return { articles, lastDoc, hasMore };
 };
@@ -91,18 +113,24 @@ export const getTrendingArticles = async (count = 5, language = null) => {
   const db = await getDbAsync();
   if (!db) return [];
   const { collection, query, orderBy, limit, getDocs } = await firestoreOps();
-  const q = query(collection(db, 'articles'), orderBy('views', 'desc'), limit(count + 30));
+  const fetchLimit = language ? count + 120 : count + 30;
+  const q = query(collection(db, 'articles'), orderBy('views', 'desc'), limit(fetchLimit));
   const snapshot = await getDocs(q);
   const seen = new Set();
   const articles = [];
   for (const d of snapshot.docs) {
     const data = { id: d.id, ...d.data() };
-    if (language && language !== 'all' && data.language !== language) continue;
+    if (!matchesLanguage(data, language)) continue;
     if (!data.slug || seen.has(data.slug)) continue;
     seen.add(data.slug);
     articles.push(data);
     if (articles.length >= count) break;
   }
+
+  if (articles.length === 0 && language) {
+    return getTrendingArticles(count, null);
+  }
+
   return articles;
 };
 
@@ -125,15 +153,22 @@ export const getArticlesByInterests = async (interests, count = 10, language = n
   );
   const snapshot = await getDocs(q);
   const seen = new Set();
-  return snapshot.docs
+  const collect = (lang) => snapshot.docs
     .map(d => ({ id: d.id, ...d.data() }))
     .filter(a => {
-      if (language && language !== 'all' && a.language !== language) return false;
+      if (!matchesLanguage(a, lang)) return false;
       if (!a.slug || seen.has(a.slug)) return false;
       seen.add(a.slug);
       return true;
     })
     .slice(0, count);
+
+  const filtered = collect(language);
+  if (filtered.length === 0 && language) {
+    seen.clear();
+    return collect(null);
+  }
+  return filtered;
 };
 
 export const trackArticleView = async (articleId) => {
@@ -237,16 +272,10 @@ export const searchArticles = async (searchTerm, pageSize = 30, language = null)
   const term = searchTerm.toLowerCase().trim();
   if (!term) return [];
 
-  const langFilter = language && language !== 'all' ? where('language', '==', language) : null;
-  const queries = langFilter
-    ? [
-        query(collection(db, 'articles'), where('category', '==', term), langFilter, orderBy('publishedAt', 'desc'), limit(pageSize)),
-        query(collection(db, 'articles'), langFilter, orderBy('publishedAt', 'desc'), limit(200)),
-      ]
-    : [
-        query(collection(db, 'articles'), where('category', '==', term), orderBy('publishedAt', 'desc'), limit(pageSize)),
-        query(collection(db, 'articles'), orderBy('publishedAt', 'desc'), limit(200)),
-      ];
+  const queries = [
+    query(collection(db, 'articles'), where('category', '==', term), orderBy('publishedAt', 'desc'), limit(pageSize)),
+    query(collection(db, 'articles'), orderBy('publishedAt', 'desc'), limit(200)),
+  ];
 
   const results = await Promise.all(queries.map(q => getDocs(q)));
   const seenIds = new Set();
@@ -271,7 +300,12 @@ export const searchArticles = async (searchTerm, pageSize = 30, language = null)
     }
   }
 
-  return articles.slice(0, pageSize);
+  const filtered = filterByLanguage(articles, language);
+  if (filtered.length === 0 && language) {
+    return articles.slice(0, pageSize);
+  }
+
+  return filtered.slice(0, pageSize);
 };
 
 export const getArticlesByIds = async (articleIds) => {

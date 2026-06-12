@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Play } from 'lucide-react';
+import Link from 'next/link';
+import { ChevronRight, Play } from 'lucide-react';
 import SafeImage from './SafeImage';
 import ShareButton from './ShareButton';
 
@@ -10,11 +11,18 @@ const VideoColumn = ({ videos = [] }) => {
 
   return (
     <div className="glass-card-solid rounded-2xl overflow-hidden">
-      <div className="p-4 border-b border-gray-100 dark:border-gray-800">
-        <h3 className="font-display font-bold text-base text-gray-900 dark:text-white flex items-center space-x-2">
-          <Play className="w-4 h-4 text-brand-600 dark:text-brand-400" />
+      <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between gap-3">
+        <h3 className="font-display font-bold text-base text-gray-900 dark:text-white flex items-center space-x-2 min-w-0">
+          <Play className="w-4 h-4 text-brand-600 dark:text-brand-400 flex-shrink-0" />
           <span>Latest Videos</span>
         </h3>
+        <Link
+          href="/videos"
+          className="flex items-center gap-0.5 text-sm font-medium text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 whitespace-nowrap flex-shrink-0"
+        >
+          View all
+          <ChevronRight className="w-4 h-4" />
+        </Link>
       </div>
       <div className="divide-y divide-gray-100 dark:divide-gray-800">
         {videos.slice(0, 4).map((video, index) => {

@@ -87,11 +87,13 @@ function parseAtom(xml) {
 }
 
 /**
- * Google News blocks Cloudflare datacenter IPs (HTTP 503). For news.google.com
- * URLs we route through rss2json.com which fetches from non-blocked IPs and
- * returns clean JSON. This mirrors Dailyhunt's strategy of never depending on
- * a single feed source — they use multiple proxied and direct publisher feeds.
+ * Google News and OneIndia block Cloudflare datacenter IPs.
+ * Route both through rss2json.com which fetches from non-blocked IPs.
  */
+function needsRss2JsonProxy(url) {
+  return url.includes('news.google.com/') || url.includes('oneindia.com/');
+}
+
 async function fetchViaRss2Json(url) {
   // Free tier: no `count` param (requires API key); returns 10 items by default.
   const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}`;
@@ -117,8 +119,7 @@ async function fetchViaRss2Json(url) {
 }
 
 export async function fetchAndParseFeed(url) {
-  // Route Google News through rss2json proxy to avoid datacenter IP blocking.
-  if (url.includes('news.google.com/')) {
+  if (needsRss2JsonProxy(url)) {
     return fetchViaRss2Json(url);
   }
 
@@ -131,13 +132,23 @@ export async function fetchAndParseFeed(url) {
       signal: controller.signal,
     });
 
-    if (!response.ok) return [];
+    if (!response.ok) {
+      const proxied = await fetchViaRss2Json(url);
+      if (proxied.length) return proxied;
+      return [];
+    }
 
     const xml = await response.text();
     const isAtom = xml.includes('<feed') && xml.includes('<entry');
-    return isAtom ? parseAtom(xml) : parseRSS(xml);
+    const items = isAtom ? parseAtom(xml) : parseRSS(xml);
+    if (!items.length) {
+      const proxied = await fetchViaRss2Json(url);
+      if (proxied.length) return proxied;
+    }
+    return items;
   } catch {
-    return [];
+    const proxied = await fetchViaRss2Json(url).catch(() => []);
+    return proxied;
   } finally {
     clearTimeout(timeout);
   }

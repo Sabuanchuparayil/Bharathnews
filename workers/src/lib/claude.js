@@ -59,7 +59,7 @@ JSON schema:
   "qualityScore": 7,
   "isJunk": false,
   "reasons": "brief reason",
-  "detectedLanguage": "en",
+  "detectedLanguage": "ISO 639-1 code (en, ml, ta, te, kn, bn, hi)",
   "dedupKey": "normalized 5-8 word key for deduplication",
   "relevanceToAudience": 8
 }
@@ -69,7 +69,8 @@ Rules:
 - qualityScore 0-10: 5+ is publishable. Be generous — mainstream news sources produce quality content.
 - relevanceToAudience 0-10: how interesting to Indians / Indian expats globally. Most India, GCC, world, business, tech, sports, health, education news scores 6+. Only niche local foreign news with zero India connection scores below 5.
 - dedupKey: lowercase normalized key capturing the core news event (not the headline verbatim)
-- Default to publishing. When in doubt, give qualityScore 7 and relevanceToAudience 7.`;
+- Default to publishing. When in doubt, give qualityScore 7 and relevanceToAudience 7.
+- If source language hint is ml/ta/te/kn/bn/hi, set detectedLanguage to that code unless the headline is clearly English.`;
 
   try {
     const text = await callClaude(env, prompt, { maxTokens: 512, temperature: 0.2 });

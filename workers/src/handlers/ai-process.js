@@ -85,7 +85,7 @@ async function processOneArticle(env, raw, token, targetLangs, settings) {
     : raw.imageUrl;
   const topics = raw.topics || [category];
   const qualityScore = raw.qualityScore || 6;
-  const language = raw.detectedLanguage || raw.language || 'en';
+  const language = raw.language || raw.detectedLanguage || 'en';
   const isNative = language !== 'en';
 
   let parsed;

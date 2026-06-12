@@ -13,8 +13,14 @@ export async function handleVideoFetch(env) {
   const channels = await loadEnabledSources(env, 'youtube');
   const results = [];
 
+  const sorted = [...channels].sort((a, b) => {
+    const aTime = a.lastFetchedAt ? new Date(a.lastFetchedAt).getTime() : 0;
+    const bTime = b.lastFetchedAt ? new Date(b.lastFetchedAt).getTime() : 0;
+    return aTime - bTime;
+  });
+
   // Process up to 9 channels × 3 items = ~45 subrequests, under the 50 free-tier cap.
-  for (const channel of channels.slice(0, 9)) {
+  for (const channel of sorted.slice(0, 9)) {
     try {
       const feedUrl = channel.url || `https://www.youtube.com/feeds/videos.xml?channel_id=${channel.channelId}`;
       const items = await fetchAndParseFeed(feedUrl);

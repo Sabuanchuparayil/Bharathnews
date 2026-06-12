@@ -3,6 +3,7 @@ import { getCategoryFallbackImage } from '../lib/image-resolver.js';
 import { fetchAndParseFeed } from '../lib/rss-parser.js';
 import { getFirebaseToken } from '../lib/firebase-auth.js';
 import { runQuery, FIRESTORE_BASE } from '../lib/firestore-rest.js';
+import { REGIONAL_LANGUAGES } from '../lib/regional-feeds.js';
 
 /** Sources fetched per cron run. Kept low because Workers free tier allows only 50
  * subrequests per invocation (1 fetch + up to ITEMS_PER_SOURCE stores + 1 health each).
@@ -71,20 +72,25 @@ async function findEmptyCategories(env, token) {
 function rotateSourcePick(sources, maxTotal, priorityCategories = new Set()) {
   const ts = (s) => (s.lastFetchedAt ? new Date(s.lastFetchedAt).getTime() : 0);
 
+  const isRegional = (s) => REGIONAL_LANGUAGES.includes(s.language);
   const priority = [];
-  const normal = [];
+  const regional = [];
+  const general = [];
+
   for (const s of sources) {
     if (priorityCategories.has(s.category)) priority.push(s);
-    else normal.push(s);
+    else if (isRegional(s)) regional.push(s);
+    else general.push(s);
   }
 
   priority.sort((a, b) => ts(a) - ts(b));
-  normal.sort((a, b) => ts(a) - ts(b));
+  regional.sort((a, b) => ts(a) - ts(b));
+  general.sort((a, b) => ts(a) - ts(b));
 
   const picked = [];
   const seenCats = new Set();
 
-  // Phase 1: one source per empty category (round-robin by category, stalest first)
+  // Phase 1: one source per empty category
   for (const s of priority) {
     if (picked.length >= maxTotal) break;
     if (!seenCats.has(s.category)) {
@@ -93,29 +99,35 @@ function rotateSourcePick(sources, maxTotal, priorityCategories = new Set()) {
     }
   }
 
-  // Phase 2: fill remaining slots from normal pool, interleaved by language
-  const remaining = [...normal];
+  // Phase 2: fill ~67% of remaining slots with regional language sources (round-robin by lang)
+  const regionalQuota = Math.min(regional.length, Math.max(1, Math.ceil(maxTotal * 0.67) - picked.length));
   const byLang = {};
-  for (const s of remaining) {
+  for (const s of regional) {
     const lang = s.language || 'en';
     (byLang[lang] = byLang[lang] || []).push(s);
   }
   const langs = Object.keys(byLang);
   let added = true;
-  while (picked.length < maxTotal && added) {
+  while (picked.length < maxTotal && picked.filter(p => isRegional(p)).length < regionalQuota && added) {
     added = false;
     for (const lang of langs) {
       const next = byLang[lang].shift();
-      if (next) {
+      if (next && !picked.includes(next)) {
         picked.push(next);
         added = true;
-        if (picked.length >= maxTotal) break;
+        if (picked.filter(p => isRegional(p)).length >= regionalQuota) break;
       }
     }
   }
 
-  if (priorityCategories.size > 0) {
-    console.log(`[rotation] picked ${picked.length} sources: ${picked.map(s => `${s.name}(${s.category})`).join(', ')}`);
+  // Phase 3: fill rest from general pool
+  for (const s of general) {
+    if (picked.length >= maxTotal) break;
+    if (!picked.includes(s)) picked.push(s);
+  }
+
+  if (priorityCategories.size > 0 || regional.length) {
+    console.log(`[rotation] picked ${picked.length}: ${picked.map(s => `${s.name}(${s.language || 'en'})`).join(', ')}`);
   }
 
   return picked;

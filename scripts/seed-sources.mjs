@@ -1,4 +1,5 @@
 import { RSS_FEEDS } from '../src/config/feeds.config.js';
+import { REGIONAL_RSS_SOURCES } from '../workers/src/lib/regional-feeds.js';
 
 /**
  * Seed news sources into Firestore.
@@ -105,25 +106,11 @@ function toFields(obj) {
   return fields;
 }
 
-// Dailyhunt-inspired hybrid content sourcing:
-// Tier 1: OneIndia direct RSS feeds (Dailyhunt's core regional content partner,
-//         they invested Rs. 15 crore in Greynium/OneIndia specifically for this)
-// Tier 2: Google News feeds proxied via rss2json.com (bypasses datacenter IP blocking)
-// Tier 3: Direct publisher RSS (Amar Ujala, Sakshi, Al Jazeera Arabic, etc.)
-const REGIONAL_SOURCES = [
-  // ── Tier 1: OneIndia (Greynium) — core regional partner ──
-  { url: 'https://malayalam.oneindia.com/rss/malayalam-news-fb.xml', name: 'OneIndia Malayalam', category: 'india', region: 'kerala', language: 'ml', type: 'rss' },
-  { url: 'https://tamil.oneindia.com/rss/tamil-news-fb.xml', name: 'OneIndia Tamil', category: 'india', region: 'india', language: 'ta', type: 'rss' },
-  { url: 'https://telugu.oneindia.com/rss/telugu-news-fb.xml', name: 'OneIndia Telugu', category: 'india', region: 'india', language: 'te', type: 'rss' },
-  { url: 'https://kannada.oneindia.com/rss/kannada-news-fb.xml', name: 'OneIndia Kannada', category: 'india', region: 'india', language: 'kn', type: 'rss' },
-  { url: 'https://hindi.oneindia.com/rss/hindi-news-fb.xml', name: 'OneIndia Hindi', category: 'india', region: 'india', language: 'hi', type: 'rss' },
+// Regional sources — shared with worker fallback (workers/src/lib/regional-feeds.js)
+const REGIONAL_SOURCES = REGIONAL_RSS_SOURCES;
 
-  // ── Tier 2: Google News via rss2json proxy (broad coverage) ──
-  { url: 'https://news.google.com/rss?hl=ml-IN&gl=IN&ceid=IN:ml', name: 'Google News Kerala', category: 'india', region: 'kerala', language: 'ml', type: 'googlenews' },
-  { url: 'https://news.google.com/rss?hl=ta-IN&gl=IN&ceid=IN:ta', name: 'Google News Tamil', category: 'india', region: 'india', language: 'ta', type: 'googlenews' },
-  { url: 'https://news.google.com/rss?hl=te-IN&gl=IN&ceid=IN:te', name: 'Google News Telugu', category: 'india', region: 'india', language: 'te', type: 'googlenews' },
-  { url: 'https://news.google.com/rss?hl=kn-IN&gl=IN&ceid=IN:kn', name: 'Google News Kannada', category: 'india', region: 'india', language: 'kn', type: 'googlenews' },
-  { url: 'https://news.google.com/rss?hl=hi-IN&gl=IN&ceid=IN:hi', name: 'Google News Hindi', category: 'india', region: 'india', language: 'hi', type: 'googlenews' },
+// GCC Google News (English expat coverage)
+const GCC_GOOGLE_SOURCES = [
   { url: 'https://news.google.com/rss?hl=en-AE&gl=AE&ceid=AE:en', name: 'Google News UAE', category: 'gcc', region: 'uae', language: 'en', type: 'googlenews' },
   { url: 'https://news.google.com/rss?hl=en-SA&gl=SA&ceid=SA:en', name: 'Google News Saudi', category: 'gcc', region: 'saudi', language: 'en', type: 'googlenews' },
   { url: 'https://news.google.com/rss?hl=en-QA&gl=QA&ceid=QA:en', name: 'Google News Qatar', category: 'gcc', region: 'qatar', language: 'en', type: 'googlenews' },
@@ -133,25 +120,51 @@ const REGIONAL_SOURCES = [
   { url: 'https://news.google.com/rss/search?q=Indian+expats+GCC&hl=en-IN&gl=IN&ceid=IN:en', name: 'Google News India-GCC', category: 'gcc', region: 'gcc', language: 'en', type: 'googlenews' },
   { url: 'https://news.google.com/rss/search?q=NRIs+UAE+Dubai&hl=en&gl=AE&ceid=AE:en', name: 'Google News NRIs UAE', category: 'gcc', region: 'uae', language: 'en', type: 'googlenews' },
   { url: 'https://news.google.com/rss/search?q=Kerala+workers+Gulf&hl=en-IN&gl=IN&ceid=IN:en', name: 'Google News Kerala Gulf', category: 'gcc', region: 'gcc', language: 'en', type: 'googlenews' },
-
-  // ── Tier 3: Direct publisher feeds ──
-  { url: 'https://www.twentyfournews.com/feed', name: 'Twentyfour News', category: 'india', region: 'kerala', language: 'ml', type: 'rss' },
-  { url: 'https://www.sakshi.com/rss.xml', name: 'Sakshi', category: 'india', region: 'india', language: 'te', type: 'rss' },
-  { url: 'https://www.amarujala.com/rss/breaking-news.xml', name: 'Amar Ujala', category: 'india', region: 'india', language: 'hi', type: 'rss' },
-  { url: 'https://www.aljazeera.net/aljazeerarss/a7c186be-1baa-4bd4-9d80-a84db769f779/73d0e1b4-532f-45ef-b135-bfdff8b8cab9', name: 'Al Jazeera Arabic', category: 'gcc', region: 'qatar', language: 'ar', type: 'rss' },
 ];
 
-// Channel IDs verified against live YouTube feeds (2026-06).
+// Channel IDs verified against live YouTube RSS feeds (2026-06-12).
 const YOUTUBE_SOURCES = [
-  { channelId: 'UCZFMm1mMw0F81Z37aaEzTUA', name: 'NDTV', category: 'india', region: 'india', language: 'en', type: 'youtube' },
   { channelId: 'UCf8w5m0YsRa8MHQ5bwSGmbw', name: 'Asianet News', category: 'india', region: 'kerala', language: 'ml', type: 'youtube' },
   { channelId: 'UCP0uG-mcMImgKnJz-VjJZmQ', name: 'Manorama News', category: 'india', region: 'kerala', language: 'ml', type: 'youtube' },
   { channelId: 'UC-f7r46JhYv78q5pGrO6ivA', name: 'MediaOne', category: 'india', region: 'kerala', language: 'ml', type: 'youtube' },
-  { channelId: 'UCNye-wNBqNL5ZzHSJj3l8Bg', name: 'Al Jazeera English', category: 'gcc', region: 'qatar', language: 'en', type: 'youtube' },
-  { channelId: 'UC_gUM8rL-Lrg6O3adPW9K1g', name: 'WION', category: 'india', region: 'india', language: 'en', type: 'youtube' },
-  { channelId: 'UCIvaYmXn910QMdemBG3v1pQ', name: 'Zee News', category: 'india', region: 'india', language: 'hi', type: 'youtube' },
-  { channelId: 'UCYPvAwZP8pZhSMW8qs7cVCw', name: 'India Today', category: 'india', region: 'india', language: 'en', type: 'youtube' },
-  { channelId: 'UCttspZesZIDEwwpVIgoZtWQ', name: 'India TV', category: 'india', region: 'india', language: 'hi', type: 'youtube' },
+  { channelId: 'UCwXrBBZnIh2ER4lal6WbAHw', name: 'Mathrubhumi News', category: 'india', region: 'kerala', language: 'ml', type: 'youtube' },
+  { channelId: 'UCnEvxaWfVL91XIYuyQRO5QA', name: 'Kairali News', category: 'india', region: 'kerala', language: 'ml', type: 'youtube' },
+  { channelId: 'UCFx1nseXKTc1Culiu3neeSQ', name: 'Reporter Live', category: 'india', region: 'kerala', language: 'ml', type: 'youtube' },
+  { channelId: 'UC-mMi78WJST4N5o8_i1FoXw', name: 'News18 Kerala', category: 'india', region: 'kerala', language: 'ml', type: 'youtube' },
+  { channelId: 'UCJY38d2Z82irYr00fki974A', name: '24 News Malayalam', category: 'india', region: 'kerala', language: 'ml', type: 'youtube' },
+  { channelId: 'UCr-3D8M0HDg8VwQsNM-t3Tw', name: 'Raj News Malayalam', category: 'india', region: 'kerala', language: 'ml', type: 'youtube' },
+  { channelId: 'UCfuZhbx-XjSqKya7dAiXTuw', name: 'Janam TV', category: 'india', region: 'kerala', language: 'ml', type: 'youtube' },
+  { channelId: 'UCsVJ9ZxMjtSLqmZjjglL__g', name: 'Kerala Vision', category: 'india', region: 'kerala', language: 'ml', type: 'youtube' },
+  { channelId: 'UCFcbm8WeZhQIy1sA50zJ3Jg', name: 'Jaihind TV', category: 'india', region: 'kerala', language: 'ml', type: 'youtube' },
+  { channelId: 'UCYlh4lH762HvHt6mmiecyWQ', name: 'Sun News', category: 'india', region: 'tamilnadu', language: 'ta', type: 'youtube' },
+  { channelId: 'UC8Z-VjXBtDJTvq6aqkIskPg', name: 'Polimer News', category: 'india', region: 'tamilnadu', language: 'ta', type: 'youtube' },
+  { channelId: 'UCmyKnNRH0wH-r8I-ceP-dsg', name: 'Puthiyathalaimurai', category: 'india', region: 'tamilnadu', language: 'ta', type: 'youtube' },
+  { channelId: 'UC2f4w_ppqHplvjiNaoTAK9w', name: 'News7 Tamil', category: 'india', region: 'tamilnadu', language: 'ta', type: 'youtube' },
+  { channelId: 'UCat88i6_rELqI_prwvjspRA', name: 'News18 Tamil Nadu', category: 'india', region: 'tamilnadu', language: 'ta', type: 'youtube' },
+  { channelId: 'UCno6OgN7-NDmRTNBgqWevlw', name: 'Captain News', category: 'india', region: 'tamilnadu', language: 'ta', type: 'youtube' },
+  { channelId: 'UCOP4Gbw-T1ofcW8vyL89ZDw', name: 'Jaya Plus', category: 'india', region: 'tamilnadu', language: 'ta', type: 'youtube' },
+  { channelId: 'UC8dnBi4WUErqYQHZ4PfsLTg', name: 'TV9 Kannada', category: 'india', region: 'karnataka', language: 'kn', type: 'youtube' },
+  { channelId: 'UCK9eVqJG07tpuQEadDlnwJw', name: 'TV9 Kannada News', category: 'india', region: 'karnataka', language: 'kn', type: 'youtube' },
+  { channelId: 'UCa-vioGhe2btBcZneaPonKA', name: 'News18 Kannada', category: 'india', region: 'karnataka', language: 'kn', type: 'youtube' },
+  { channelId: 'UCtzYV2L-m8ew93mZb3qhf5w', name: 'NTV Telugu', category: 'india', region: 'andhra', language: 'te', type: 'youtube' },
+  { channelId: 'UC_2irx_BQR7RsBKmUV9fePQ', name: 'ABN Telugu', category: 'india', region: 'andhra', language: 'te', type: 'youtube' },
+  { channelId: 'UCQ_FATLW83q-4xJ2fsi8qAw', name: 'Sakshi TV', category: 'india', region: 'andhra', language: 'te', type: 'youtube' },
+  { channelId: 'UClMlGnpuMYDPKwpBufpjfMA', name: 'T News', category: 'india', region: 'telangana', language: 'te', type: 'youtube' },
+  { channelId: 'UCRYQj7pRrjm8EwgsUMNVJsQ', name: 'iNews', category: 'india', region: 'andhra', language: 'te', type: 'youtube' },
+  { channelId: 'UCixD-KrpjXtMupkzkdFFlFg', name: 'CVR News', category: 'india', region: 'andhra', language: 'te', type: 'youtube' },
+  { channelId: 'UC61kgbrqggBKUD2nBb8f3Aw', name: 'Prime9 News', category: 'india', region: 'telangana', language: 'te', type: 'youtube' },
+  { channelId: 'UCbf0XHULBkTfv2hBjaaDw9Q', name: 'News18 Bangla', category: 'india', region: 'westbengal', language: 'bn', type: 'youtube' },
+  { channelId: 'UCNvCQpcafnbW4KQ8X7oQ9kg', name: 'Kolkata TV', category: 'india', region: 'westbengal', language: 'bn', type: 'youtube' },
+  { channelId: 'UCJ3I6MHOz5exARlTW_meOGQ', name: 'Calcutta News', category: 'india', region: 'westbengal', language: 'bn', type: 'youtube' },
+];
+
+const DISABLED_YOUTUBE_SOURCE_IDS = [
+  'ndtv-yt',
+  'al-jazeera-english-yt',
+  'wion-yt',
+  'zee-news-yt',
+  'india-today-yt',
+  'india-tv-yt',
 ];
 
 const RSS_FROM_CONFIG = RSS_FEEDS.map(f => ({
@@ -162,7 +175,7 @@ const RSS_FROM_CONFIG = RSS_FEEDS.map(f => ({
   trustWeight: 0.85,
 }));
 
-const ALL_SOURCES = [...RSS_FROM_CONFIG, ...REGIONAL_SOURCES, ...YOUTUBE_SOURCES];
+const ALL_SOURCES = [...RSS_FROM_CONFIG, ...REGIONAL_SOURCES, ...GCC_GOOGLE_SOURCES, ...YOUTUBE_SOURCES];
 
 async function runQuery(token, collectionId) {
   const res = await fetch(`https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents:runQuery`, {
@@ -191,7 +204,6 @@ async function wipeSources(token) {
 async function seed() {
   const token = await getToken();
   let created = 0;
-  let skipped = 0;
 
   // Rebuild the sources collection from scratch so corrected URLs/IDs replace stale ones.
   if (process.argv.includes('--wipe') || process.env.WIPE_SOURCES === '1') {
@@ -214,15 +226,32 @@ async function seed() {
       body.url = `https://www.youtube.com/feeds/videos.xml?channel_id=${src.channelId}`;
     }
 
-    const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/sources/${id}?currentDocument.exists=false`;
-    const res = await fetch(url, {
+    const base = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/sources/${id}`;
+    const createUrl = `${base}?currentDocument.exists=false`;
+    let res = await fetch(createUrl, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ fields: toFields(body) }),
     });
-    if (res.status === 409) skipped++;
-    else if (res.ok) created++;
+    if (res.status === 409) {
+      res = await fetch(base, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ fields: toFields(body) }),
+      });
+      if (res.ok) created++;
+      else console.error(`Failed update ${src.name}:`, (await res.text()).slice(0, 100));
+    } else if (res.ok) created++;
     else console.error(`Failed ${src.name}:`, (await res.text()).slice(0, 100));
+  }
+
+  for (const id of DISABLED_YOUTUBE_SOURCE_IDS) {
+    const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/sources/${id}?updateMask.fieldPaths=enabled`;
+    await fetch(url, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ fields: { enabled: { booleanValue: false } } }),
+    });
   }
 
   // Seed default site settings
@@ -240,7 +269,7 @@ async function seed() {
     }),
   });
 
-  console.log(`Seeded ${created} sources (${skipped} already existed), settings/site updated`);
+  console.log(`Seeded/updated ${created} sources, disabled ${DISABLED_YOUTUBE_SOURCE_IDS.length} legacy YouTube channels, settings/site updated`);
 }
 
 seed().catch(err => { console.error(err); process.exit(1); });

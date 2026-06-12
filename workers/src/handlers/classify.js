@@ -88,10 +88,10 @@ async function classifyOne(env, raw, token, threshold) {
     qualityScore,
     category: classification.category || raw.category,
     topics: classification.topics || [],
-    detectedLanguage: classification.detectedLanguage || raw.language || 'en',
+    detectedLanguage: raw.language || classification.detectedLanguage || 'en',
     clusterId: classification.dedupKey || '',
     dedupKey: classification.dedupKey || '',
-    language: classification.detectedLanguage || raw.language || 'en',
+    language: raw.language || classification.detectedLanguage || 'en',
   });
 
   return 'classified';

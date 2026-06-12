@@ -1,14 +1,38 @@
 import { getFirebaseToken } from './firebase-auth.js';
 import { runQuery, FIRESTORE_BASE } from './firestore-rest.js';
 import { FALLBACK_RSS_FEEDS, FALLBACK_YOUTUBE_CHANNELS } from './feeds.js';
+import { REGIONAL_RSS_SOURCES } from './regional-feeds.js';
 
 let cachedSources = null;
 let cacheTime = 0;
 const CACHE_TTL = 5 * 60 * 1000;
 
+function slugifySource(name, type) {
+  const base = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 60);
+  return type === 'youtube' ? `${base}-yt` : type === 'googlenews' ? `${base}-gn` : base;
+}
+
+/** MergeMerge regional feeds into Firestore sources so stale seeds still get regional coverage. */
+function ensureRegionalSources(sources) {
+  const urls = new Set(sources.map(s => s.url).filter(Boolean));
+  const merged = [...sources];
+  for (const src of REGIONAL_RSS_SOURCES) {
+    if (urls.has(src.url)) continue;
+    merged.push({
+      ...src,
+      id: slugifySource(src.name, src.type),
+      enabled: true,
+      trustWeight: 0.85,
+    });
+    urls.add(src.url);
+  }
+  return merged;
+}
+
 export async function loadEnabledSources(env, type = null) {
   if (cachedSources && Date.now() - cacheTime < CACHE_TTL) {
-    return type ? cachedSources.filter(s => s.type === type) : cachedSources;
+    const filtered = type ? cachedSources.filter(s => s.type === type) : cachedSources;
+    return filtered;
   }
 
   try {
@@ -26,18 +50,18 @@ export async function loadEnabledSources(env, type = null) {
     };
     const docs = await runQuery(env, query, token);
     if (docs.length > 0) {
-      cachedSources = docs;
+      cachedSources = ensureRegionalSources(docs);
       cacheTime = Date.now();
-      return type ? docs.filter(s => s.type === type) : docs;
+      return type ? cachedSources.filter(s => s.type === type) : cachedSources;
     }
   } catch (err) {
     console.error('Failed to load sources from Firestore, using fallback:', err.message);
   }
 
-  const fallback = [
-    ...FALLBACK_RSS_FEEDS.map(f => ({ ...f, type: 'rss', enabled: true, trustWeight: 0.8 })),
+  const fallback = ensureRegionalSources([
+    ...FALLBACK_RSS_FEEDS.map(f => ({ ...f, type: f.url?.includes('news.google.com') ? 'googlenews' : 'rss', enabled: true, trustWeight: 0.8 })),
     ...FALLBACK_YOUTUBE_CHANNELS.map(f => ({ ...f, type: 'youtube', enabled: true, trustWeight: 0.8 })),
-  ];
+  ]);
   cachedSources = fallback;
   cacheTime = Date.now();
   return type ? fallback.filter(s => s.type === type) : fallback;
