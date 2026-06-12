@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { SUPPORTED_LANGUAGES } from '@/config/languages.config';
 import { useAuth } from './AuthContext';
 import { getDbAsync, firestoreOps } from '@/lib/firebase-client';
@@ -8,26 +8,38 @@ import { getDbAsync, firestoreOps } from '@/lib/firebase-client';
 const LanguageContext = createContext(null);
 const STORAGE_KEY = 'bharathnews_lang';
 
-export function LanguageProvider({ children }) {
-  const { user } = useAuth();
-  const [language, setLanguageState] = useState('all');
-
-  useEffect(() => {
+function getInitialLanguage() {
+  if (typeof window === 'undefined') return 'all';
+  try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved && SUPPORTED_LANGUAGES.some(l => l.code === saved)) {
-      setLanguageState(saved);
-    }
-  }, []);
+    if (saved && SUPPORTED_LANGUAGES.some(l => l.code === saved)) return saved;
+  } catch {}
+  return 'all';
+}
+
+export function LanguageProvider({ children }) {
+  const { user, userProfile } = useAuth();
+  const [language, setLanguageState] = useState(getInitialLanguage);
+  const profileSyncedRef = useRef(false);
 
   useEffect(() => {
-    if (user?.language && SUPPORTED_LANGUAGES.some(l => l.code === user.language)) {
-      setLanguageState(user.language);
+    if (!userProfile?.language) {
+      profileSyncedRef.current = false;
+      return;
     }
-  }, [user?.language]);
+    if (profileSyncedRef.current) return;
+    if (SUPPORTED_LANGUAGES.some(l => l.code === userProfile.language)) {
+      setLanguageState(userProfile.language);
+      localStorage.setItem(STORAGE_KEY, userProfile.language);
+      profileSyncedRef.current = true;
+    }
+  }, [userProfile?.language]);
 
   const setLanguage = useCallback(async (code) => {
+    if (!SUPPORTED_LANGUAGES.some(l => l.code === code)) return;
     setLanguageState(code);
     localStorage.setItem(STORAGE_KEY, code);
+    profileSyncedRef.current = true;
 
     if (user) {
       try {
@@ -35,9 +47,7 @@ export function LanguageProvider({ children }) {
         if (!db) return;
         const { doc, updateDoc } = await firestoreOps();
         await updateDoc(doc(db, 'users', user.uid), { language: code });
-      } catch {
-        // non-blocking
-      }
+      } catch {}
     }
   }, [user]);
 

@@ -10,10 +10,12 @@ import { useTheme } from '../context/ThemeContext';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { HEADER_NAV } from '../config/feeds.config';
-import { getTrendingArticles } from '../services/firestore';
 import LanguageSwitcher from './LanguageSwitcher';
 
 const NotificationsPanel = lazy(() => import('./NotificationsPanel'));
+
+let _trendingCache = { value: null, ts: 0 };
+const TRENDING_CACHE_MS = 5 * 60 * 1000;
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -21,7 +23,7 @@ const Header = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [hasTrending, setHasTrending] = useState(false);
+  const [hasTrending, setHasTrending] = useState(_trendingCache.value ?? false);
   const profileRef = useRef(null);
   const searchTrapRef = useFocusTrap(searchOpen);
   const menuTrapRef = useFocusTrap(mobileMenuOpen);
@@ -33,7 +35,17 @@ const Header = () => {
   const router = useRouter();
 
   useEffect(() => {
-    getTrendingArticles(1).then(articles => setHasTrending(articles.length > 0)).catch(() => setHasTrending(false));
+    if (Date.now() - _trendingCache.ts < TRENDING_CACHE_MS) {
+      setHasTrending(_trendingCache.value);
+      return;
+    }
+    import('../services/firestore').then(({ getTrendingArticles }) =>
+      getTrendingArticles(1).then(articles => {
+        const has = articles.length > 0;
+        _trendingCache = { value: has, ts: Date.now() };
+        setHasTrending(has);
+      })
+    ).catch(() => setHasTrending(false));
   }, []);
 
   useEffect(() => {

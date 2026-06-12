@@ -2,9 +2,7 @@ const isDev = process.env.NODE_ENV === 'development';
 
 const logger = {
   error: (...args) => {
-    if (isDev) {
-      console.error(...args);
-    }
+    console.error(...args);
   },
   warn: (...args) => {
     if (isDev) {

@@ -30,6 +30,9 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'framer-motion', 'date-fns', 'react-toastify'],
+  },
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'images.unsplash.com' },
@@ -44,6 +47,9 @@ const nextConfig = {
       { protocol: 'https', hostname: '*.indiatimes.com' },
     ],
     minimumCacheTTL: 3600,
+    formats: ['image/avif', 'image/webp'],
+    deviceSizes: [640, 750, 828, 1080, 1200],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256],
   },
   async headers() {
     return [
@@ -53,6 +59,12 @@ const nextConfig = {
         headers: [
           ...securityHeaders,
           { key: 'Cache-Control', value: 'public, s-maxage=300, stale-while-revalidate=600' },
+        ],
+      },
+      {
+        source: '/:category(india|gcc|business|sports|technology|entertainment|world|health|education|lifestyle|opinion|jobs|real-estate|ai-tools|explore)',
+        headers: [
+          { key: 'Cache-Control', value: 'public, s-maxage=120, stale-while-revalidate=300' },
         ],
       },
     ];

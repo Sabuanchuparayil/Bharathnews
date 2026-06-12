@@ -8,7 +8,7 @@ import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
-  const { user, loading, loginWithGoogle, loginWithEmail, isAdmin } = useAuth();
+  const { user, userProfile, loading, loginWithGoogle, loginWithEmail, isAdmin } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState('');
@@ -34,9 +34,17 @@ export default function Login() {
 
   useEffect(() => {
     if (loading || !user) return;
-    if (isAdminFlow && !isAdmin) return;
+
+    if (isAdminFlow) {
+      if (!userProfile) return;
+      if (!isAdmin) {
+        setError('Your account does not have admin access. Contact the site owner.');
+        return;
+      }
+    }
+
     router.replace(next);
-  }, [loading, user, isAdmin, isAdminFlow, next, router]);
+  }, [loading, user, userProfile, isAdmin, isAdminFlow, next, router]);
 
   const handleGoogleSignIn = async () => {
     setError('');
@@ -82,6 +90,12 @@ export default function Login() {
                   : 'Sign in with email or Google to access your account.'}
             </p>
           </div>
+
+          {signingIn && user && isAdminFlow && !userProfile && (
+            <div className="mb-4 text-sm text-gray-600 dark:text-gray-400 text-center">
+              Verifying admin access…
+            </div>
+          )}
 
           {error && (
             <div className="mb-4 flex items-start gap-2 text-left text-sm text-red-600 bg-red-50 dark:bg-red-950/30 rounded-xl p-3">

@@ -17,20 +17,21 @@ import { createSign } from 'crypto';
 import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { resolveProjectId } from './firebase-admin-utils.mjs';
 
 const require = createRequire(import.meta.url);
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
 
-const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'thebharathnews-app';
+const PROJECT_ID = resolveProjectId();
 const IDENTITY_API = 'https://identitytoolkit.googleapis.com';
 
 const DEFAULT_DOMAINS = [
   'thebharathnews.com',
   'www.thebharathnews.com',
+  'thebharathnews-app.firebaseapp.com',
   'localhost',
   '127.0.0.1',
-  'bharathnews-production.up.railway.app',
 ];
 
 function parseArgs(argv) {

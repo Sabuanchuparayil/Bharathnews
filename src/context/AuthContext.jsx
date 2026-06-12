@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { getClientFirebase } from '../config/firebase.config';
+import { initClientFirebase } from '../config/firebase.config';
 import { toggleBookmark, toggleLike } from '../services/firestore';
 import { setAuthCookies, clearAuthCookies } from '../lib/auth-cookies';
 import logger from '../utils/logger';
@@ -20,16 +20,16 @@ export const AuthProvider = ({ children }) => {
   const [userProfile, setUserProfile] = useState(null);
 
   useEffect(() => {
-    const fb = getClientFirebase();
-    if (!fb?.auth) {
-      setLoading(false);
-      return undefined;
-    }
-
     let unsubscribe;
     let cancelled = false;
 
     (async () => {
+      const fb = await initClientFirebase();
+      if (cancelled || !fb?.auth) {
+        setLoading(false);
+        return;
+      }
+
       const { onAuthStateChanged } = await import('firebase/auth');
       const { doc, setDoc, getDoc, serverTimestamp } = await import('firebase/firestore');
       if (cancelled) return;
@@ -38,32 +38,37 @@ export const AuthProvider = ({ children }) => {
       unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
         if (firebaseUser) {
           setUser(firebaseUser);
-          const profileRef = doc(db, 'users', firebaseUser.uid);
-          const profileSnap = await getDoc(profileRef);
-          if (profileSnap.exists()) {
-            const profile = profileSnap.data();
-            setUserProfile(profile);
-            setAuthCookies(profile.role || 'reader');
-          } else {
-            await setDoc(profileRef, {
-              displayName: firebaseUser.displayName,
-              email: firebaseUser.email,
-              photoURL: firebaseUser.photoURL,
-              role: 'reader',
-              language: 'all',
-              createdAt: serverTimestamp(),
-              interests: {
-                categories: {},
-                topics: [],
-                sources: {},
-                readingTimes: {},
-              },
-              bookmarks: [],
-              likes: [],
-            });
-            const saved = await getDoc(profileRef);
-            setUserProfile(saved.data());
-            setAuthCookies('reader');
+          try {
+            const profileRef = doc(db, 'users', firebaseUser.uid);
+            const profileSnap = await getDoc(profileRef);
+            if (profileSnap.exists()) {
+              const profile = profileSnap.data();
+              setUserProfile(profile);
+              setAuthCookies(profile.role || 'reader');
+            } else {
+              await setDoc(profileRef, {
+                displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+                email: firebaseUser.email,
+                photoURL: firebaseUser.photoURL,
+                role: 'reader',
+                language: 'all',
+                createdAt: serverTimestamp(),
+                interests: {
+                  categories: {},
+                  topics: [],
+                  sources: {},
+                  readingTimes: {},
+                },
+                bookmarks: [],
+                likes: [],
+              });
+              const saved = await getDoc(profileRef);
+              setUserProfile(saved.data());
+              setAuthCookies('reader');
+            }
+          } catch (err) {
+            logger.error('Failed to load user profile:', err);
+            setUserProfile(null);
           }
         } else {
           setUser(null);
@@ -82,7 +87,7 @@ export const AuthProvider = ({ children }) => {
 
   const refreshUserProfile = useCallback(async () => {
     if (!user) return null;
-    const fb = getClientFirebase();
+    const fb = await initClientFirebase();
     if (!fb?.db) return null;
     const { doc, getDoc } = await import('firebase/firestore');
     const profileRef = doc(fb.db, 'users', user.uid);
@@ -95,8 +100,10 @@ export const AuthProvider = ({ children }) => {
   }, [user]);
 
   const loginWithGoogle = async () => {
-    const fb = getClientFirebase();
-    if (!fb?.auth || !fb?.googleProvider) return;
+    const fb = await initClientFirebase();
+    if (!fb?.auth || !fb?.googleProvider) {
+      throw new Error('Authentication unavailable. Please refresh and try again.');
+    }
     try {
       const { signInWithPopup, signInWithRedirect } = await import('firebase/auth');
       const inIframe = typeof window !== 'undefined' && window.self !== window.top;
@@ -122,8 +129,8 @@ export const AuthProvider = ({ children }) => {
   };
 
   const loginWithEmail = async (email, password) => {
-    const fb = getClientFirebase();
-    if (!fb?.auth) throw new Error('Authentication unavailable');
+    const fb = await initClientFirebase();
+    if (!fb?.auth) throw new Error('Authentication unavailable. Please refresh and try again.');
     try {
       const { signInWithEmailAndPassword } = await import('firebase/auth');
       await signInWithEmailAndPassword(fb.auth, email.trim(), password);
@@ -141,7 +148,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
-    const fb = getClientFirebase();
+    const fb = await initClientFirebase();
     if (!fb?.auth) return;
     const { signOut } = await import('firebase/auth');
     await signOut(fb.auth);
@@ -149,7 +156,7 @@ export const AuthProvider = ({ children }) => {
 
   const updateUserInterests = async (interests) => {
     if (!user) return;
-    const fb = getClientFirebase();
+    const fb = await initClientFirebase();
     if (!fb?.db) return;
     const { doc, updateDoc } = await import('firebase/firestore');
     const profileRef = doc(fb.db, 'users', user.uid);

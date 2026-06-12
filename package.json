@@ -13,6 +13,8 @@
     "worker:secrets": "bash scripts/set-worker-secrets.sh",
     "firebase:deploy": "firebase deploy --only firestore",
     "firebase:auth-domains": "node scripts/update-auth-domains.mjs",
+    "firebase:enable-google": "node scripts/enable-google-auth.mjs",
+    "firebase:auth-inspect": "node scripts/enable-google-auth.mjs --inspect",
     "firebase:db:mumbai": "firebase firestore:databases:create '(default)' --location asia-south1",
     "seed:sources": "node scripts/seed-sources.mjs",
     "set-first-admin": "node scripts/set-first-admin.mjs",
