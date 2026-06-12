@@ -4,7 +4,9 @@ import { getFirebaseToken } from '../lib/firebase-auth.js';
 import { runQuery, FIRESTORE_BASE } from '../lib/firestore-rest.js';
 import { loadSiteSettings } from '../lib/sources-loader.js';
 
-const BATCH_SIZE = 8;
+// Each article costs ~6 subrequests (status, image, AI gen, publish, status, telegram);
+// kept low for the 50-subrequest free-tier limit per invocation.
+const BATCH_SIZE = 5;
 
 export async function handleAIProcess(env) {
   const token = await getFirebaseToken(env);
@@ -13,6 +15,25 @@ export async function handleAIProcess(env) {
     ? settings.targetLanguages
     : (settings.targetLanguages || 'ml,hi,ar').split(',').map(s => s.trim());
   const processed = [];
+
+  // Recover articles stuck in "processing" from previous failed runs
+  const stuck = await runQuery(env, {
+    from: [{ collectionId: 'raw_articles' }],
+    where: {
+      fieldFilter: {
+        field: { fieldPath: 'status' },
+        op: 'EQUAL',
+        value: { stringValue: 'processing' },
+      },
+    },
+      limit: 5,
+  }, token);
+  for (const doc of stuck) {
+    const slug = doc.slug || doc.id;
+    const docPath = `projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/raw_articles/${slug}`;
+    await patchStatus(docPath, token, 'classified').catch(() => {});
+  }
+  if (stuck.length) console.log(`Recovered ${stuck.length} stuck processing articles`);
 
   const docs = await runQuery(env, {
     from: [{ collectionId: 'raw_articles' }],
@@ -34,6 +55,9 @@ export async function handleAIProcess(env) {
       if (result) processed.push(result);
     } catch (err) {
       console.error('AI process error:', err.message);
+      const slug = raw.slug || raw.id;
+      const docPath = `projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/raw_articles/${slug}`;
+      await patchStatus(docPath, token, 'classified').catch(() => {});
     }
   }
 
@@ -82,6 +106,13 @@ async function processOneArticle(env, raw, token, targetLangs, settings) {
 
   const translationFields = buildTranslationFields(parsed.translations || {});
 
+  const finalTitle = parsed.title || title || slug.replace(/-/g, ' ');
+  if (!finalTitle.trim()) {
+    console.error(`Skipping article with no title: ${slug}`);
+    await patchStatus(docPath, token, 'rejected');
+    return null;
+  }
+
   const publishRes = await fetch(`${FIRESTORE_BASE(env.FIREBASE_PROJECT_ID)}/articles`, {
     method: 'POST',
     headers: {
@@ -90,7 +121,7 @@ async function processOneArticle(env, raw, token, targetLangs, settings) {
     },
     body: JSON.stringify({
       fields: {
-        title: { stringValue: parsed.title || title },
+        title: { stringValue: finalTitle },
         slug: { stringValue: slug },
         summary: { stringValue: parsed.summary || '' },
         fullContent: { stringValue: parsed.fullContent || '' },

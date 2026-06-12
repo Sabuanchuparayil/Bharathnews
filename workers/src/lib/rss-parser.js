@@ -53,8 +53,10 @@ function parseRSS(xml) {
   while ((match = itemRegex.exec(xml)) !== null) {
     const block = match[1];
     items.push({
-      title: decodeEntities(stripHtml(extractTag(block, 'title'))),
-      link: decodeEntities(extractTag(block, 'link') || extractTag(block, 'guid')),
+      // decodeEntities BEFORE stripHtml so CDATA-wrapped titles survive (stripHtml's
+      // <[^>]*> regex would otherwise eat the whole <![CDATA[...]]> block).
+      title: stripHtml(decodeEntities(extractTag(block, 'title'))),
+      link: decodeEntities(extractTag(block, 'link') || extractTag(block, 'guid')).trim(),
       description: stripHtml(decodeEntities(extractTag(block, 'description'))).slice(0, 500),
       pubDate: extractTag(block, 'pubDate') || extractTag(block, 'dc:date'),
       imageUrl: extractImage(block),
@@ -72,8 +74,8 @@ function parseAtom(xml) {
     const block = match[1];
     const link = extractAttr(block, 'link', 'href') || extractTag(block, 'link');
     items.push({
-      title: decodeEntities(stripHtml(extractTag(block, 'title'))),
-      link: decodeEntities(link),
+      title: stripHtml(decodeEntities(extractTag(block, 'title'))),
+      link: decodeEntities(link).trim(),
       description: stripHtml(decodeEntities(
         extractTag(block, 'summary') || extractTag(block, 'content')
       )).slice(0, 500),
@@ -84,7 +86,42 @@ function parseAtom(xml) {
   return items;
 }
 
+/**
+ * Google News blocks Cloudflare datacenter IPs (HTTP 503). For news.google.com
+ * URLs we route through rss2json.com which fetches from non-blocked IPs and
+ * returns clean JSON. This mirrors Dailyhunt's strategy of never depending on
+ * a single feed source — they use multiple proxied and direct publisher feeds.
+ */
+async function fetchViaRss2Json(url) {
+  // Free tier: no `count` param (requires API key); returns 10 items by default.
+  const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(apiUrl, { signal: controller.signal });
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (data.status !== 'ok' || !Array.isArray(data.items)) return [];
+    return data.items.map(item => ({
+      title: stripHtml(decodeEntities(item.title || '')),
+      link: item.link || item.guid || '',
+      description: stripHtml(item.description || '').slice(0, 500),
+      pubDate: item.pubDate || '',
+      imageUrl: item.thumbnail || item.enclosure?.link || '',
+    })).filter(i => i.title && i.link);
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function fetchAndParseFeed(url) {
+  // Route Google News through rss2json proxy to avoid datacenter IP blocking.
+  if (url.includes('news.google.com/')) {
+    return fetchViaRss2Json(url);
+  }
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 5000);
   try {

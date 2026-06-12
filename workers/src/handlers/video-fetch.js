@@ -3,18 +3,24 @@ import { fetchAndParseFeed } from '../lib/rss-parser.js';
 import { getFirebaseToken } from '../lib/firebase-auth.js';
 import { FIRESTORE_BASE } from '../lib/firestore-rest.js';
 
+function safeISODate(value) {
+  const d = value ? new Date(value) : new Date();
+  return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+}
+
 export async function handleVideoFetch(env) {
   const token = await getFirebaseToken(env);
   const channels = await loadEnabledSources(env, 'youtube');
   const results = [];
 
-  for (const channel of channels.slice(0, 5)) {
+  // Process up to 9 channels × 3 items = ~45 subrequests, under the 50 free-tier cap.
+  for (const channel of channels.slice(0, 9)) {
     try {
       const feedUrl = channel.url || `https://www.youtube.com/feeds/videos.xml?channel_id=${channel.channelId}`;
       const items = await fetchAndParseFeed(feedUrl);
       let stored = 0;
 
-      for (const item of items.slice(0, 2)) {
+      for (const item of items.slice(0, 3)) {
         const videoId = extractVideoId(item.link);
         if (!videoId) continue;
 
@@ -65,7 +71,7 @@ async function storeVideo(env, video, token) {
         channelName: { stringValue: video.channelName },
         channelId: { stringValue: video.channelId },
         thumbnail: { stringValue: video.thumbnail },
-        publishedAt: { timestampValue: new Date(video.publishedAt).toISOString() },
+        publishedAt: { timestampValue: safeISODate(video.publishedAt) },
         fetchedAt: { timestampValue: new Date().toISOString() },
         category: { stringValue: video.category },
         language: { stringValue: video.language || 'en' },

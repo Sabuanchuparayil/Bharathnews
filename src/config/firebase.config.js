@@ -21,16 +21,22 @@ export async function initClientFirebase() {
   initPromise = (async () => {
     const { initializeApp, getApps } = await import('firebase/app');
     const { getAuth, GoogleAuthProvider } = await import('firebase/auth');
-    const { getFirestore } = await import('firebase/firestore');
+    const { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } = await import('firebase/firestore');
 
     const app = getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    client = {
-      app,
-      auth,
-      db: getFirestore(app),
-      googleProvider: new GoogleAuthProvider(),
-    };
+
+    let db;
+    try {
+      db = initializeFirestore(app, {
+        localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+      });
+    } catch {
+      const { getFirestore } = await import('firebase/firestore');
+      db = getFirestore(app);
+    }
+
+    client = { app, auth, db, googleProvider: new GoogleAuthProvider() };
     return client;
   })();
 

@@ -42,7 +42,6 @@ const NewsCard = ({ article, variant = 'default', index = 0 }) => {
   const { language } = useLanguage();
   const [showBurst, setShowBurst] = useState(false);
   const [quickRead, setQuickRead] = useState(false);
-  const [dragX, setDragX] = useState(0);
 
   const localized = localizeArticle(article, language);
   const {
@@ -87,17 +86,9 @@ const NewsCard = ({ article, variant = 'default', index = 0 }) => {
     if (nowLiked) setShowBurst(true);
   };
 
-  const handleDragEnd = (_, info) => {
-    if (info.offset.x > 80) handleBookmark();
-    setDragX(0);
-  };
-
   if (variant === 'compact') {
     return (
-      <motion.div
-        initial={false}
-        className={`border-l-4 ${getCategoryAccentBorder(category)}`}
-      >
+      <div className={`border-l-4 ${getCategoryAccentBorder(category)}`}>
         <Link href={`/article/${slug}`} className="group flex space-x-4 p-3 rounded-2xl hover:bg-surface-2 dark:hover:bg-dark-surface-2 transition-colors">
           <SafeImage src={imageUrl} alt={title} category={category} width={80} height={80} sizes="80px" className="w-20 h-20 object-cover rounded-xl flex-shrink-0" />
           <div className="flex-1 min-w-0">
@@ -109,7 +100,7 @@ const NewsCard = ({ article, variant = 'default', index = 0 }) => {
             </div>
           </div>
         </Link>
-      </motion.div>
+      </div>
     );
   }
 
@@ -118,22 +109,9 @@ const NewsCard = ({ article, variant = 'default', index = 0 }) => {
 
   return (
     <>
-      <motion.article
-        drag="x"
-        dragConstraints={{ left: 0, right: 120 }}
-        dragElastic={0.1}
-        onDrag={(_, info) => setDragX(info.offset.x)}
-        onDragEnd={handleDragEnd}
-        style={{ x: dragX }}
-        initial={false}
-        whileHover={{ y: -4 }}
-        className={`glass-card-solid rounded-2xl overflow-hidden group card-lift border-l-4 ${getCategoryAccentBorder(category)} relative`}
+      <article
+        className={`glass-card-solid rounded-2xl overflow-hidden group card-lift border-l-4 ${getCategoryAccentBorder(category)} relative hover:-translate-y-1 transition-transform duration-200`}
       >
-        {dragX > 40 && (
-          <div className="absolute inset-y-0 left-0 w-16 flex items-center justify-center bg-brand-600/90 z-10 rounded-l-2xl">
-            <Bookmark className="w-5 h-5 text-white" />
-          </div>
-        )}
 
         <Link href={`/article/${slug}`}>
           <div className={`relative ${imageHeight} overflow-hidden`}>
@@ -220,7 +198,7 @@ const NewsCard = ({ article, variant = 'default', index = 0 }) => {
             <span>{views > 999 ? `${(views/1000).toFixed(1)}K` : views}</span>
           </div>
         </div>
-      </motion.article>
+      </article>
 
       <QuickReadSheet article={quickRead ? article : null} onClose={() => setQuickRead(false)} />
     </>

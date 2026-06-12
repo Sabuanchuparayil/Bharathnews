@@ -65,10 +65,11 @@ JSON schema:
 }
 
 Rules:
-- isJunk=true for spam, clickbait with no substance, duplicate fluff, irrelevant celebrity gossip, or content with zero India/GCC relevance
-- qualityScore 0-10: 6+ is publishable for a quality news site
-- relevanceToAudience 0-10: how relevant to Indian expats in GCC
-- dedupKey: lowercase normalized key capturing the core news event (not the headline verbatim)`;
+- isJunk=true ONLY for spam, clickbait with no substance, or auto-generated nonsense
+- qualityScore 0-10: 5+ is publishable. Be generous — mainstream news sources produce quality content.
+- relevanceToAudience 0-10: how interesting to Indians / Indian expats globally. Most India, GCC, world, business, tech, sports, health, education news scores 6+. Only niche local foreign news with zero India connection scores below 5.
+- dedupKey: lowercase normalized key capturing the core news event (not the headline verbatim)
+- Default to publishing. When in doubt, give qualityScore 7 and relevanceToAudience 7.`;
 
   try {
     const text = await callClaude(env, prompt, { maxTokens: 512, temperature: 0.2 });
@@ -78,12 +79,12 @@ Rules:
     return {
       category: category || 'india',
       topics: [category || 'india'],
-      qualityScore: 5,
+      qualityScore: 7,
       isJunk: false,
       reasons: 'Claude unavailable - fallback classification',
       detectedLanguage: language || 'en',
       dedupKey: title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(' ').slice(0, 6).join('-'),
-      relevanceToAudience: 5,
+      relevanceToAudience: 7,
     };
   }
 }

@@ -49,11 +49,12 @@ async function classifyOne(env, raw, token, threshold) {
     language: raw.language,
   });
 
-  const qualityScore = classification.qualityScore ?? 5;
+  const qualityScore = classification.qualityScore ?? 7;
   const isJunk = classification.isJunk === true;
   const relevance = classification.relevanceToAudience ?? qualityScore;
 
-  if (isJunk || qualityScore < threshold || relevance < threshold) {
+  // Relevance is a soft signal — only hard-reject truly irrelevant content (score < 3)
+  if (isJunk || qualityScore < threshold || relevance < 3) {
     await patchRaw(docPath, token, {
       status: 'rejected',
       editorialStatus: 'rejected',

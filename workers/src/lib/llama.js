@@ -25,8 +25,10 @@ const LANG_NAMES = {
   ml: 'Malayalam', ta: 'Tamil', te: 'Telugu', kn: 'Kannada', hi: 'Hindi', ar: 'Arabic',
 };
 
-export async function generateMultilingualArticle(env, { title, description, source, category, topics, targetLangs = ['ml', 'ta', 'te', 'kn', 'hi', 'ar'] }) {
+export async function generateMultilingualArticle(env, { title, description, source, category, topics, targetLangs = ['ml', 'hi', 'ar'] }) {
   const langList = targetLangs.map(l => LANG_NAMES[l] || l).join(', ');
+  const translationTemplate = targetLangs
+    .reduce((o, l) => { o[l] = { title: '', summary: '', fullContent: '' }; return o; }, {});
 
   const prompt = `You are a news editor for The Bharath News (India-GCC focused).
 Write an ORIGINAL 200-word English article from this headline and summary.
@@ -46,14 +48,7 @@ Respond ONLY with valid JSON (no markdown):
   "fullContent": "200-word English article",
   "topics": ["topic1","topic2","topic3"],
   "score": 7,
-  "translations": {
-    "ml": {"title":"","summary":"","fullContent":""},
-    "ta": {"title":"","summary":"","fullContent":""},
-    "te": {"title":"","summary":"","fullContent":""},
-    "kn": {"title":"","summary":"","fullContent":""},
-    "hi": {"title":"","summary":"","fullContent":""},
-    "ar": {"title":"","summary":"","fullContent":""}
-  }
+  "translations": ${JSON.stringify(translationTemplate)}
 }`;
 
   const text = await callAI(env, prompt, 4096);

@@ -5,7 +5,9 @@ import { getMessagingInstance } from '../config/firebase.config';
 import { getToken, onMessage } from 'firebase/messaging';
 
 export function useNotifications() {
-  const [permission, setPermission] = useState(Notification?.permission || 'default');
+  const [permission, setPermission] = useState(
+    typeof Notification !== 'undefined' ? Notification.permission : 'default'
+  );
   const [token, setToken] = useState(null);
 
   const requestPermission = async () => {

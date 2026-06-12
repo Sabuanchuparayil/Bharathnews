@@ -22,8 +22,6 @@ const jetbrainsMono = JetBrains_Mono({
   display: 'swap',
 });
 
-export const dynamic = 'force-dynamic';
-
 export const viewport = {
   themeColor: '#4338ca',
   viewportFit: 'cover',
@@ -53,6 +51,10 @@ export default function RootLayout({ children }) {
         <link rel="icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
         <meta name="mobile-web-app-capable" content="yes" />
+        {/* Preconnect to Firebase services — shaves ~200-400ms off first Firestore query */}
+        <link rel="preconnect" href="https://firestore.googleapis.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://www.googleapis.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://firestore.googleapis.com" />
       </head>
       <body className="min-h-screen bg-surface-1 dark:bg-dark-surface-0 text-gray-900 dark:text-gray-50 transition-colors duration-300 font-body">
         {process.env.NEXT_PUBLIC_ADSENSE_PUBLISHER_ID && (

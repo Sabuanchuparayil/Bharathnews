@@ -4,10 +4,18 @@ import { fetchAndParseFeed } from '../lib/rss-parser.js';
 import { getFirebaseToken } from '../lib/firebase-auth.js';
 import { FIRESTORE_BASE } from '../lib/firestore-rest.js';
 
-/** One source per category (13 cats); keeps HTTP /api/ingest under Worker time limits. */
-const MAX_SOURCES_PER_RUN = 13;
+/** Sources fetched per cron run. Kept low because Workers free tier allows only 50
+ * subrequests per invocation (1 fetch + up to ITEMS_PER_SOURCE stores + 1 health each).
+ * Rotation (least-recently-fetched first) still covers every source within a few runs. */
+const MAX_SOURCES_PER_RUN = 6;
 const ITEMS_PER_SOURCE = 5;
-const PARALLEL_BATCH = 4;
+const PARALLEL_BATCH = 3;
+
+/** Parse a feed date safely; falls back to now for malformed pubDate values. */
+function safeISODate(value) {
+  const d = value ? new Date(value) : new Date();
+  return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+}
 
 /** Unicode-safe slug for regional language headlines (Malayalam, Tamil, Hindi, Arabic, etc.) */
 function slugifyTitle(title) {
@@ -21,33 +29,36 @@ function slugifyTitle(title) {
   return slug || `article-${Date.now().toString(36)}`;
 }
 
-/** Pick at least one source per category, then fill remaining slots. */
-function balancedSourcePick(sources, maxTotal) {
-  const byCategory = {};
-  for (const s of sources) {
-    const cat = s.category || 'india';
-    if (!byCategory[cat]) byCategory[cat] = [];
-    byCategory[cat].push(s);
+/**
+ * Rotate through ALL sources by least-recently-fetched first.
+ * Never-fetched sources (no lastFetchedAt) sort to the front, so newly added /
+ * regional-language feeds get ingested immediately. Within the same freshness,
+ * one source per language is interleaved so each run stays language-diverse.
+ */
+function rotateSourcePick(sources, maxTotal) {
+  const ts = (s) => (s.lastFetchedAt ? new Date(s.lastFetchedAt).getTime() : 0);
+  const sorted = [...sources].sort((a, b) => ts(a) - ts(b));
+
+  // Interleave by language to avoid a single run being all-English or all one language.
+  const byLang = {};
+  for (const s of sorted) {
+    const lang = s.language || 'en';
+    (byLang[lang] = byLang[lang] || []).push(s);
   }
-
+  const langs = Object.keys(byLang);
   const picked = [];
-  const pickedSet = new Set();
-
-  for (const cat of Object.keys(byCategory)) {
-    if (picked.length >= maxTotal) break;
-    const source = byCategory[cat].shift();
-    if (source) {
-      picked.push(source);
-      pickedSet.add(source);
+  let added = true;
+  while (picked.length < maxTotal && added) {
+    added = false;
+    for (const lang of langs) {
+      const next = byLang[lang].shift();
+      if (next) {
+        picked.push(next);
+        added = true;
+        if (picked.length >= maxTotal) break;
+      }
     }
   }
-
-  const remaining = sources.filter(s => !pickedSet.has(s));
-  for (const s of remaining) {
-    if (picked.length >= maxTotal) break;
-    picked.push(s);
-  }
-
   return picked;
 }
 
@@ -97,7 +108,7 @@ export async function handleRSSIngest(env) {
   const token = await getFirebaseToken(env);
   const allSources = await loadEnabledSources(env, 'rss');
   const googleSources = await loadEnabledSources(env, 'googlenews');
-  const sources = balancedSourcePick([...allSources, ...googleSources], MAX_SOURCES_PER_RUN);
+  const sources = rotateSourcePick([...allSources, ...googleSources], MAX_SOURCES_PER_RUN);
   const results = [];
 
   for (let i = 0; i < sources.length; i += PARALLEL_BATCH) {
@@ -134,7 +145,7 @@ async function storeRawArticle(env, article, token) {
         slug: { stringValue: article.slug },
         imageUrl: { stringValue: article.imageUrl },
         status: { stringValue: 'pending_ai' },
-        publishedAt: { timestampValue: new Date(article.publishedAt || Date.now()).toISOString() },
+        publishedAt: { timestampValue: safeISODate(article.publishedAt) },
         createdAt: { timestampValue: new Date().toISOString() },
       },
     }),

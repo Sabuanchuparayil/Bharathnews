@@ -11,7 +11,12 @@ const nextConfig = {
       { protocol: 'https', hostname: '*.googleusercontent.com' },
       { protocol: 'https', hostname: 'firebasestorage.googleapis.com' },
       { protocol: 'https', hostname: 'ui-avatars.com' },
+      { protocol: 'https', hostname: '*.oneindia.com' },
+      { protocol: 'https', hostname: '*.hindustantimes.com' },
+      { protocol: 'https', hostname: '*.ndtv.com' },
+      { protocol: 'https', hostname: '*.indiatimes.com' },
     ],
+    minimumCacheTTL: 3600,
   },
   env: {
     NEXT_PUBLIC_FIREBASE_API_KEY: env('NEXT_PUBLIC_FIREBASE_API_KEY', 'VITE_FIREBASE_API_KEY'),
