@@ -19,7 +19,8 @@
     "seed:sources": "node scripts/seed-sources.mjs",
     "set-first-admin": "node scripts/set-first-admin.mjs",
     "create-admin-user": "node scripts/create-admin-user.mjs",
-    "pipeline:status": "node scripts/pipeline-status.mjs"
+    "pipeline:status": "node scripts/pipeline-status.mjs",
+    "setup:google-translate": "node scripts/setup-google-translate.mjs"
   },
   "dependencies": {
     "date-fns": "^3.6.0",

@@ -12,6 +12,7 @@ import { useInterests } from '../context/InterestContext';
 import SafeImage from './SafeImage';
 import QuickReadSheet from './QuickReadSheet';
 import { getCategoryColor, getCategoryAccentBorder, getCategoryLabel } from '../utils/categoryColors';
+import { decodeHtmlEntities } from '../utils/formatters';
 
 const HeartBurst = () => (
   <>
@@ -51,8 +52,8 @@ const NewsCard = ({ article, variant = 'default', index = 0 }) => {
     views = 0,
     source = '',
   } = article;
-  const title = article.title || 'Untitled';
-  const summary = article.summary || '';
+  const title = decodeHtmlEntities(article.title || 'Untitled');
+  const summary = decodeHtmlEntities(article.summary || '');
 
   const liked = id ? isLiked(id) : false;
   const bookmarked = id ? isBookmarked(id) : false;

@@ -53,7 +53,9 @@ export async function POST(request, { params }) {
     }
 
     const existing = getStoredTranslation(article, targetLang);
-    if (existing?.fullContent || existing?.title) {
+    const forceRetranslate = body.forceRetranslate === true;
+    const cacheValid = existing?.provider === 'google-nmt' && (existing?.fullContent || existing?.title);
+    if (!forceRetranslate && cacheValid) {
       return NextResponse.json({ translation: existing });
     }
 
@@ -88,6 +90,7 @@ export async function POST(request, { params }) {
     const translation = {
       ...workerData.translation,
       machineAssisted: true,
+      provider: workerData.translation?.provider || 'google-nmt',
     };
 
     if (article.id) {

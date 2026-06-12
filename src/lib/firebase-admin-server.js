@@ -121,6 +121,7 @@ export async function saveArticleTranslation(articleId, langCode, translation) {
         summary: translation.summary || '',
         fullContent: translation.fullContent || '',
         machineAssisted: translation.machineAssisted !== false,
+        provider: translation.provider || 'google-nmt',
         updatedAt: FieldValue.serverTimestamp(),
       },
     },

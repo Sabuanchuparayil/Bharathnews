@@ -16,10 +16,22 @@ function extractAttr(xml, tag, attr) {
 }
 
 function decodeEntities(str) {
+  if (!str) return '';
   return str
-    .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&').replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'").replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1');
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+    .replace(/&#x([0-9a-fA-F]+);/gi, (_, hex) => {
+      const cp = parseInt(hex, 16);
+      return Number.isFinite(cp) ? String.fromCodePoint(cp) : _;
+    })
+    .replace(/&#(\d+);/g, (_, dec) => {
+      const cp = parseInt(dec, 10);
+      return Number.isFinite(cp) ? String.fromCodePoint(cp) : _;
+    })
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
 }
 
 function stripHtml(html) {
@@ -107,7 +119,7 @@ async function fetchViaRss2Json(url) {
     return data.items.map(item => ({
       title: stripHtml(decodeEntities(item.title || '')),
       link: item.link || item.guid || '',
-      description: stripHtml(item.description || '').slice(0, 500),
+      description: stripHtml(decodeEntities(item.description || '')).slice(0, 500),
       pubDate: item.pubDate || '',
       imageUrl: item.thumbnail || item.enclosure?.link || '',
     })).filter(i => i.title && i.link);

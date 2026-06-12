@@ -1,4 +1,5 @@
 import { SUPPORTED_LANGUAGES } from '@/config/languages.config';
+import { decodeHtmlEntities } from '@/utils/formatters';
 
 /** Languages readers can switch to on an article page (excludes "all"). */
 export const READABLE_LANGS = SUPPORTED_LANGUAGES.filter(l => l.code !== 'all');
@@ -24,9 +25,9 @@ export function resolveArticleDisplay(article, readLang) {
 
   if (!target || target === sourceLang) {
     return {
-      title: article.title,
-      summary: article.summary,
-      fullContent: article.fullContent,
+      title: decodeHtmlEntities(article.title),
+      summary: decodeHtmlEntities(article.summary),
+      fullContent: decodeHtmlEntities(article.fullContent),
       lang: sourceLang,
       isTranslation: false,
       machineAssisted: false,
@@ -36,9 +37,9 @@ export function resolveArticleDisplay(article, readLang) {
   const stored = getStoredTranslation(article, target);
   if (stored) {
     return {
-      title: stored.title || article.title,
-      summary: stored.summary || article.summary,
-      fullContent: stored.fullContent || article.fullContent,
+      title: decodeHtmlEntities(stored.title || article.title),
+      summary: decodeHtmlEntities(stored.summary || article.summary),
+      fullContent: decodeHtmlEntities(stored.fullContent || article.fullContent),
       lang: target,
       isTranslation: true,
       machineAssisted: !!stored.machineAssisted,
