@@ -9,6 +9,7 @@ import { LanguageProvider } from '@/context/LanguageContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 
 const InstallPWA = lazy(() => import('@/components/InstallPWA'));
+const ServiceWorkerRegistration = lazy(() => import('@/components/ServiceWorkerRegistration'));
 const LazyToast = lazy(() =>
   import('react-toastify').then(mod => {
     import('react-toastify/dist/ReactToastify.css');
@@ -39,6 +40,7 @@ export default function Providers({ children }) {
           <MotionConfig reducedMotion={prefersReducedMotion ? 'always' : 'user'}>
             {children}
             <Suspense fallback={null}>
+              <ServiceWorkerRegistration />
               <InstallPWA />
               <LazyToast
                 position="bottom-center"
