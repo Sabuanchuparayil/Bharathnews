@@ -3,9 +3,9 @@
 
 const CATEGORY_IMAGE_POOL = {
   india: [
-    'https://images.unsplash.com/photo-1524492412937-280b57ca018c?w=800&h=450&fit=crop',
     'https://images.unsplash.com/photo-1532664189809-02133fee698d?w=800&h=450&fit=crop',
     'https://images.unsplash.com/photo-1587474260584-136574528ed5?w=800&h=450&fit=crop',
+    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=450&fit=crop',
   ],
   gcc: [
     'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=450&fit=crop',
@@ -23,14 +23,14 @@ const CATEGORY_IMAGE_POOL = {
     'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=800&h=450&fit=crop',
   ],
   sports: [
-    'https://images.unsplash.com/photo-1461896836934-ffe607ba7951?w=800&h=450&fit=crop',
     'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=800&h=450&fit=crop',
     'https://images.unsplash.com/photo-1517649763962-0c623066013b?w=800&h=450&fit=crop',
+    'https://images.unsplash.com/photo-1495020689067-958852a7765e?w=800&h=450&fit=crop',
   ],
   entertainment: [
-    'https://images.unsplash.com/photo-1489599849927-2fa91ead3d88?w=800&h=450&fit=crop',
     'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&h=450&fit=crop',
     'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&h=450&fit=crop',
+    'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&h=450&fit=crop',
   ],
   health: [
     'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&h=450&fit=crop',
@@ -38,9 +38,9 @@ const CATEGORY_IMAGE_POOL = {
     'https://images.unsplash.com/photo-1532938911079-1b06ac7ceec7?w=800&h=450&fit=crop',
   ],
   education: [
-    'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&h=450&fit=crop',
     'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=800&h=450&fit=crop',
     'https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?w=800&h=450&fit=crop',
+    'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&h=450&fit=crop',
   ],
   jobs: [
     'https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=800&h=450&fit=crop',
@@ -79,6 +79,9 @@ const DEFAULT_IMAGES = [
   'https://images.unsplash.com/photo-1495020689067-958852a7765e?w=800&h=450&fit=crop',
   'https://images.unsplash.com/photo-1526470608268-f674ce90ebd4?w=800&h=450&fit=crop',
 ];
+
+/** Local placeholder — always available, used as last-resort fallback in SafeImage. */
+export const LOCAL_PLACEHOLDER = '/og-default.png';
 
 function simpleHash(str) {
   let h = 0;

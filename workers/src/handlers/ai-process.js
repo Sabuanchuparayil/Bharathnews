@@ -215,7 +215,8 @@ async function patchStatus(docPath, token, status) {
 
 async function distributeToTelegram(env, article, channelId) {
   try {
-    const msg = `<b>${escapeHtml(article.title)}</b>\n\n${escapeHtml(article.summary)}\n\n📰 <a href="https://thebharathnews.com/article/${article.slug}">Read Full Story</a>\n\n#${article.category} #TheBharathNews`;
+    const siteUrl = env.MAIN_SITE_URL || 'https://www.thebharathnews.com';
+    const msg = `<b>${escapeHtml(article.title)}</b>\n\n${escapeHtml(article.summary)}\n\n📰 <a href="${siteUrl}/article/${encodeURIComponent(article.slug)}">Read Full Story</a>\n\n#${article.category} #TheBharathNews`;
     await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

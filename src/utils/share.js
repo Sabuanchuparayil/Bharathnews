@@ -1,8 +1,10 @@
 'use client';
 
+import { DEFAULT_SITE_URL } from '@/lib/site-url';
+
 const SITE_ORIGIN = typeof window !== 'undefined'
   ? window.location.origin
-  : 'https://thebharathnews.com';
+  : DEFAULT_SITE_URL;
 
 export const buildShareUrl = (path, contentType = 'content') => {
   const base = path.startsWith('http') ? path : `${SITE_ORIGIN}${path.startsWith('/') ? path : `/${path}`}`;

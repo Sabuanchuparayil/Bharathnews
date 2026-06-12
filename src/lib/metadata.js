@@ -1,4 +1,4 @@
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://thebharathnews.com';
+import { SITE_URL } from '@/lib/site-url';
 const SITE_NAME = 'The Bharath News';
 
 const DEFAULT_OG_IMAGE = `${SITE_URL}/og-default.png`;

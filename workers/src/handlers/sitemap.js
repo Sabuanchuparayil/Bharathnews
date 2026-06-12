@@ -1,13 +1,14 @@
 import { getFirebaseToken } from '../lib/firebase-auth.js';
 import { runQuery } from '../lib/firestore-rest.js';
 
-const SITE = 'https://thebharathnews.com';
+const DEFAULT_SITE_URL = 'https://www.thebharathnews.com';
 
 function escapeXml(str) {
   return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 export async function handleSitemap(env) {
+  const site = env.MAIN_SITE_URL || DEFAULT_SITE_URL;
   const token = await getFirebaseToken(env);
   const docs = await runQuery(env, {
     from: [{ collectionId: 'articles' }],
@@ -27,7 +28,7 @@ export async function handleSitemap(env) {
     .map(d => {
       const date = d.publishedAt || new Date().toISOString();
       const lastmod = typeof date === 'string' ? date.split('T')[0] : new Date(date).toISOString().split('T')[0];
-      return `  <url><loc>${SITE}/article/${escapeXml(encodeURIComponent(d.slug))}</loc><lastmod>${lastmod}</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>`;
+      return `  <url><loc>${site}/article/${escapeXml(encodeURIComponent(d.slug))}</loc><lastmod>${lastmod}</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>`;
     });
 
   const staticPages = [
@@ -49,7 +50,7 @@ export async function handleSitemap(env) {
     { path: 'explore', freq: 'daily', priority: '0.7' },
     { path: 'community', freq: 'daily', priority: '0.6' },
     { path: 'search', freq: 'weekly', priority: '0.5' },
-  ].map(p => `  <url><loc>${SITE}/${p.path}</loc><changefreq>${p.freq}</changefreq><priority>${p.priority}</priority></url>`);
+  ].map(p => `  <url><loc>${site}/${p.path}</loc><changefreq>${p.freq}</changefreq><priority>${p.priority}</priority></url>`);
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

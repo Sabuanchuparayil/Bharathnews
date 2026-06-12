@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Bharath News (https://thebharathnews.com) is a multilingual AI-powered news aggregation platform. We source articles from leading news publishers across India and the GCC region, curate them using AI-assisted classification, and deliver them to readers in their preferred language.
+The Bharath News (https://www.thebharathnews.com) is a multilingual AI-powered news aggregation platform. We source articles from leading news publishers across India and the GCC region, curate them using AI-assisted classification, and deliver them to readers in their preferred language.
 
 ## Content Structure
 
@@ -60,12 +60,12 @@ Each article contains:
 
 ## URL Structure
 
-- Homepage: https://thebharathnews.com
-- Category: https://thebharathnews.com/{category}
-- Article: https://thebharathnews.com/article/{slug}
-- Videos: https://thebharathnews.com/videos
-- Search: https://thebharathnews.com/search?q={query}
-- Explore: https://thebharathnews.com/explore
+- Homepage: https://www.thebharathnews.com
+- Category: https://www.thebharathnews.com/{category}
+- Article: https://www.thebharathnews.com/article/{slug}
+- Videos: https://www.thebharathnews.com/videos
+- Search: https://www.thebharathnews.com/search?q={query}
+- Explore: https://www.thebharathnews.com/explore
 
 ## Publishing
 

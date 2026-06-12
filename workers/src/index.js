@@ -58,7 +58,7 @@ export default {
 
     const url = new URL(request.url);
     const origin = request.headers.get('Origin') || '';
-    const mainHost = env.MAIN_SITE_URL || 'https://thebharathnews.com';
+    const mainHost = env.MAIN_SITE_URL || 'https://www.thebharathnews.com';
     const allowedOrigins = [mainHost, 'http://localhost:3000', 'http://localhost:3001'];
     const corsOrigin = allowedOrigins.includes(origin) ? origin : mainHost;
     const cors = {

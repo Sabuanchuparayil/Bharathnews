@@ -27,7 +27,7 @@ Content is available in: English, Hindi, Malayalam, Tamil, Kannada, Telugu, Beng
 
 ## Website
 
-URL: https://thebharathnews.com
+URL: https://www.thebharathnews.com
 
 ## API
 
@@ -35,4 +35,4 @@ Articles are available via the website. Each article has a canonical URL at /art
 
 ## Contact
 
-Visit https://thebharathnews.com for more information.
+Visit https://www.thebharathnews.com for more information.

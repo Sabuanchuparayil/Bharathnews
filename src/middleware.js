@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { SITE_APEX_HOST, SITE_CANONICAL_HOST } from '@/lib/site-url';
 
 const AUTH_REQUIRED = ['/dashboard', '/settings', '/bookmarks', '/creator'];
 const ADMIN_PREFIX = '/admin';
@@ -16,6 +17,14 @@ function sanitizeNext(nextPath) {
 }
 
 export function middleware(request) {
+  const host = request.headers.get('host')?.split(':')[0]?.toLowerCase();
+  if (host === SITE_APEX_HOST) {
+    const url = request.nextUrl.clone();
+    url.hostname = SITE_CANONICAL_HOST;
+    url.protocol = 'https:';
+    return NextResponse.redirect(url, 301);
+  }
+
   const { pathname } = request.nextUrl;
 
   if (pathname.startsWith('/@') && pathname.length > 2) {
@@ -72,14 +81,6 @@ export function middleware(request) {
 
 export const config = {
   matcher: [
-    '/@(.*)',
-    '/admin',
-    '/admin/:path*',
-    '/dashboard',
-    '/dashboard/:path*',
-    '/settings',
-    '/bookmarks',
-    '/creator/:path*',
-    '/',
+    '/((?!_next/static|_next/image|favicon.ico|icons/).*)',
   ],
 };

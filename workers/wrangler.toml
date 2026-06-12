@@ -9,7 +9,7 @@ crons = ["*/15 * * * *", "0 8 * * *"]
 [vars]
 ENVIRONMENT = "production"
 MAIN_SITE_HOST = "thebharathnews.com"
-MAIN_SITE_URL = "https://thebharathnews.com"
+MAIN_SITE_URL = "https://www.thebharathnews.com"
 
 [ai]
 binding = "AI"

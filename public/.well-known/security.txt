@@ -1,3 +1,3 @@
 Contact: mailto:support@thebharathnews.com
 Preferred-Languages: en
-Canonical: https://thebharathnews.com/.well-known/security.txt
+Canonical: https://www.thebharathnews.com/.well-known/security.txt

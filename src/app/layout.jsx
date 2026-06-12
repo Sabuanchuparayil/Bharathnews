@@ -3,6 +3,7 @@ import Providers from './providers';
 import Script from 'next/script';
 import { Inter, Amaranth, JetBrains_Mono } from 'next/font/google';
 import { safeJsonLd } from '@/lib/metadata';
+import { SITE_URL } from '@/lib/site-url';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -22,8 +23,6 @@ const jetbrainsMono = JetBrains_Mono({
   variable: '--font-mono',
   display: 'swap',
 });
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://thebharathnews.com';
 
 export const viewport = {
   themeColor: '#4338ca',

@@ -22,7 +22,7 @@ export async function handleDistribute(env, articleId) {
     score: parseInt(data.fields.score?.integerValue || '5', 10),
   };
 
-  const siteUrl = env.MAIN_SITE_URL || 'https://thebharathnews.com';
+  const siteUrl = env.MAIN_SITE_URL || 'https://www.thebharathnews.com';
   const articleUrl = `${siteUrl}/article/${encodeURIComponent(article.slug)}`;
 
   const tg = resolveTelegramConfig(settings, env);

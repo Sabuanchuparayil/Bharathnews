@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { SITE_URL } from '@/lib/site-url';
 
 const ArticleSchema = ({ article }) => {
   const schema = {
@@ -19,12 +20,12 @@ const ArticleSchema = ({ article }) => {
       name: 'The Bharath News',
       logo: {
         '@type': 'ImageObject',
-        url: 'https://thebharathnews.com/icons/icon-512x512.png',
+        url: `${SITE_URL}/icons/icon-512x512.png`,
       },
     },
     mainEntityOfPage: {
       '@type': 'WebPage',
-      '@id': `https://thebharathnews.com/article/${article.slug}`,
+      '@id': `${SITE_URL}/article/${article.slug}`,
     },
   };
 

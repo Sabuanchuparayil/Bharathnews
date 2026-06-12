@@ -33,7 +33,8 @@ export async function handleNewsletterDigest(env) {
     return { sent: 0, reason: 'no subscribers or articles' };
   }
 
-  const html = buildDigestHtml(articles);
+  const siteUrl = env.MAIN_SITE_URL || 'https://www.thebharathnews.com';
+  const html = buildDigestHtml(articles, siteUrl);
   let sent = 0;
 
   for (const sub of subscribers.slice(0, 100)) {
@@ -65,10 +66,10 @@ function escapeHtml(str) {
   return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function buildDigestHtml(articles) {
+function buildDigestHtml(articles, siteUrl) {
   const items = articles.map(a => {
     const slug = encodeURIComponent(a.slug || '');
-    return `<li><a href="https://thebharathnews.com/article/${slug}">${escapeHtml(a.title)}</a><br/><small>${escapeHtml((a.summary || '').slice(0, 120))}</small></li>`;
+    return `<li><a href="${siteUrl}/article/${slug}">${escapeHtml(a.title)}</a><br/><small>${escapeHtml((a.summary || '').slice(0, 120))}</small></li>`;
   }).join('');
-  return `<h1>The Bharath News — Weekly Digest</h1><ul>${items}</ul><p><a href="https://thebharathnews.com">Read more</a></p>`;
+  return `<h1>The Bharath News — Weekly Digest</h1><ul>${items}</ul><p><a href="${siteUrl}">Read more</a></p>`;
 }

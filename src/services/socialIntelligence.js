@@ -1,6 +1,7 @@
 'use client';
 
 import { withFirestore } from '@/lib/firebase-client';
+import { SITE_URL } from '@/lib/site-url';
 
 const ENGAGEMENT_WEIGHTS = {
   views: 1,
@@ -30,22 +31,22 @@ const PLATFORM_TEMPLATES = {
   telegram: {
     maxLength: 4096,
     format: (article) =>
-      `📰 *${article.title}*\n\n${article.summary || ''}\n\n🔗 Read more: https://thebharathnews.com/article/${article.slug}\n\n#${(article.category || 'news').replace(/\s+/g, '')} #BharathNews`,
+      `📰 *${article.title}*\n\n${article.summary || ''}\n\n🔗 Read more: ${SITE_URL}/article/${article.slug}\n\n#${(article.category || 'news').replace(/\s+/g, '')} #BharathNews`,
   },
   whatsapp: {
     maxLength: 65536,
     format: (article) =>
-      `*${article.title}*\n\n${article.summary || ''}\n\n📖 Read: https://thebharathnews.com/article/${article.slug}?utm_source=whatsapp&utm_medium=social`,
+      `*${article.title}*\n\n${article.summary || ''}\n\n📖 Read: ${SITE_URL}/article/${article.slug}?utm_source=whatsapp&utm_medium=social`,
   },
   facebook: {
     maxLength: 63206,
     format: (article) =>
-      `${article.title}\n\n${article.summary || ''}\n\nhttps://thebharathnews.com/article/${article.slug}?utm_source=facebook&utm_medium=social`,
+      `${article.title}\n\n${article.summary || ''}\n\n${SITE_URL}/article/${article.slug}?utm_source=facebook&utm_medium=social`,
   },
   twitter: {
     maxLength: 280,
     format: (article) => {
-      const url = `https://thebharathnews.com/article/${article.slug}?utm_source=twitter&utm_medium=social`;
+      const url = `${SITE_URL}/article/${article.slug}?utm_source=twitter&utm_medium=social`;
       const hashtag = `#${(article.category || 'news').replace(/\s+/g, '')}`;
       const maxTitleLen = 280 - url.length - hashtag.length - 5;
       const title = article.title.length > maxTitleLen

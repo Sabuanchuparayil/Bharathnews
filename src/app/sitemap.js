@@ -1,7 +1,7 @@
 import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { getServerDb } from '@/lib/firebase-server';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://thebharathnews.com';
+import { SITE_URL } from '@/lib/site-url';
 
 const CATEGORIES = [
   'india', 'gcc', 'business', 'technology', 'sports',
