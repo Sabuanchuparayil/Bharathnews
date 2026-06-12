@@ -3,7 +3,7 @@ import { resolveArticleImage, isCategoryFallbackImage } from '../lib/image-resol
 import { getFirebaseToken } from '../lib/firebase-auth.js';
 import { runQuery, FIRESTORE_BASE } from '../lib/firestore-rest.js';
 import { loadSiteSettings } from '../lib/sources-loader.js';
-import { resolveTelegramConfig } from '../lib/site-settings.js';
+import { onArticlePublished } from '../lib/on-article-published.js';
 
 // Each article costs ~6 subrequests (status, image, AI gen, publish, status, telegram);
 // kept low for the 50-subrequest free-tier limit per invocation.
@@ -171,18 +171,21 @@ async function processOneArticle(env, raw, token, targetLangs, settings) {
     return null;
   }
 
+  const publishData = await publishRes.json();
+  const articleId = publishData.name?.split('/').pop() || '';
+
   await patchStatus(docPath, token, 'processed');
 
-  if ((parsed.score || qualityScore) >= (settings.qualityThreshold ?? 6)) {
-    const tg = resolveTelegramConfig(settings, env);
-    if (tg.enabled && tg.hasBotToken && (parsed.score || qualityScore) >= tg.minScore) {
-      await distributeToTelegram(env, {
-        title: parsed.title || title,
-        summary: parsed.summary,
-        slug,
-        category,
-      }, tg.channelId);
-    }
+  if (articleId) {
+    await onArticlePublished(env, {
+      id: articleId,
+      title: finalTitle,
+      slug,
+      summary: parsed.summary || '',
+      editorialStatus: 'published',
+      score: parsed.score || qualityScore,
+      qualityScore,
+    }, token, settings);
   }
 
   return parsed.title || title;
@@ -211,22 +214,4 @@ async function patchStatus(docPath, token, status) {
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({ fields: { status: { stringValue: status } } }),
   });
-}
-
-async function distributeToTelegram(env, article, channelId) {
-  try {
-    const siteUrl = env.MAIN_SITE_URL || 'https://www.thebharathnews.com';
-    const msg = `<b>${escapeHtml(article.title)}</b>\n\n${escapeHtml(article.summary)}\n\n📰 <a href="${siteUrl}/article/${encodeURIComponent(article.slug)}">Read Full Story</a>\n\n#${article.category} #TheBharathNews`;
-    await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: channelId || env.TELEGRAM_CHANNEL_ID, text: msg, parse_mode: 'HTML' }),
-    });
-  } catch (err) {
-    console.error('Telegram failed:', err.message);
-  }
-}
-
-function escapeHtml(str) {
-  return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }

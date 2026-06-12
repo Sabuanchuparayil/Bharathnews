@@ -75,7 +75,7 @@ export function resolveTelegramConfig(settings, env) {
   const cfg = mergeSiteSettings(settings).integrations?.telegram || {};
   return {
     enabled: cfg.enabled !== false,
-    channelId: cfg.channelId || env.TELEGRAM_CHANNEL_ID || '@TheBharathNews',
+    channelId: cfg.channelId || env.TELEGRAM_CHANNEL || env.TELEGRAM_CHANNEL_ID || '@TheBharathNews',
     minScore: cfg.minScoreToPost ?? 7,
     hasBotToken: Boolean(env.TELEGRAM_BOT_TOKEN),
   };

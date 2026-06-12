@@ -27,6 +27,7 @@
   qualityScore: number,      // 0-10 from Claude Haiku
   score: number,             // legacy display score
   editorialStatus: string,   // published|rejected|duplicate
+  telegramPostedAt: timestamp, // set after first Telegram auto-post (idempotency)
   clusterId: string,         // dedup cluster key
   views: number,
   likes: number,

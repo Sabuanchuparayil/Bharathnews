@@ -39,6 +39,7 @@ else
 fi
 
 put_secret TELEGRAM_BOT_TOKEN "${TELEGRAM_BOT_TOKEN:-}"
+put_secret TELEGRAM_CHANNEL "${TELEGRAM_CHANNEL:-@TheBharathNews}"
 put_secret TELEGRAM_CHANNEL_ID "${TELEGRAM_CHANNEL_ID:-@TheBharathNews}"
 put_secret ANTHROPIC_API_KEY "${ANTHROPIC_API_KEY:-}"
 put_secret CLAUDE_MODEL "${CLAUDE_MODEL:-}"

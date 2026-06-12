@@ -126,3 +126,11 @@ export async function saveArticleTranslation(articleId, langCode, translation) {
     },
   }, { merge: true });
 }
+
+export async function markArticleTelegramPosted(articleId) {
+  const db = getFirestore(getAdminApp());
+  await db.collection('articles').doc(articleId).set({
+    telegramPostedAt: FieldValue.serverTimestamp(),
+    distributed: { telegram: true },
+  }, { merge: true });
+}

@@ -5,6 +5,26 @@ import { slugify } from '../utils/slugify';
 
 const CREATOR_ROLES = ['contributor', 'vlogger'];
 
+async function notifyTelegramForArticle(articleId) {
+  try {
+    const { initClientFirebase } = await import('@/config/firebase.config');
+    const fb = await initClientFirebase();
+    const user = fb?.auth?.currentUser;
+    if (!user) return;
+    const token = await user.getIdToken();
+    await fetch('/api/articles/telegram-notify', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ articleId }),
+    });
+  } catch {
+    /* Telegram notify is best-effort */
+  }
+}
+
 export const isCreatorRole = (role) => CREATOR_ROLES.includes(role);
 
 export const submitRoleApplication = async (userId, { requestedRole, bio, portfolioUrl, sampleWork }) =>
@@ -249,7 +269,7 @@ export const moderateCreatorPost = async (postId, { approved, feedback }) =>
       await updateDoc(profileRef, { postCount: increment(1) });
 
       if (post.type === 'article' && post.visibility === 'public') {
-        await addDoc(collection(db, 'articles'), {
+        const articleRef = await addDoc(collection(db, 'articles'), {
           title: post.title,
           slug: `${post.authorSlug}-${post.slug}`,
           summary: post.excerpt,
@@ -262,6 +282,7 @@ export const moderateCreatorPost = async (postId, { approved, feedback }) =>
           authorSlug: post.authorSlug,
           creatorPostId: postId,
           isCitizenContent: true,
+          editorialStatus: 'published',
           publishedAt: serverTimestamp(),
           createdAt: serverTimestamp(),
           views: 0,
@@ -270,6 +291,7 @@ export const moderateCreatorPost = async (postId, { approved, feedback }) =>
           comments: 0,
           score: 5,
         });
+        notifyTelegramForArticle(articleRef.id);
       }
     }
   });
