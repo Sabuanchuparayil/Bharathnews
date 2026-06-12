@@ -149,7 +149,9 @@ const YOUTUBE_SOURCES = [
   { channelId: 'UC-f7r46JhYv78q5pGrO6ivA', name: 'MediaOne', category: 'india', region: 'kerala', language: 'ml', type: 'youtube' },
   { channelId: 'UCNye-wNBqNL5ZzHSJj3l8Bg', name: 'Al Jazeera English', category: 'gcc', region: 'qatar', language: 'en', type: 'youtube' },
   { channelId: 'UC_gUM8rL-Lrg6O3adPW9K1g', name: 'WION', category: 'india', region: 'india', language: 'en', type: 'youtube' },
+  { channelId: 'UCIvaYmXn910QMdemBG3v1pQ', name: 'Zee News', category: 'india', region: 'india', language: 'hi', type: 'youtube' },
   { channelId: 'UCYPvAwZP8pZhSMW8qs7cVCw', name: 'India Today', category: 'india', region: 'india', language: 'en', type: 'youtube' },
+  { channelId: 'UCttspZesZIDEwwpVIgoZtWQ', name: 'India TV', category: 'india', region: 'india', language: 'hi', type: 'youtube' },
 ];
 
 const RSS_FROM_CONFIG = RSS_FEEDS.map(f => ({

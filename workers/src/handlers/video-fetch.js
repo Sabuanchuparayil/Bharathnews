@@ -51,8 +51,18 @@ export async function handleVideoFetch(env) {
 
 function extractVideoId(link) {
   if (!link) return null;
-  const match = link.match(/[?&]v=([^&]+)/) || link.match(/yt:video:([a-zA-Z0-9_-]+)/);
-  return match ? match[1] : null;
+  const patterns = [
+    /[?&]v=([a-zA-Z0-9_-]{11})/,
+    /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+    /\/embed\/([a-zA-Z0-9_-]{11})/,
+    /\/shorts\/([a-zA-Z0-9_-]{11})/,
+    /yt:video:([a-zA-Z0-9_-]{11})/,
+  ];
+  for (const re of patterns) {
+    const m = link.match(re);
+    if (m) return m[1];
+  }
+  return null;
 }
 
 async function storeVideo(env, video, token) {

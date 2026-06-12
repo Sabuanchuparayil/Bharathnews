@@ -68,7 +68,15 @@ const fetchChannelVideos = async (channel) => {
 async function fetchFromFirestore(channelId, langFilter) {
   const category = channelId === 'all' ? null : YOUTUBE_CHANNELS.find(c => c.channelId === channelId)?.category || null;
   const count = channelId === 'all' ? 40 : 20;
-  const videos = await getVideoFeeds(category, count, langFilter);
+
+  let videos = await getVideoFeeds(category, count, langFilter);
+
+  // Old videos may lack a language field — if filtered query is empty, retry without filter
+  // and apply client-side filtering (treats missing language as 'en').
+  if (!videos.length && langFilter) {
+    const all = await getVideoFeeds(category, count, null);
+    videos = all.filter(v => (v.language || 'en') === langFilter);
+  }
 
   const filtered = channelId === 'all'
     ? videos
@@ -83,7 +91,9 @@ async function fetchFromRss2Json(channelId, langFilter) {
     : YOUTUBE_CHANNELS.filter(c => c.channelId === channelId);
 
   if (langFilter) {
-    channels = channels.filter(c => c.language === langFilter);
+    const langChannels = channels.filter(c => c.language === langFilter);
+    if (langChannels.length) channels = langChannels;
+    // If no channels match the language, keep all channels so videos still load
   }
 
   const results = await Promise.allSettled(

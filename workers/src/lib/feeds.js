@@ -42,7 +42,12 @@ export const FALLBACK_YOUTUBE_CHANNELS = [
   { channelId: 'UCZFMm1mMw0F81Z37aaEzTUA', name: 'NDTV', category: 'india', language: 'en' },
   { channelId: 'UCf8w5m0YsRa8MHQ5bwSGmbw', name: 'Asianet News', category: 'india', language: 'ml' },
   { channelId: 'UCP0uG-mcMImgKnJz-VjJZmQ', name: 'Manorama News', category: 'india', language: 'ml' },
+  { channelId: 'UC-f7r46JhYv78q5pGrO6ivA', name: 'MediaOne', category: 'india', language: 'ml' },
   { channelId: 'UCNye-wNBqNL5ZzHSJj3l8Bg', name: 'Al Jazeera English', category: 'gcc', language: 'en' },
+  { channelId: 'UC_gUM8rL-Lrg6O3adPW9K1g', name: 'WION', category: 'india', language: 'en' },
+  { channelId: 'UCIvaYmXn910QMdemBG3v1pQ', name: 'Zee News', category: 'india', language: 'hi' },
+  { channelId: 'UCYPvAwZP8pZhSMW8qs7cVCw', name: 'India Today', category: 'india', language: 'en' },
+  { channelId: 'UCttspZesZIDEwwpVIgoZtWQ', name: 'India TV', category: 'india', language: 'hi' },
 ];
 
 /** @deprecated Use loadEnabledSources from sources-loader.js */
