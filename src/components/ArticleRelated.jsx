@@ -6,7 +6,7 @@ import { ArrowRight } from 'lucide-react';
 import { getArticles } from '../services/firestore';
 import SafeImage from './SafeImage';
 import { useLanguage } from '../context/LanguageContext';
-import { localizeArticle } from '../utils/localizeArticle';
+import { toFirestoreLanguageFilter } from '@/config/languages.config';
 import { getCategoryLabel } from '../utils/categoryColors';
 
 const ArticleRelated = ({ category, currentSlug }) => {
@@ -15,12 +15,12 @@ const ArticleRelated = ({ category, currentSlug }) => {
 
   useEffect(() => {
     if (!category) return;
-    getArticles(category)
+    getArticles(category, null, 20, toFirestoreLanguageFilter(language))
       .then(articles => {
         setRelated(articles.filter(a => a.slug !== currentSlug).slice(0, 6));
       })
       .catch(() => setRelated([]));
-  }, [category, currentSlug]);
+  }, [category, currentSlug, language]);
 
   if (!related.length) return null;
 
@@ -36,9 +36,7 @@ const ArticleRelated = ({ category, currentSlug }) => {
         </Link>
       </div>
       <div className="flex space-x-4 overflow-x-auto scrollbar-hide pb-2 -mx-1 px-1">
-        {related.map(article => {
-          const localized = localizeArticle(article, language);
-          return (
+        {related.map(article => (
           <Link
             key={article.id}
             href={`/article/${article.slug}`}
@@ -47,7 +45,7 @@ const ArticleRelated = ({ category, currentSlug }) => {
             <div className="relative h-32 overflow-hidden">
               <SafeImage
                 src={article.imageUrl}
-                alt={localized.displayTitle}
+                alt={article.title}
                 category={article.category}
                 width={224}
                 height={128}
@@ -60,12 +58,11 @@ const ArticleRelated = ({ category, currentSlug }) => {
                 {getCategoryLabel(article.category)}
               </span>
               <h3 className="font-display font-bold text-sm text-gray-900 dark:text-white line-clamp-2 mt-1 group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors">
-                {localized.displayTitle}
+                {article.title}
               </h3>
             </div>
           </Link>
-          );
-        })}
+        ))}
       </div>
     </section>
   );

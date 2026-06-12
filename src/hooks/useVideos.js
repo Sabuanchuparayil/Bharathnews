@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { YOUTUBE_CHANNELS } from '../config/feeds.config';
 import { getVideoFeeds } from '../services/firestore';
+import { useLanguage } from '../context/LanguageContext';
+import { toFirestoreLanguageFilter } from '@/config/languages.config';
 
 const videoCache = new Map();
 const CACHE_TTL = 5 * 60 * 1000;
@@ -22,6 +24,7 @@ function normalizeFirestoreVideo(video) {
     thumbnail: video.thumbnail || `https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`,
     publishedAt,
     category: video.category,
+    language: video.language,
   };
 }
 
@@ -57,14 +60,15 @@ const fetchChannelVideos = async (channel) => {
       thumbnail: item.thumbnail || `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
       publishedAt: item.pubDate,
       category: channel.category,
+      language: channel.language || 'en',
     };
   }).filter(Boolean);
 };
 
-async function fetchFromFirestore(channelId) {
+async function fetchFromFirestore(channelId, langFilter) {
   const category = channelId === 'all' ? null : YOUTUBE_CHANNELS.find(c => c.channelId === channelId)?.category || null;
   const count = channelId === 'all' ? 40 : 20;
-  const videos = await getVideoFeeds(category, count);
+  const videos = await getVideoFeeds(category, count, langFilter);
 
   const filtered = channelId === 'all'
     ? videos
@@ -73,10 +77,14 @@ async function fetchFromFirestore(channelId) {
   return filtered.map(normalizeFirestoreVideo).filter(v => v.videoId);
 }
 
-async function fetchFromRss2Json(channelId) {
-  const channels = channelId === 'all'
+async function fetchFromRss2Json(channelId, langFilter) {
+  let channels = channelId === 'all'
     ? YOUTUBE_CHANNELS
     : YOUTUBE_CHANNELS.filter(c => c.channelId === channelId);
+
+  if (langFilter) {
+    channels = channels.filter(c => c.language === langFilter);
+  }
 
   const results = await Promise.allSettled(
     channels.map(ch => fetchChannelVideos(ch))
@@ -91,6 +99,8 @@ async function fetchFromRss2Json(channelId) {
 }
 
 export function useVideos(channelId = 'all') {
+  const { language } = useLanguage();
+  const langFilter = toFirestoreLanguageFilter(language);
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const abortRef = useRef(false);
@@ -98,7 +108,7 @@ export function useVideos(channelId = 'all') {
   useEffect(() => {
     abortRef.current = false;
 
-    const cacheKey = channelId;
+    const cacheKey = `${channelId}:${language}`;
     const cached = videoCache.get(cacheKey);
     if (cached && Date.now() - cached.ts < CACHE_TTL) {
       setVideos(cached.data);
@@ -109,10 +119,10 @@ export function useVideos(channelId = 'all') {
     const fetchVideos = async () => {
       setLoading(true);
       try {
-        let allVideos = await fetchFromFirestore(channelId);
+        let allVideos = await fetchFromFirestore(channelId, langFilter);
 
         if (!allVideos.length) {
-          allVideos = await fetchFromRss2Json(channelId);
+          allVideos = await fetchFromRss2Json(channelId, langFilter);
         }
 
         if (abortRef.current) return;
@@ -127,7 +137,7 @@ export function useVideos(channelId = 'all') {
 
     fetchVideos();
     return () => { abortRef.current = true; };
-  }, [channelId]);
+  }, [channelId, language, langFilter]);
 
   return { videos, loading };
 }

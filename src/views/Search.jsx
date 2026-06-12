@@ -7,10 +7,14 @@ import Layout from '../components/Layout';
 import NewsCard from '../components/NewsCard';
 import EmptyState from '../components/EmptyState';
 import { searchArticles } from '../services/firestore';
+import { useLanguage } from '../context/LanguageContext';
+import { toFirestoreLanguageFilter } from '@/config/languages.config';
 
 const Search = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { language } = useLanguage();
+  const langFilter = toFirestoreLanguageFilter(language);
   const [query, setQuery] = useState(searchParams.get('q') || '');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -25,14 +29,14 @@ const Search = () => {
     setLoading(true);
     setSearched(true);
     try {
-      const filtered = await searchArticles(q.trim());
+      const filtered = await searchArticles(q.trim(), 30, langFilter);
       setResults(filtered);
     } catch (error) {
       console.error('Search error:', error);
       setResults([]);
     }
     setLoading(false);
-  }, []);
+  }, [langFilter]);
 
   const debounceReady = useRef(false);
 
@@ -53,7 +57,7 @@ const Search = () => {
       }
     }, delay);
     return () => clearTimeout(timer);
-  }, [query, runSearch, router, searchParams]);
+  }, [query, runSearch, router, searchParams, langFilter]);
 
   const handleSearch = (e) => {
     e.preventDefault();

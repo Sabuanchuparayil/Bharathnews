@@ -51,15 +51,15 @@ export const RSS_FEEDS = [
 
 // Channel IDs verified against live YouTube feeds (2026-06).
 export const YOUTUBE_CHANNELS = [
-  { channelId: 'UCZFMm1mMw0F81Z37aaEzTUA', name: 'NDTV', category: 'india' },
-  { channelId: 'UCf8w5m0YsRa8MHQ5bwSGmbw', name: 'Asianet News', category: 'india' },
-  { channelId: 'UCP0uG-mcMImgKnJz-VjJZmQ', name: 'Manorama News', category: 'india' },
-  { channelId: 'UC-f7r46JhYv78q5pGrO6ivA', name: 'MediaOne', category: 'india' },
-  { channelId: 'UCNye-wNBqNL5ZzHSJj3l8Bg', name: 'Al Jazeera English', category: 'gcc' },
-  { channelId: 'UC_gUM8rL-Lrg6O3adPW9K1g', name: 'WION', category: 'india' },
-  { channelId: 'UCIvaYmXn910QMdemBG3v1pQ', name: 'Zee News', category: 'india' },
-  { channelId: 'UCYPvAwZP8pZhSMW8qs7cVCw', name: 'India Today', category: 'india' },
-  { channelId: 'UCttspZesZIDEwwpVIgoZtWQ', name: 'India TV', category: 'india' },
+  { channelId: 'UCZFMm1mMw0F81Z37aaEzTUA', name: 'NDTV', category: 'india', language: 'en' },
+  { channelId: 'UCf8w5m0YsRa8MHQ5bwSGmbw', name: 'Asianet News', category: 'india', language: 'ml' },
+  { channelId: 'UCP0uG-mcMImgKnJz-VjJZmQ', name: 'Manorama News', category: 'india', language: 'ml' },
+  { channelId: 'UC-f7r46JhYv78q5pGrO6ivA', name: 'MediaOne', category: 'india', language: 'ml' },
+  { channelId: 'UCNye-wNBqNL5ZzHSJj3l8Bg', name: 'Al Jazeera English', category: 'gcc', language: 'en' },
+  { channelId: 'UC_gUM8rL-Lrg6O3adPW9K1g', name: 'WION', category: 'india', language: 'en' },
+  { channelId: 'UCIvaYmXn910QMdemBG3v1pQ', name: 'Zee News', category: 'india', language: 'hi' },
+  { channelId: 'UCYPvAwZP8pZhSMW8qs7cVCw', name: 'India Today', category: 'india', language: 'en' },
+  { channelId: 'UCttspZesZIDEwwpVIgoZtWQ', name: 'India TV', category: 'india', language: 'hi' },
 ];
 
 /** Primary site navigation — top-level sections. Category pages via Explore. */

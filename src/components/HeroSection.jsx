@@ -7,16 +7,13 @@ import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import SafeImage from './SafeImage';
 import ShareButton from './ShareButton';
-import { useLanguage } from '../context/LanguageContext';
-import { localizeArticle } from '../utils/localizeArticle';
 import { getCategoryColor, getCategoryLabel } from '../utils/categoryColors';
 
 const HeroSection = ({ featured = [] }) => {
-  const { language } = useLanguage();
   if (!featured.length || !featured[0]?.slug) return null;
 
-  const main = localizeArticle(featured[0], language);
-  const secondary = featured.slice(1, 4).filter(a => a.slug).map(a => localizeArticle(a, language));
+  const main = featured[0];
+  const secondary = featured.slice(1, 4).filter(a => a.slug);
 
   return (
     <section className="relative">
@@ -32,7 +29,7 @@ const HeroSection = ({ featured = [] }) => {
               <div className="relative h-72 sm:h-80 lg:h-[420px] rounded-3xl overflow-hidden">
                 <SafeImage
                   src={main.imageUrl}
-                  alt={main.displayTitle}
+                  alt={main.title}
                   category={main.category}
                   width={1200}
                   height={420}
@@ -51,10 +48,10 @@ const HeroSection = ({ featured = [] }) => {
                     </span>
                   </div>
                   <h1 className="font-display font-bold text-2xl sm:text-3xl lg:text-4xl text-white leading-tight text-balance mb-3">
-                    {main.displayTitle}
+                    {main.title}
                   </h1>
                   <p className="text-sm text-gray-200 line-clamp-2 max-w-xl mb-4">
-                    {main.displaySummary}
+                    {main.summary}
                   </p>
                   <div className="flex items-center space-x-4 text-xs text-gray-300">
                     <span>{main.author}</span>
@@ -68,8 +65,8 @@ const HeroSection = ({ featured = [] }) => {
               </Link>
               <div className="absolute top-4 right-4 z-10">
                 <ShareButton
-                  title={main.displayTitle}
-                  text={main.displaySummary}
+                  title={main.title}
+                  text={main.summary}
                   path={`/article/${main.slug}`}
                   contentType="article"
                   size="sm"
@@ -92,7 +89,7 @@ const HeroSection = ({ featured = [] }) => {
                 >
                   <SafeImage
                     src={article.imageUrl}
-                    alt={article.displayTitle}
+                    alt={article.title}
                     category={article.category}
                     width={112}
                     height={112}
@@ -103,7 +100,7 @@ const HeroSection = ({ featured = [] }) => {
                     <div>
                       <span className="text-xs font-medium text-brand-600 dark:text-brand-400">{getCategoryLabel(article.category)}</span>
                       <h3 className="font-display font-bold text-sm lg:text-base text-gray-900 dark:text-white line-clamp-2 mt-1 group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors">
-                        {article.displayTitle}
+                        {article.title}
                       </h3>
                     </div>
                     <div className="flex items-center space-x-2 text-xs text-gray-500 mt-2">

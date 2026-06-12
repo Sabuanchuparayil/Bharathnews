@@ -10,7 +10,7 @@ const STORAGE_KEY = 'bharathnews_lang';
 
 export function LanguageProvider({ children }) {
   const { user } = useAuth();
-  const [language, setLanguageState] = useState('en');
+  const [language, setLanguageState] = useState('all');
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -20,7 +20,7 @@ export function LanguageProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    if (user?.language) {
+    if (user?.language && SUPPORTED_LANGUAGES.some(l => l.code === user.language)) {
       setLanguageState(user.language);
     }
   }, [user?.language]);
@@ -28,8 +28,6 @@ export function LanguageProvider({ children }) {
   const setLanguage = useCallback(async (code) => {
     setLanguageState(code);
     localStorage.setItem(STORAGE_KEY, code);
-    document.documentElement.lang = code;
-    document.documentElement.dir = code === 'ar' ? 'rtl' : 'ltr';
 
     if (user) {
       try {
@@ -42,11 +40,6 @@ export function LanguageProvider({ children }) {
       }
     }
   }, [user]);
-
-  useEffect(() => {
-    document.documentElement.lang = language;
-    document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
-  }, [language]);
 
   const currentLang = SUPPORTED_LANGUAGES.find(l => l.code === language) || SUPPORTED_LANGUAGES[0];
 

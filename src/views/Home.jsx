@@ -17,6 +17,8 @@ import EmptyState from '../components/EmptyState';
 import OnboardingModal from '../components/OnboardingModal';
 import TrendingHeroBanner from '../components/TrendingHeroBanner';
 import { getHomeCategories } from '../config/feeds.config';
+import { toFirestoreLanguageFilter } from '@/config/languages.config';
+import { useLanguage } from '../context/LanguageContext';
 import { getArticlesPage, getTrendingArticles, fetchUniqueArticles } from '../services/firestore';
 
 const PAGE_SIZE = 12;
@@ -35,6 +37,8 @@ function dedupeArticles(articles, excludeSlugs = new Set()) {
 
 const Home = () => {
   const searchParams = useSearchParams();
+  const { language } = useLanguage();
+  const langFilter = toFirestoreLanguageFilter(language);
   const [activeCategory, setActiveCategory] = useState('all');
   const [articles, setArticles] = useState([]);
   const [featuredArticles, setFeaturedArticles] = useState([]);
@@ -53,8 +57,8 @@ const Home = () => {
     try {
       const category = activeCategory === 'all' ? null : activeCategory;
       const [page, trending] = await Promise.all([
-        fetchUniqueArticles(category, PAGE_SIZE + FEATURED_COUNT),
-        getTrendingArticles(STORY_RING_COUNT + 4),
+        fetchUniqueArticles(category, PAGE_SIZE + FEATURED_COUNT, null, langFilter),
+        getTrendingArticles(STORY_RING_COUNT + 4, langFilter),
       ]);
 
       const featured = page.articles.slice(0, FEATURED_COUNT);
@@ -71,7 +75,7 @@ const Home = () => {
       setError('Unable to load stories. Please try again.');
     }
     setLoading(false);
-  }, [activeCategory]);
+  }, [activeCategory, langFilter]);
 
   useEffect(() => {
     const queryCategory = searchParams.get('category');
@@ -91,7 +95,7 @@ const Home = () => {
     setLoadingMore(true);
     try {
       const category = activeCategory === 'all' ? null : activeCategory;
-      const page = await fetchUniqueArticles(category, PAGE_SIZE, lastDoc);
+      const page = await fetchUniqueArticles(category, PAGE_SIZE, lastDoc, langFilter);
       setArticles(prev => {
         const existingSlugs = new Set([
           ...featuredArticles.map(a => a.slug),

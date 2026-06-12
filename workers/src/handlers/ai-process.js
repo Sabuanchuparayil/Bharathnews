@@ -86,22 +86,34 @@ async function processOneArticle(env, raw, token, targetLangs, settings) {
   const topics = raw.topics || [category];
   const qualityScore = raw.qualityScore || 6;
   const language = raw.detectedLanguage || raw.language || 'en';
+  const isNative = language !== 'en';
 
   let parsed;
-  try {
-    parsed = await generateMultilingualArticle(env, {
-      title, description, source, category, topics, targetLangs,
-    });
-  } catch (err) {
-    console.error(`Generation failed for "${title.slice(0, 40)}":`, err.message);
+  if (isNative) {
     parsed = {
       title,
-      summary: description.slice(0, 200) || title,
+      summary: description.slice(0, 300) || title,
       fullContent: description || title,
       topics,
       score: qualityScore,
       translations: {},
     };
+  } else {
+    try {
+      parsed = await generateMultilingualArticle(env, {
+        title, description, source, category, topics, targetLangs,
+      });
+    } catch (err) {
+      console.error(`Generation failed for "${title.slice(0, 40)}":`, err.message);
+      parsed = {
+        title,
+        summary: description.slice(0, 200) || title,
+        fullContent: description || title,
+        topics,
+        score: qualityScore,
+        translations: {},
+      };
+    }
   }
 
   const translationFields = buildTranslationFields(parsed.translations || {});

@@ -5,21 +5,15 @@ import Link from 'next/link';
 import { TrendingUp } from 'lucide-react';
 import SafeImage from './SafeImage';
 import ChannelFollowCTA from './ChannelFollowCTA';
-import { useLanguage } from '../context/LanguageContext';
-import { localizeArticles } from '../utils/localizeArticle';
 import { getCategoryLabel } from '../utils/categoryColors';
 
 export function MobileTrendingStrip({ articles = [] }) {
-  const { language } = useLanguage();
   const seen = new Set();
-  const items = localizeArticles(
-    articles.filter(a => {
-      if (!a?.slug || !a?.title || seen.has(a.slug)) return false;
-      seen.add(a.slug);
-      return true;
-    }),
-    language
-  ).slice(0, 6);
+  const items = articles.filter(a => {
+    if (!a?.slug || !a?.title || seen.has(a.slug)) return false;
+    seen.add(a.slug);
+    return true;
+  }).slice(0, 6);
 
   if (!items.length) return null;
 
@@ -42,7 +36,7 @@ export function MobileTrendingStrip({ articles = [] }) {
               <div className="relative h-24 rounded-xl overflow-hidden mb-2">
                 <SafeImage
                   src={article.imageUrl}
-                  alt={article.displayTitle}
+                  alt={article.title}
                   category={article.category}
                   width={176}
                   height={96}
@@ -54,7 +48,7 @@ export function MobileTrendingStrip({ articles = [] }) {
                 </span>
               </div>
               <p className="text-xs font-medium text-gray-900 dark:text-white line-clamp-2 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors leading-snug">
-                {article.displayTitle}
+                {article.title}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{getCategoryLabel(article.category)}</p>
             </Link>

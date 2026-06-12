@@ -12,8 +12,6 @@ import { useInterests } from '../context/InterestContext';
 import SafeImage from './SafeImage';
 import QuickReadSheet from './QuickReadSheet';
 import { getCategoryColor, getCategoryAccentBorder, getCategoryLabel } from '../utils/categoryColors';
-import { useLanguage } from '../context/LanguageContext';
-import { localizeArticle } from '../utils/localizeArticle';
 
 const HeartBurst = () => (
   <>
@@ -39,11 +37,9 @@ const HeartBurst = () => (
 const NewsCard = ({ article, variant = 'default', index = 0 }) => {
   const { user, isBookmarked, isLiked, toggleBookmark, toggleLike } = useAuth();
   const { trackShare, trackBookmark } = useInterests();
-  const { language } = useLanguage();
   const [showBurst, setShowBurst] = useState(false);
   const [quickRead, setQuickRead] = useState(false);
 
-  const localized = localizeArticle(article, language);
   const {
     id,
     slug = '',
@@ -54,9 +50,9 @@ const NewsCard = ({ article, variant = 'default', index = 0 }) => {
     readTime = 3,
     views = 0,
     source = '',
-  } = localized;
-  const title = localized.displayTitle || 'Untitled';
-  const summary = localized.displaySummary || '';
+  } = article;
+  const title = article.title || 'Untitled';
+  const summary = article.summary || '';
 
   const liked = id ? isLiked(id) : false;
   const bookmarked = id ? isBookmarked(id) : false;

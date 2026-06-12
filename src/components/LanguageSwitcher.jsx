@@ -11,25 +11,27 @@ export default function LanguageSwitcher({ compact = false }) {
   const ref = useRef(null);
   useClickOutside(ref, open, () => setOpen(false));
 
+  const displayLabel = currentLang.nativeName;
+
   return (
     <div className="relative" ref={ref}>
       <button
         type="button"
         onClick={() => setOpen(!open)}
         className="btn-ghost p-2.5 rounded-xl flex items-center space-x-1"
-        aria-label="Change language"
+        aria-label="Filter by language"
         aria-expanded={open}
       >
         <Globe className="w-5 h-5" />
         {!compact && (
           <>
-            <span className="text-sm font-medium hidden sm:inline">{currentLang.nativeName}</span>
+            <span className="text-sm font-medium hidden sm:inline">{displayLabel}</span>
             <ChevronDown className="w-3.5 h-3.5 hidden sm:inline" />
           </>
         )}
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-44 glass-card-solid rounded-2xl p-2 z-50 shadow-lg">
+        <div className="absolute right-0 mt-2 w-44 glass-card-solid rounded-2xl p-2 z-50 shadow-lg max-h-80 overflow-y-auto">
           {languages.map(lang => (
             <button
               key={lang.code}

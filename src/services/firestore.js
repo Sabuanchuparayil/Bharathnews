@@ -4,8 +4,8 @@ import { getDbAsync, firestoreOps } from '@/lib/firebase-client';
 
 const emptyPage = { articles: [], lastDoc: null, hasMore: false };
 
-export const getArticles = async (category = null, lastDoc = null, pageSize = 20) => {
-  const { articles } = await getArticlesPage(category, lastDoc, pageSize);
+export const getArticles = async (category = null, lastDoc = null, pageSize = 20, language = null) => {
+  const { articles } = await getArticlesPage(category, lastDoc, pageSize, language);
   return articles;
 };
 
@@ -54,14 +54,14 @@ export const getArticlesPage = async (category = null, lastDoc = null, pageSize 
 };
 
 /** Paginate until enough unique-by-slug articles are collected (duplicate-heavy datasets). */
-export const fetchUniqueArticles = async (category = null, minCount = 12, startAfterDoc = null) => {
+export const fetchUniqueArticles = async (category = null, minCount = 12, startAfterDoc = null, language = null) => {
   const seenSlugs = new Set();
   const articles = [];
   let lastDoc = startAfterDoc;
   let hasMore = true;
 
   while (articles.length < minCount && hasMore) {
-    const page = await getArticlesPage(category, lastDoc, 24);
+    const page = await getArticlesPage(category, lastDoc, 24, language);
     for (const article of page.articles) {
       if (!article?.slug || seenSlugs.has(article.slug)) continue;
       seenSlugs.add(article.slug);
@@ -87,16 +87,17 @@ export const getArticleBySlug = async (slug) => {
   return { id: d.id, ...d.data() };
 };
 
-export const getTrendingArticles = async (count = 5) => {
+export const getTrendingArticles = async (count = 5, language = null) => {
   const db = await getDbAsync();
   if (!db) return [];
   const { collection, query, orderBy, limit, getDocs } = await firestoreOps();
-  const q = query(collection(db, 'articles'), orderBy('views', 'desc'), limit(count + 10));
+  const q = query(collection(db, 'articles'), orderBy('views', 'desc'), limit(count + 30));
   const snapshot = await getDocs(q);
   const seen = new Set();
   const articles = [];
   for (const d of snapshot.docs) {
     const data = { id: d.id, ...d.data() };
+    if (language && language !== 'all' && data.language !== language) continue;
     if (!data.slug || seen.has(data.slug)) continue;
     seen.add(data.slug);
     articles.push(data);
@@ -105,13 +106,13 @@ export const getTrendingArticles = async (count = 5) => {
   return articles;
 };
 
-export const getArticlesByInterests = async (interests, count = 10) => {
+export const getArticlesByInterests = async (interests, count = 10, language = null) => {
   const topCategories = Object.entries(interests.categories || {})
     .sort(([, a], [, b]) => b - a)
     .slice(0, 3)
     .map(([cat]) => cat);
 
-  if (topCategories.length === 0) return getTrendingArticles(count);
+  if (topCategories.length === 0) return getTrendingArticles(count, language);
 
   const db = await getDbAsync();
   if (!db) return [];
@@ -120,13 +121,14 @@ export const getArticlesByInterests = async (interests, count = 10) => {
     collection(db, 'articles'),
     where('category', 'in', topCategories),
     orderBy('score', 'desc'),
-    limit(count + 10)
+    limit(count + 20)
   );
   const snapshot = await getDocs(q);
   const seen = new Set();
   return snapshot.docs
     .map(d => ({ id: d.id, ...d.data() }))
     .filter(a => {
+      if (language && language !== 'all' && a.language !== language) return false;
       if (!a.slug || seen.has(a.slug)) return false;
       seen.add(a.slug);
       return true;
@@ -228,17 +230,23 @@ export const getSubscriberCount = async () => {
   return snap.size;
 };
 
-export const searchArticles = async (searchTerm, pageSize = 30) => {
+export const searchArticles = async (searchTerm, pageSize = 30, language = null) => {
   const db = await getDbAsync();
   if (!db) return [];
   const { collection, query, where, orderBy, limit, getDocs } = await firestoreOps();
   const term = searchTerm.toLowerCase().trim();
   if (!term) return [];
 
-  const queries = [
-    query(collection(db, 'articles'), where('category', '==', term), orderBy('publishedAt', 'desc'), limit(pageSize)),
-    query(collection(db, 'articles'), orderBy('publishedAt', 'desc'), limit(200)),
-  ];
+  const langFilter = language && language !== 'all' ? where('language', '==', language) : null;
+  const queries = langFilter
+    ? [
+        query(collection(db, 'articles'), where('category', '==', term), langFilter, orderBy('publishedAt', 'desc'), limit(pageSize)),
+        query(collection(db, 'articles'), langFilter, orderBy('publishedAt', 'desc'), limit(200)),
+      ]
+    : [
+        query(collection(db, 'articles'), where('category', '==', term), orderBy('publishedAt', 'desc'), limit(pageSize)),
+        query(collection(db, 'articles'), orderBy('publishedAt', 'desc'), limit(200)),
+      ];
 
   const results = await Promise.all(queries.map(q => getDocs(q)));
   const seenIds = new Set();
@@ -282,13 +290,21 @@ export const getArticlesByIds = async (articleIds) => {
   return results.flatMap(snap => snap.docs.map(d => ({ id: d.id, ...d.data() })));
 };
 
-export const getVideoFeeds = async (category = null, count = 20) => {
+export const getVideoFeeds = async (category = null, count = 20, language = null) => {
   const db = await getDbAsync();
   if (!db) return [];
   const { collection, query, where, orderBy, limit, getDocs } = await firestoreOps();
-  let q = query(collection(db, 'videos'), orderBy('fetchedAt', 'desc'), limit(count));
-  if (category) {
-    q = query(collection(db, 'videos'), where('category', '==', category), orderBy('fetchedAt', 'desc'), limit(count));
+  const filters = [];
+  if (category) filters.push(where('category', '==', category));
+  if (language && language !== 'all') filters.push(where('language', '==', language));
+
+  let q;
+  if (filters.length === 0) {
+    q = query(collection(db, 'videos'), orderBy('fetchedAt', 'desc'), limit(count));
+  } else if (filters.length === 1) {
+    q = query(collection(db, 'videos'), filters[0], orderBy('fetchedAt', 'desc'), limit(count));
+  } else {
+    q = query(collection(db, 'videos'), ...filters, orderBy('fetchedAt', 'desc'), limit(count));
   }
   const snapshot = await getDocs(q);
   return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));

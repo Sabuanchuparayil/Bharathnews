@@ -1,29 +1,14 @@
-/**
- * Resolve article fields for the selected UI language.
- * Falls back to English canonical fields when translation missing.
- */
-export function localizeArticle(article, lang = 'en') {
+/** Pass-through — content is shown in its native language; no UI translation. */
+export function localizeArticle(article) {
   if (!article) return article;
-  if (lang === 'en' || !lang) {
-    return {
-      ...article,
-      displayTitle: article.title,
-      displaySummary: article.summary,
-      displayContent: article.fullContent,
-      isRtl: false,
-    };
-  }
-
-  const t = article.translations?.[lang];
   return {
     ...article,
-    displayTitle: t?.title || article.title,
-    displaySummary: t?.summary || article.summary,
-    displayContent: t?.fullContent || article.fullContent,
-    isRtl: lang === 'ar',
+    displayTitle: article.title,
+    displaySummary: article.summary,
+    displayContent: article.fullContent,
   };
 }
 
-export function localizeArticles(articles, lang = 'en') {
-  return articles.map(a => localizeArticle(a, lang));
+export function localizeArticles(articles) {
+  return articles.map(a => localizeArticle(a));
 }

@@ -49,7 +49,7 @@ export const AuthProvider = ({ children }) => {
               email: firebaseUser.email,
               photoURL: firebaseUser.photoURL,
               role: 'reader',
-              language: 'en',
+              language: 'all',
               createdAt: serverTimestamp(),
               interests: {
                 categories: {},

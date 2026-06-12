@@ -11,10 +11,14 @@ import TrendingHeroBanner from '../components/TrendingHeroBanner';
 import CategoryFilter from '../components/CategoryFilter';
 import { Newspaper } from 'lucide-react';
 import { fetchUniqueArticles, getTrendingArticles } from '../services/firestore';
+import { useLanguage } from '../context/LanguageContext';
+import { toFirestoreLanguageFilter } from '@/config/languages.config';
 
 const PAGE_SIZE = 12;
 
 const CategoryPage = ({ category, title }) => {
+  const { language } = useLanguage();
+  const langFilter = toFirestoreLanguageFilter(language);
   const [articles, setArticles] = useState([]);
   const [trendingArticles, setTrendingArticles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,8 +29,8 @@ const CategoryPage = ({ category, title }) => {
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      fetchUniqueArticles(category, PAGE_SIZE),
-      getTrendingArticles(5),
+      fetchUniqueArticles(category, PAGE_SIZE, null, langFilter),
+      getTrendingArticles(5, langFilter),
     ]).then(([page, trending]) => {
       setArticles(page.articles);
       setLastDoc(page.lastDoc);
@@ -34,13 +38,13 @@ const CategoryPage = ({ category, title }) => {
       setTrendingArticles(trending);
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, [category]);
+  }, [category, langFilter]);
 
   const handleLoadMore = async () => {
     if (!hasMore || loadingMore || !lastDoc) return;
     setLoadingMore(true);
     try {
-      const page = await fetchUniqueArticles(category, PAGE_SIZE, lastDoc);
+      const page = await fetchUniqueArticles(category, PAGE_SIZE, lastDoc, langFilter);
       setArticles(prev => {
         const existingSlugs = new Set(prev.map(a => a.slug));
         const fresh = page.articles.filter(a => a.slug && !existingSlugs.has(a.slug));
