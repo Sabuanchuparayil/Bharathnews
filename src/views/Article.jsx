@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
-import { ArrowLeft, Bookmark, Heart, Clock, Eye, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Bookmark, Heart, Clock, MessageCircle, ExternalLink } from 'lucide-react';
 import ShareButton from '../components/ShareButton';
 import ArticleReadLanguage from '../components/ArticleReadLanguage';
 import RelativeTime from '../components/RelativeTime';
@@ -16,11 +16,12 @@ import ArticleFloatingBar from '../components/ArticleFloatingBar';
 import ArticleRelated from '../components/ArticleRelated';
 import { resolveArticleImage } from '../utils/articleImages';
 import { getCategoryColor, getCategoryLabel } from '../utils/categoryColors';
-import { getArticleBySlug, trackArticleView } from '../services/firestore';
+import { getArticleBySlug } from '../services/articles';
 import { useAuth } from '../context/AuthContext';
 import { useInterests } from '../context/InterestContext';
 import { getArticleSourceLang, resolveArticleDisplay } from '../lib/article-translations';
 import { useLanguage } from '../context/LanguageContext';
+import { isExcerptOnly, normalizeArticleBody } from '@/lib/article-content';
 
 const Article = ({ slug: slugProp, initialArticle = null }) => {
   const slug = slugProp;
@@ -29,6 +30,8 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
   const { language: siteLanguage } = useLanguage();
   const [article, setArticle] = useState(initialArticle);
   const [runtimeTranslations, setRuntimeTranslations] = useState({});
+  const [enrichedContent, setEnrichedContent] = useState(null);
+  const [contentLoading, setContentLoading] = useState(false);
   const [readLang, setReadLang] = useState(() => getArticleSourceLang(initialArticle));
   const [loading, setLoading] = useState(!initialArticle);
   const startTime = useRef(Date.now());
@@ -46,7 +49,6 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
   useEffect(() => {
     if (initialArticle) {
       articleRef.current = initialArticle;
-      trackArticleView(initialArticle.id);
     }
   }, [initialArticle]);
 
@@ -57,7 +59,6 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
       if (data) {
         setArticle(data);
         articleRef.current = data;
-        trackArticleView(data.id);
       }
       setLoading(false);
     };
@@ -76,6 +77,26 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
     const src = getArticleSourceLang(article);
     if (siteLanguage !== src) setReadLang(siteLanguage);
   }, [article, siteLanguage]);
+
+  useEffect(() => {
+    if (!article?.slug) return undefined;
+    const current = normalizeArticleBody(article.fullContent || article.summary || '');
+    if (!isExcerptOnly(current, article.summary || '')) return undefined;
+
+    let cancelled = false;
+    setContentLoading(true);
+    fetch(`/api/articles/${encodeURIComponent(article.slug)}/full-content`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (!cancelled && data?.content && data.content.length > current.length) {
+          setEnrichedContent(data.content);
+        }
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setContentLoading(false); });
+
+    return () => { cancelled = true; };
+  }, [article?.slug, article?.fullContent, article?.summary]);
 
   const mergedArticle = useMemo(() => {
     if (!article) return null;
@@ -144,7 +165,9 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
   const resolved = resolveArticleDisplay(mergedArticle || article, readLang);
   const displayTitle = resolved?.title || article.title;
   const displaySummary = resolved?.summary || article.summary;
-  const displayContent = resolved?.fullContent || article.fullContent;
+  const displayContent = enrichedContent || resolved?.fullContent || article.fullContent;
+  const sourceUrl = article.sourceUrl || article.source_url;
+  const showSourceLink = isExcerptOnly(displayContent, displaySummary) && sourceUrl;
 
   return (
     <Layout>
@@ -174,7 +197,7 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
               {displayTitle}
             </h1>
             {displaySummary && (
-              <p className="text-lg text-gray-600 dark:text-gray-300 mb-4 leading-relaxed line-clamp-3">
+              <p className="text-lg text-gray-600 dark:text-gray-300 mb-4 leading-relaxed">
                 {displaySummary}
               </p>
             )}
@@ -183,10 +206,6 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
               <span className="flex items-center space-x-1">
                 <Clock className="w-4 h-4" />
                 <span><RelativeTime date={publishedDate} /></span>
-              </span>
-              <span className="flex items-center space-x-1">
-                <Eye className="w-4 h-4" />
-                <span>{article.views?.toLocaleString() || 0} views</span>
               </span>
               <span className="text-brand-600 dark:text-brand-400 font-medium">{readTime} min read</span>
               {article.source && <span>Source: {article.source}</span>}
@@ -215,9 +234,27 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
           <AdSlot className="mb-8" />
 
           <div className="article-drop-cap prose prose-lg dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 leading-relaxed mb-8">
-            {displayContent?.split('\n').filter(Boolean).map((paragraph, i) => (
+            {contentLoading && isExcerptOnly(displayContent, displaySummary) && (
+              <div className="space-y-3 mb-4">
+                <div className="h-4 skeleton rounded" />
+                <div className="h-4 skeleton rounded w-5/6" />
+                <div className="h-4 skeleton rounded w-4/6" />
+              </div>
+            )}
+            {displayContent?.split(/\n+/).filter(Boolean).map((paragraph, i) => (
               <p key={i}>{paragraph}</p>
             ))}
+            {showSourceLink && (
+              <a
+                href={sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 mt-6 px-4 py-3 rounded-xl bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 font-medium hover:bg-brand-100 dark:hover:bg-brand-950/60 transition-colors"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Read the complete story at {article.source || 'original source'}
+              </a>
+            )}
           </div>
 
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between py-4 border-t border-b border-gray-200 dark:border-gray-800 mb-8">

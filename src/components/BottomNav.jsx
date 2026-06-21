@@ -1,21 +1,22 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link'
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Compass, Play, Users, User } from 'lucide-react';
+import { Home, Compass, Trophy, Wallet, User } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { BOTTOM_NAV } from '../config/feeds.config';
+
+const ICONS = {
+  home: Home,
+  compass: Compass,
+  trophy: Trophy,
+  wallet: Wallet,
+  user: User,
+};
 
 const BottomNav = () => {
   const pathname = usePathname();
-
-  const tabs = [
-    { to: '/', icon: Home, label: 'Home' },
-    { to: '/explore', icon: Compass, label: 'Explore' },
-    { to: '/videos', icon: Play, label: 'Videos' },
-    { to: '/community', icon: Users, label: 'Community' },
-    { to: '/settings', icon: User, label: 'You' },
-  ];
 
   const isActive = (path) => {
     if (path === '/') return pathname === '/';
@@ -25,12 +26,13 @@ const BottomNav = () => {
   return (
     <nav className="bottom-nav safe-bottom">
       <div className="flex items-center justify-around h-16 px-2">
-        {tabs.map(tab => {
-          const active = isActive(tab.to);
+        {BOTTOM_NAV.map(tab => {
+          const Icon = ICONS[tab.icon] || Home;
+          const active = isActive(tab.path);
           return (
             <Link
-              key={tab.to}
-              href={tab.to}
+              key={tab.path}
+              href={tab.path}
               aria-current={active ? 'page' : undefined}
               className="flex flex-col items-center justify-center w-16 h-full relative"
             >
@@ -41,7 +43,7 @@ const BottomNav = () => {
                   transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                 />
               )}
-              <tab.icon
+              <Icon
                 className={`w-5 h-5 transition-colors duration-200 ${
                   active ? 'text-brand-600 dark:text-brand-400' : 'text-gray-400 dark:text-gray-500'
                 }`}

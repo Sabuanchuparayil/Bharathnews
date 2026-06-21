@@ -1,23 +1,18 @@
 import { generateMultilingualArticle } from '../lib/llama.js';
 import { resolveArticleImage, isCategoryFallbackImage } from '../lib/image-resolver.js';
-import { getFirebaseToken } from '../lib/firebase-auth.js';
-import { runQuery, FIRESTORE_BASE } from '../lib/firestore-rest.js';
+import { runQuery, insertRow, patchRawArticle } from '../lib/supabase-rest.js';
 import { loadSiteSettings } from '../lib/sources-loader.js';
 import { onArticlePublished } from '../lib/on-article-published.js';
 
-// Each article costs ~6 subrequests (status, image, AI gen, publish, status, telegram).
-// Native-language articles skip AI and cost ~4 subrequests.
 const BATCH_SIZE = 8;
 
 export async function handleAIProcess(env) {
-  const token = await getFirebaseToken(env);
   const settings = await loadSiteSettings(env);
   const targetLangs = Array.isArray(settings.targetLanguages)
     ? settings.targetLanguages
     : (settings.targetLanguages || 'ml,hi,ar').split(',').map(s => s.trim());
   const processed = [];
 
-  // Recover articles stuck in "processing" from previous failed runs
   const stuck = await runQuery(env, {
     from: [{ collectionId: 'raw_articles' }],
     where: {
@@ -29,11 +24,10 @@ export async function handleAIProcess(env) {
     },
     orderBy: [{ field: { fieldPath: 'createdAt' }, direction: 'ASCENDING' }],
     limit: 5,
-  }, token);
+  }, null);
+
   for (const doc of stuck) {
-    const slug = doc.slug || doc.id;
-    const docPath = `projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/raw_articles/${slug}`;
-    await patchStatus(docPath, token, 'classified').catch(() => {});
+    await patchRawArticle(env, doc.slug || doc.id, { status: 'classified' }).catch(() => {});
   }
   if (stuck.length) console.log(`Recovered ${stuck.length} stuck processing articles`);
 
@@ -48,19 +42,18 @@ export async function handleAIProcess(env) {
     },
     orderBy: [{ field: { fieldPath: 'createdAt' }, direction: 'ASCENDING' }],
     limit: BATCH_SIZE,
-  }, token);
+  }, null);
 
   console.log(`AI process: found ${docs.length} classified articles`);
 
   for (const raw of docs) {
     try {
-      const result = await processOneArticle(env, raw, token, targetLangs, settings);
+      const result = await processOneArticle(env, raw, targetLangs, settings);
       if (result) processed.push(result);
     } catch (err) {
       console.error('AI process error:', err.message);
       const slug = raw.slug || raw.id;
-      const docPath = `projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/raw_articles/${slug}`;
-      await patchStatus(docPath, token, 'classified').catch(() => {});
+      await patchRawArticle(env, slug, { status: 'classified' }).catch(() => {});
     }
   }
 
@@ -68,11 +61,10 @@ export async function handleAIProcess(env) {
   return { processed: processed.length, remaining: Math.max(0, docs.length - processed.length) };
 }
 
-async function processOneArticle(env, raw, token, targetLangs, settings) {
+async function processOneArticle(env, raw, targetLangs, settings) {
   const slug = raw.slug || raw.id;
-  const docPath = `projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/raw_articles/${slug}`;
 
-  await patchStatus(docPath, token, 'processing');
+  await patchRawArticle(env, slug, { status: 'processing' });
 
   const title = raw.title || '';
   const description = raw.description || '';
@@ -119,65 +111,50 @@ async function processOneArticle(env, raw, token, targetLangs, settings) {
     }
   }
 
-  const translationFields = buildTranslationFields(parsed.translations || {});
-
+  const translations = parsed.translations || {};
   const finalTitle = parsed.title || title || slug.replace(/-/g, ' ');
   if (!finalTitle.trim()) {
     console.error(`Skipping article with no title: ${slug}`);
-    await patchStatus(docPath, token, 'rejected');
+    await patchRawArticle(env, slug, { status: 'rejected' });
     return null;
   }
 
-  const publishRes = await fetch(`${FIRESTORE_BASE(env.FIREBASE_PROJECT_ID)}/articles`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      fields: {
-        title: { stringValue: finalTitle },
-        slug: { stringValue: slug },
-        summary: { stringValue: parsed.summary || '' },
-        fullContent: { stringValue: parsed.fullContent || '' },
-        translations: translationFields,
-        imageUrl: { stringValue: imageUrl },
-        category: { stringValue: category },
-        region: { stringValue: region },
-        language: { stringValue: language },
-        source: { stringValue: source },
-        author: { stringValue: 'The Bharath News' },
-        qualityScore: { doubleValue: qualityScore },
-        score: { integerValue: String(parsed.score || qualityScore) },
-        editorialStatus: { stringValue: 'published' },
-        clusterId: { stringValue: raw.clusterId || '' },
-        views: { integerValue: '0' },
-        likes: { integerValue: '0' },
-        comments: { integerValue: '0' },
-        shares: { integerValue: '0' },
-        topics: { arrayValue: { values: (parsed.topics || topics).map(t => ({ stringValue: t })) } },
-        publishedAt: { timestampValue: new Date().toISOString() },
-        distributed: { mapValue: { fields: {
-          telegram: { booleanValue: false },
-          facebook: { booleanValue: false },
-          whatsapp: { booleanValue: false },
-        }}},
-      },
-    }),
-  });
-
-  if (!publishRes.ok) {
-    const err = await publishRes.text();
-    console.error(`Failed to publish "${title.slice(0, 40)}":`, err.slice(0, 200));
-    await patchStatus(docPath, token, 'classified');
+  let articleRow;
+  try {
+    articleRow = await insertRow(env, 'articles', {
+      title: finalTitle,
+      slug,
+      summary: parsed.summary || '',
+      full_content: parsed.fullContent || '',
+      translations,
+      image_url: imageUrl,
+      category,
+      subcategory: raw.subcategory || null,
+      region,
+      language,
+      source,
+      author: 'The Bharath News',
+      quality_score: qualityScore,
+      score: parsed.score || qualityScore,
+      editorial_status: 'published',
+      cluster_id: raw.clusterId || '',
+      views: 0,
+      likes: 0,
+      comments: 0,
+      shares: 0,
+      topics: parsed.topics || topics,
+      published_at: new Date().toISOString(),
+      distributed: { telegram: false, facebook: false, whatsapp: false },
+    });
+  } catch (err) {
+    console.error(`Failed to publish "${title.slice(0, 40)}":`, err.message);
+    await patchRawArticle(env, slug, { status: 'classified' });
     return null;
   }
 
-  const publishData = await publishRes.json();
-  const articleId = publishData.name?.split('/').pop() || '';
+  await patchRawArticle(env, slug, { status: 'processed' });
 
-  await patchStatus(docPath, token, 'processed');
-
+  const articleId = articleRow?.id;
   if (articleId) {
     await onArticlePublished(env, {
       id: articleId,
@@ -187,33 +164,8 @@ async function processOneArticle(env, raw, token, targetLangs, settings) {
       editorialStatus: 'published',
       score: parsed.score || qualityScore,
       qualityScore,
-    }, token, settings);
+    }, null, settings);
   }
 
   return parsed.title || title;
-}
-
-function buildTranslationFields(translations) {
-  const langFields = {};
-  for (const [lang, content] of Object.entries(translations)) {
-    if (!content) continue;
-    langFields[lang] = {
-      mapValue: {
-        fields: {
-          title: { stringValue: content.title || '' },
-          summary: { stringValue: content.summary || '' },
-          fullContent: { stringValue: content.fullContent || '' },
-        },
-      },
-    };
-  }
-  return { mapValue: { fields: langFields } };
-}
-
-async function patchStatus(docPath, token, status) {
-  await fetch(`https://firestore.googleapis.com/v1/${docPath}?updateMask.fieldPaths=status`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ fields: { status: { stringValue: status } } }),
-  });
 }

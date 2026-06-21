@@ -27,17 +27,8 @@ put_secret() {
   printf '%s' "$value" | npx wrangler secret put "$name"
 }
 
-put_secret FIREBASE_PROJECT_ID "${FIREBASE_PROJECT_ID:-}"
-
-if [[ -n "${FIREBASE_SERVICE_ACCOUNT_JSON:-}" && -f "${FIREBASE_SERVICE_ACCOUNT_JSON}" ]]; then
-  FIREBASE_TOKEN="$(node "${ROOT}/scripts/generate-firebase-token.mjs" "${FIREBASE_SERVICE_ACCOUNT_JSON}")"
-  put_secret FIREBASE_TOKEN "$FIREBASE_TOKEN"
-elif [[ -n "${FIREBASE_TOKEN:-}" ]]; then
-  put_secret FIREBASE_TOKEN "$FIREBASE_TOKEN"
-else
-  echo "Warning: set FIREBASE_SERVICE_ACCOUNT_JSON or FIREBASE_TOKEN in secrets.env"
-fi
-
+put_secret SUPABASE_URL "${SUPABASE_URL:-}"
+put_secret SUPABASE_SERVICE_KEY "${SUPABASE_SERVICE_KEY:-${SUPABASE_SERVICE_ROLE_KEY:-}}"
 put_secret TELEGRAM_BOT_TOKEN "${TELEGRAM_BOT_TOKEN:-}"
 put_secret TELEGRAM_CHANNEL "${TELEGRAM_CHANNEL:-@TheBharathNews}"
 put_secret TELEGRAM_CHANNEL_ID "${TELEGRAM_CHANNEL_ID:-@TheBharathNews}"

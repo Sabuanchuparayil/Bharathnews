@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { verifyAdminRequest, createUserWithRole } from '@/lib/firebase-admin-server';
+import { verifyAdminRequest, createUserWithRole } from '@/lib/supabase-admin';
 
 export async function POST(request) {
   const auth = await verifyAdminRequest(request);

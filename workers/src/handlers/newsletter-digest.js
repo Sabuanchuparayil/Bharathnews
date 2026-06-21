@@ -1,5 +1,4 @@
-import { getFirebaseToken } from '../lib/firebase-auth.js';
-import { runQuery, FIRESTORE_BASE } from '../lib/firestore-rest.js';
+import { selectRows } from '../lib/supabase-rest.js';
 import { loadSiteSettings } from '../lib/sources-loader.js';
 import { resolveEmailConfig } from '../lib/site-settings.js';
 
@@ -17,17 +16,13 @@ export async function handleNewsletterDigest(env) {
     return { sent: 0, skipped: true, reason: 'no_api_key' };
   }
 
-  const token = await getFirebaseToken(env);
-  const subscribers = await runQuery(env, {
-    from: [{ collectionId: 'subscribers' }],
-    limit: 500,
-  }, token);
-
-  const articles = await runQuery(env, {
-    from: [{ collectionId: 'articles' }],
-    orderBy: [{ field: { fieldPath: 'publishedAt' }, direction: 'DESCENDING' }],
+  const subscribers = await selectRows(env, 'subscribers', { limit: 500 });
+  const articles = await selectRows(env, 'articles', {
+    filters: { editorial_status: 'published' },
+    order: 'published_at',
+    ascending: false,
     limit: 10,
-  }, token);
+  });
 
   if (!subscribers.length || !articles.length) {
     return { sent: 0, reason: 'no subscribers or articles' };

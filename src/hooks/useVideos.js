@@ -2,25 +2,34 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { YOUTUBE_CHANNELS } from '../config/feeds.config';
-import { getVideoFeeds } from '../services/firestore';
+import { getVideoFeeds } from '../services/articles';
 import { useLanguage } from '../context/LanguageContext';
 import { toFirestoreLanguageFilter } from '@/config/languages.config';
 
 const videoCache = new Map();
-const CACHE_TTL = 5 * 60 * 1000;
+const CACHE_TTL = 2 * 60 * 1000;
 
 function normalizeFirestoreVideo(video) {
+  const channelName = video.channelName || video.channel || '';
+  let channelId = video.channelId || null;
+  if (!channelId && channelName) {
+    const match = YOUTUBE_CHANNELS.find(c => c.name === channelName);
+    channelId = match?.channelId || null;
+  }
+
   const publishedAt = video.publishedAt?.seconds
     ? new Date(video.publishedAt.seconds * 1000).toISOString()
-    : video.publishedAt || video.fetchedAt?.seconds
-      ? new Date(video.fetchedAt.seconds * 1000).toISOString()
-      : null;
+    : typeof video.publishedAt === 'string'
+      ? video.publishedAt
+      : video.fetchedAt?.seconds
+        ? new Date(video.fetchedAt.seconds * 1000).toISOString()
+        : null;
 
   return {
     title: video.title,
     videoId: video.videoId,
-    channelName: video.channelName,
-    channelId: video.channelId,
+    channelName,
+    channelId,
     thumbnail: video.thumbnail || `https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`,
     publishedAt,
     category: video.category,
@@ -65,35 +74,56 @@ const fetchChannelVideos = async (channel) => {
   }).filter(Boolean);
 };
 
+function channelIdForVideo(video) {
+  if (video.channelId) return video.channelId;
+  const name = video.channelName || video.channel;
+  return YOUTUBE_CHANNELS.find(c => c.name === name)?.channelId || null;
+}
+
+function sortVideosByRecency(videos) {
+  return [...videos].sort((a, b) => {
+    const da = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+    const db = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+    return db - da;
+  });
+}
+
+function resolveVideoLanguageFilter(langFilter) {
+  // Regional YouTube feeds are ml/ta/te/kn/bn — English/Hindi site language should still show them
+  if (!langFilter || langFilter === 'all' || langFilter === 'en' || langFilter === 'hi') return null;
+  return langFilter;
+}
+
 async function fetchFromFirestore(channelId, langFilter) {
+  const videoLang = resolveVideoLanguageFilter(langFilter);
   const category = channelId === 'all' ? null : YOUTUBE_CHANNELS.find(c => c.channelId === channelId)?.category || null;
-  const count = channelId === 'all' ? 40 : 20;
+  const count = channelId === 'all' ? 120 : 40;
 
-  let videos = await getVideoFeeds(category, count, langFilter);
+  let videos = await getVideoFeeds(category, count, videoLang);
 
-  // Old videos may lack a language field — if filtered query is empty, retry without filter
-  // and apply client-side filtering (treats missing language as 'en').
-  if (!videos.length && langFilter) {
-    const all = await getVideoFeeds(category, count, null);
-    videos = all.filter(v => (v.language || 'en') === langFilter);
+  if (!videos.length && videoLang) {
+    videos = await getVideoFeeds(category, count, null);
+    videos = videos.filter(v => (v.language || 'en') === videoLang);
   }
 
   const filtered = channelId === 'all'
     ? videos
-    : videos.filter(v => v.channelId === channelId);
+    : videos.filter(v => channelIdForVideo(v) === channelId);
 
-  return filtered.map(normalizeFirestoreVideo).filter(v => v.videoId);
+  return sortVideosByRecency(
+    filtered.map(normalizeFirestoreVideo).filter(v => v.videoId)
+  );
 }
 
 async function fetchFromRss2Json(channelId, langFilter) {
+  const videoLang = resolveVideoLanguageFilter(langFilter);
   let channels = channelId === 'all'
     ? YOUTUBE_CHANNELS
     : YOUTUBE_CHANNELS.filter(c => c.channelId === channelId);
 
-  if (langFilter) {
-    const langChannels = channels.filter(c => c.language === langFilter);
+  if (videoLang) {
+    const langChannels = channels.filter(c => c.language === videoLang);
     if (langChannels.length) channels = langChannels;
-    // If no channels match the language, keep all channels so videos still load
   }
 
   const results = await Promise.allSettled(

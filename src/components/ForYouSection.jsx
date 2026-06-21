@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { toFirestoreLanguageFilter } from '@/config/languages.config';
-import { getArticlesByInterests } from '../services/firestore';
+import { getArticlesByInterests } from '../services/articles';
 import SafeImage from './SafeImage';
 import { getCategoryLabel } from '../utils/categoryColors';
 

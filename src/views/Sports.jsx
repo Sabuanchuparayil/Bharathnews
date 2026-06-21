@@ -1,4 +1,4 @@
 'use client';
 
-import CategoryPage from './CategoryPage';
-export default () => <CategoryPage category="sports" title="Sports News" />;
+import SectionPage from './SectionPage';
+export default () => <SectionPage sectionId="sports" title="Sports" layoutVariant="sports" />;

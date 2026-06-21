@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Eye, Heart } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import ShareButton from './ShareButton';
 import { getCategoryColor, getCategoryLabel } from '../utils/categoryColors';
 
@@ -32,7 +32,6 @@ const CreatorPostCard = ({ post }) => (
         </h3>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 line-clamp-2">{post.excerpt}</p>
         <div className="flex items-center gap-4 mt-3 text-xs text-gray-400">
-          <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {post.views || 0}</span>
           <span className="flex items-center gap-1"><Heart className="w-3 h-3" /> {post.likes || 0}</span>
         </div>
       </div>

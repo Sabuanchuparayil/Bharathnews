@@ -6,7 +6,7 @@ import { Search as SearchIcon } from 'lucide-react';
 import Layout from '../components/Layout';
 import NewsCard from '../components/NewsCard';
 import EmptyState from '../components/EmptyState';
-import { searchArticles } from '../services/firestore';
+import { searchArticles } from '../services/articles';
 import { useLanguage } from '../context/LanguageContext';
 import { toFirestoreLanguageFilter } from '@/config/languages.config';
 

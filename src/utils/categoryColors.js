@@ -65,6 +65,10 @@ export const getCategoryAccentBorder = (category) => {
     opinion: 'border-l-slate-500',
     breaking: 'border-l-red-500',
     world: 'border-l-violet-500',
+    money: 'border-l-blue-500',
+    tech: 'border-l-purple-500',
+    life: 'border-l-rose-500',
+    'top-stories': 'border-l-red-500',
   };
   return borders[key] || 'border-l-brand-500';
 };

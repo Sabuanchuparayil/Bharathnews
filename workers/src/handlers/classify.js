@@ -1,12 +1,10 @@
 import { classifyArticle } from '../lib/claude.js';
-import { getFirebaseToken } from '../lib/firebase-auth.js';
-import { runQuery, FIRESTORE_BASE } from '../lib/firestore-rest.js';
+import { runQuery, patchRawArticle } from '../lib/supabase-rest.js';
 import { loadSiteSettings } from '../lib/sources-loader.js';
 
 const BATCH_SIZE = 15;
 
 export async function handleClassify(env) {
-  const token = await getFirebaseToken(env);
   const settings = await loadSiteSettings(env);
   const threshold = settings.qualityThreshold || 6;
   const results = { classified: 0, rejected: 0, duplicate: 0 };
@@ -22,13 +20,13 @@ export async function handleClassify(env) {
     },
     orderBy: [{ field: { fieldPath: 'createdAt' }, direction: 'ASCENDING' }],
     limit: BATCH_SIZE,
-  }, token);
+  }, null);
 
   console.log(`Classify: found ${docs.length} pending articles`);
 
   for (const raw of docs) {
     try {
-      const outcome = await classifyOne(env, raw, token, threshold);
+      const outcome = await classifyOne(env, raw, threshold);
       results[outcome]++;
     } catch (err) {
       console.error(`Classify error for "${raw.title?.slice(0, 40)}":`, err.message);
@@ -39,8 +37,8 @@ export async function handleClassify(env) {
   return results;
 }
 
-async function classifyOne(env, raw, token, threshold) {
-  const docPath = `projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/raw_articles/${raw.slug || raw.id}`;
+async function classifyOne(env, raw, threshold) {
+  const slug = raw.slug || raw.id;
 
   const classification = await classifyArticle(env, {
     title: raw.title,
@@ -54,51 +52,49 @@ async function classifyOne(env, raw, token, threshold) {
   const isJunk = classification.isJunk === true;
   const relevance = classification.relevanceToAudience ?? qualityScore;
 
-  // Relevance is a soft signal — only hard-reject truly irrelevant content (score < 3)
   if (isJunk || qualityScore < threshold || relevance < 3) {
-    await patchRaw(docPath, token, {
+    await patchRawArticle(env, slug, {
       status: 'rejected',
-      editorialStatus: 'rejected',
-      qualityScore,
+      editorial_status: 'rejected',
+      quality_score: qualityScore,
       topics: classification.topics || [],
-      detectedLanguage: classification.detectedLanguage || raw.language || 'en',
+      detected_language: classification.detectedLanguage || raw.language || 'en',
       category: classification.category || raw.category,
-      clusterId: classification.dedupKey || '',
-      rejectReason: classification.reasons || 'Below quality threshold',
+      cluster_id: classification.dedupKey || '',
+      reject_reason: (classification.reasons || 'Below quality threshold').slice(0, 500),
     });
     return 'rejected';
   }
 
-  const duplicate = await checkDuplicate(env, classification.dedupKey, token);
+  const duplicate = await checkDuplicate(env, classification.dedupKey);
   if (duplicate) {
-    await patchRaw(docPath, token, {
+    await patchRawArticle(env, slug, {
       status: 'duplicate',
-      editorialStatus: 'duplicate',
-      qualityScore,
-      clusterId: classification.dedupKey || '',
+      editorial_status: 'duplicate',
+      quality_score: qualityScore,
+      cluster_id: classification.dedupKey || '',
       topics: classification.topics || [],
-      detectedLanguage: classification.detectedLanguage || raw.language || 'en',
+      detected_language: raw.language || classification.detectedLanguage || 'en',
       category: classification.category || raw.category,
     });
     return 'duplicate';
   }
 
-  await patchRaw(docPath, token, {
+  await patchRawArticle(env, slug, {
     status: 'classified',
-    editorialStatus: 'classified',
-    qualityScore,
+    editorial_status: 'classified',
+    quality_score: qualityScore,
     category: classification.category || raw.category,
     topics: classification.topics || [],
-    detectedLanguage: raw.language || classification.detectedLanguage || 'en',
-    clusterId: classification.dedupKey || '',
-    dedupKey: classification.dedupKey || '',
+    detected_language: raw.language || classification.detectedLanguage || 'en',
+    cluster_id: classification.dedupKey || '',
     language: raw.language || classification.detectedLanguage || 'en',
   });
 
   return 'classified';
 }
 
-async function checkDuplicate(env, dedupKey, token) {
+async function checkDuplicate(env, dedupKey) {
   if (!dedupKey) return false;
   const existing = await runQuery(env, {
     from: [{ collectionId: 'raw_articles' }],
@@ -110,28 +106,6 @@ async function checkDuplicate(env, dedupKey, token) {
       },
     },
     limit: 5,
-  }, token);
+  }, null);
   return existing.some(e => ['classified', 'processed'].includes(e.status));
-}
-
-async function patchRaw(docPath, token, data) {
-  const fields = {};
-  const mask = [];
-
-  for (const [key, val] of Object.entries(data)) {
-    mask.push(`updateMask.fieldPaths=${key}`);
-    if (typeof val === 'string') fields[key] = { stringValue: val };
-    else if (typeof val === 'number') fields[key] = Number.isInteger(val) ? { integerValue: String(val) } : { doubleValue: val };
-    else if (Array.isArray(val)) fields[key] = { arrayValue: { values: val.map(v => ({ stringValue: String(v) })) } };
-  }
-
-  const res = await fetch(`https://firestore.googleapis.com/v1/${docPath}?${mask.join('&')}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ fields }),
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`patchRaw failed (${res.status}): ${err.slice(0, 150)}`);
-  }
 }

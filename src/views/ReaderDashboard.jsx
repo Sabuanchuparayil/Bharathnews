@@ -7,7 +7,7 @@ import Layout from '../components/Layout';
 import NewsCard from '../components/NewsCard';
 import EmptyState from '../components/EmptyState';
 import { useAuth } from '../context/AuthContext';
-import { getArticlesByIds, getBookmarks } from '../services/firestore';
+import { getArticlesByIds, getBookmarks } from '../services/articles';
 import { getCategoryLabel } from '../utils/categoryColors';
 
 const ReaderDashboard = () => {

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Home, Search, ArrowLeft } from 'lucide-react';
 import Layout from '../components/Layout';
-import { CATEGORY_ROUTES } from '../config/feeds.config';
+import { HEADER_NAV } from '../config/feeds.config';
 
 const NotFound = () => (
   <Layout showChatbot={false}>
@@ -40,22 +40,17 @@ const NotFound = () => (
         <div className="mt-12 glass-card-solid rounded-2xl p-6 text-left">
           <h2 className="font-display font-bold text-sm text-gray-900 dark:text-white mb-3">Popular sections</h2>
           <div className="flex flex-wrap gap-2">
-            {[
-              CATEGORY_ROUTES.india,
-              CATEGORY_ROUTES.gcc,
-              CATEGORY_ROUTES.business,
-              CATEGORY_ROUTES.technology,
-              { path: '/videos', title: 'Videos' },
-            ].map(link => (
+            {HEADER_NAV.filter(n => n.sectionId !== 'top-stories').map(link => (
               <Link
                 key={link.path}
                 href={link.path}
                 className="category-pill category-pill-inactive text-xs flex items-center space-x-1"
               >
                 <ArrowLeft className="w-3 h-3 rotate-180" />
-                <span>{link.title.replace(' News', '')}</span>
+                <span>{link.label}</span>
               </Link>
             ))}
+            <Link href="/explore" className="category-pill category-pill-inactive text-xs">Discover</Link>
           </div>
         </div>
       </motion.div>

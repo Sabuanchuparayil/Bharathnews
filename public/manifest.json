@@ -1,7 +1,7 @@
 {
   "name": "The Bharath News — Breaking News from India & GCC",
   "short_name": "BharathNews",
-  "description": "Breaking news from India and GCC regions. Business, technology, sports, entertainment, and community stories in English and regional languages.",
+  "description": "India's multilingual news app — breaking news from India & Gulf/GCC in 8 languages. Politics, cricket, Bollywood, business, technology & NRI community updates. Trusted by Indians worldwide.",
   "start_url": "/?source=pwa",
   "id": "/?source=pwa",
   "display": "standalone",

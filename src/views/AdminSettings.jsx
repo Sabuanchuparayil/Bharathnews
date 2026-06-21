@@ -400,12 +400,57 @@ const AdminSettings = () => {
                 <Facebook className="w-5 h-5 text-blue-700" />
                 <h2 className="font-display font-bold text-lg">Facebook</h2>
               </div>
-              <Toggle label="Auto-post enabled" checked={i.facebook?.enabled === true} onChange={v => patchIntegration('facebook', { enabled: v })} />
+              <Toggle label="Show Facebook in footer" checked={i.facebook?.enabled !== false} onChange={v => patchIntegration('facebook', { enabled: v })} />
+              <Toggle
+                label="Post via Worker Graph API"
+                checked={i.facebook?.graphApiEnabled === true}
+                onChange={v => patchIntegration('facebook', { graphApiEnabled: v })}
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 mb-4">
+                Keep <strong>Graph API off</strong> when using <strong>dlvr.it</strong> (recommended).
+                Use <strong>two separate dlvr.it routes</strong> — English page gets English feed only,
+                Malayalam page gets Malayalam feed only. Target <strong>25 posts/day per page</strong>.
+              </p>
+              <div className="rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900 p-4 mb-4 text-xs text-gray-700 dark:text-gray-300 space-y-2">
+                <p className="font-semibold text-blue-900 dark:text-blue-200">dlvr.it settings (each route)</p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>Updates → Trickle: <strong>Post Newest Items First</strong></li>
+                  <li>Updates → Max posts per update: <strong>1</strong> (spreads quota across the day)</li>
+                  <li>Updates → Frequency: Every 5 minutes</li>
+                  <li>Detail → Post mode: Post Immediately</li>
+                </ul>
+              </div>
               <div className="grid sm:grid-cols-2 gap-4 mt-4">
-                <Field label="Page URL">
+                <Field label="Page URL (English)">
                   <input type="url" value={i.facebook?.pageUrl || ''} onChange={e => patchIntegration('facebook', { pageUrl: e.target.value })} className={inputClass} />
                 </Field>
-                <Field label="Min score to auto-post">
+                <Field label="Max posts/day per page (dlvr.it)">
+                  <input
+                    type="number"
+                    min={1}
+                    max={50}
+                    readOnly
+                    value={i.facebook?.dlvrItMaxPostsPerDay ?? 25}
+                    className={`${inputClass} w-24 bg-gray-50 dark:bg-gray-900`}
+                  />
+                </Field>
+                <Field label="dlvr.it RSS — English page only">
+                  <input
+                    type="url"
+                    readOnly
+                    value={i.facebook?.dlvrItEnglishFeedUrl || 'https://www.thebharathnews.com/feed.xml?lang=en&limit=25&hours=24'}
+                    className={`${inputClass} bg-gray-50 dark:bg-gray-900`}
+                  />
+                </Field>
+                <Field label="dlvr.it RSS — Malayalam page only">
+                  <input
+                    type="url"
+                    readOnly
+                    value={i.facebook?.dlvrItMalayalamFeedUrl || i.facebook?.dlvrItFeedUrl || 'https://www.thebharathnews.com/feed.xml?lang=ml&limit=25&hours=24'}
+                    className={`${inputClass} bg-gray-50 dark:bg-gray-900`}
+                  />
+                </Field>
+                <Field label="Min score (Graph API only)">
                   <input type="number" min={0} max={10} value={i.facebook?.minScoreToPost ?? 7} onChange={e => patchIntegration('facebook', { minScoreToPost: parseInt(e.target.value, 10) })} className={`${inputClass} w-24`} />
                 </Field>
               </div>

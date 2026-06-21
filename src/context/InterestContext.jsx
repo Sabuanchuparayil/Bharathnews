@@ -1,10 +1,9 @@
 'use client';
 
 import React, { createContext, useContext, useCallback } from 'react';
-import { getDbAsync, firestoreOps } from '@/lib/firebase-client';
+import { getSupabaseBrowser } from '@/lib/supabase-client';
 import { useAuth } from './AuthContext';
 import { updateInterests } from '../utils/interestScorer';
-import { trackUserInteraction } from '../services/firestore';
 
 const InterestContext = createContext(null);
 
@@ -13,38 +12,29 @@ export const useInterests = () => useContext(InterestContext);
 export const InterestProvider = ({ children }) => {
   const { user, userProfile } = useAuth();
 
+  const updateUserInterests = useCallback(async (article, action) => {
+    if (!user) return;
+    const supabase = getSupabaseBrowser();
+    if (!supabase) return;
+    const newInterests = updateInterests(userProfile?.interests || {}, article, action);
+    await supabase.from('users').update({ interests: newInterests }).eq('id', user.id);
+  }, [user, userProfile]);
+
   const trackRead = useCallback(async (article, durationSeconds) => {
     if (!user) return;
-    const db = await getDbAsync();
-    if (!db) return;
-    const { doc, updateDoc } = await firestoreOps();
-
     const action = durationSeconds > 30 ? 'read_long' : 'read';
-    const newInterests = updateInterests(userProfile?.interests || {}, article, action);
-
-    await updateDoc(doc(db, 'users', user.uid), { interests: newInterests });
-    await trackUserInteraction(user.uid, article.id, action, { duration: durationSeconds });
-  }, [user, userProfile]);
+    await updateUserInterests(article, action);
+  }, [user, updateUserInterests]);
 
   const trackShare = useCallback(async (article) => {
     if (!user) return;
-    const db = await getDbAsync();
-    if (!db) return;
-    const { doc, updateDoc } = await firestoreOps();
-    const newInterests = updateInterests(userProfile?.interests || {}, article, 'share');
-    await updateDoc(doc(db, 'users', user.uid), { interests: newInterests });
-    await trackUserInteraction(user.uid, article.id, 'share', {});
-  }, [user, userProfile]);
+    await updateUserInterests(article, 'share');
+  }, [user, updateUserInterests]);
 
   const trackBookmark = useCallback(async (article) => {
     if (!user) return;
-    const db = await getDbAsync();
-    if (!db) return;
-    const { doc, updateDoc } = await firestoreOps();
-    const newInterests = updateInterests(userProfile?.interests || {}, article, 'bookmark');
-    await updateDoc(doc(db, 'users', user.uid), { interests: newInterests });
-    await trackUserInteraction(user.uid, article.id, 'bookmark', {});
-  }, [user, userProfile]);
+    await updateUserInterests(article, 'bookmark');
+  }, [user, updateUserInterests]);
 
   return (
     <InterestContext.Provider value={{ trackRead, trackShare, trackBookmark }}>

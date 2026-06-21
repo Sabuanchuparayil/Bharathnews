@@ -1,8 +1,8 @@
-import { getFirebaseToken } from './firebase-auth.js';
-import { runQuery, FIRESTORE_BASE } from './firestore-rest.js';
 import { FALLBACK_RSS_FEEDS, FALLBACK_YOUTUBE_CHANNELS } from './feeds.js';
 import { REGIONAL_RSS_SOURCES } from './regional-feeds.js';
 import { DEFAULT_SITE_SETTINGS, mergeSiteSettings, parseTargetLanguages } from './site-settings.js';
+import { selectRows, patchRow, getSiteSettingsRow } from './supabase-rest.js';
+import { filterBlockedSources } from './blocked-sources.js';
 
 let cachedSources = null;
 let cacheTime = 0;
@@ -13,7 +13,6 @@ function slugifySource(name, type) {
   return type === 'youtube' ? `${base}-yt` : type === 'googlenews' ? `${base}-gn` : base;
 }
 
-/** MergeMerge regional feeds into Firestore sources so stale seeds still get regional coverage. */
 function ensureRegionalSources(sources) {
   const urls = new Set(sources.map(s => s.url).filter(Boolean));
   const merged = [...sources];
@@ -32,31 +31,32 @@ function ensureRegionalSources(sources) {
 
 export async function loadEnabledSources(env, type = null) {
   if (cachedSources && Date.now() - cacheTime < CACHE_TTL) {
-    const filtered = type ? cachedSources.filter(s => s.type === type) : cachedSources;
-    return filtered;
+    return type ? cachedSources.filter(s => s.type === type) : cachedSources;
   }
 
   try {
-    const token = await getFirebaseToken(env);
-    const query = {
-      from: [{ collectionId: 'sources' }],
-      where: {
-        fieldFilter: {
-          field: { fieldPath: 'enabled' },
-          op: 'EQUAL',
-          value: { booleanValue: true },
-        },
-      },
+    const docs = await selectRows(env, 'sources', {
+      filters: { enabled: true },
       limit: 200,
-    };
-    const docs = await runQuery(env, query, token);
+    });
     if (docs.length > 0) {
-      cachedSources = ensureRegionalSources(docs);
+      cachedSources = filterBlockedSources(ensureRegionalSources(docs));
       cacheTime = Date.now();
-      return type ? cachedSources.filter(s => s.type === type) : cachedSources;
+      const filtered = type ? cachedSources.filter(s => s.type === type) : cachedSources;
+      if (type === 'youtube' && !filtered.length) {
+        return FALLBACK_YOUTUBE_CHANNELS.map(f => ({
+          ...f,
+          id: `${f.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 60)}-yt`,
+          type: 'youtube',
+          enabled: true,
+          trustWeight: 0.8,
+          url: `https://www.youtube.com/feeds/videos.xml?channel_id=${f.channelId}`,
+        }));
+      }
+      return filtered;
     }
   } catch (err) {
-    console.error('Failed to load sources from Firestore, using fallback:', err.message);
+    console.error('Failed to load sources from Supabase, using fallback:', err.message);
   }
 
   const fallback = ensureRegionalSources([
@@ -68,34 +68,19 @@ export async function loadEnabledSources(env, type = null) {
   return type ? fallback.filter(s => s.type === type) : fallback;
 }
 
-export async function updateSourceHealth(env, sourceId, { itemCount = 0, lastError = '' } = {}, token) {
-  if (!sourceId || !token) return;
-  const url = `${FIRESTORE_BASE(env.FIREBASE_PROJECT_ID)}/sources/${sourceId}?updateMask.fieldPaths=lastFetchedAt&updateMask.fieldPaths=itemCount&updateMask.fieldPaths=lastError`;
-  await fetch(url, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({
-      fields: {
-        lastFetchedAt: { timestampValue: new Date().toISOString() },
-        itemCount: { integerValue: String(itemCount) },
-        lastError: { stringValue: lastError || '' },
-      },
-    }),
+export async function updateSourceHealth(env, sourceId, { itemCount = 0, lastError = '' } = {}) {
+  if (!sourceId) return;
+  await patchRow(env, 'sources', 'id', sourceId, {
+    last_fetched_at: new Date().toISOString(),
+    item_count: itemCount,
+    last_error: lastError || '',
   });
 }
 
 export async function loadSiteSettings(env) {
   try {
-    const token = await getFirebaseToken(env);
-    const res = await fetch(
-      `${FIRESTORE_BASE(env.FIREBASE_PROJECT_ID)}/settings/site`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    if (!res.ok) return mergeSiteSettings();
-    const data = await res.json();
-    const { parseFirestoreFields } = await import('./firestore-rest.js');
-    const parsed = parseFirestoreFields(data.fields || {});
-    return mergeSiteSettings(parsed);
+    const parsed = await getSiteSettingsRow(env);
+    return mergeSiteSettings(parsed || {});
   } catch {
     return mergeSiteSettings();
   }

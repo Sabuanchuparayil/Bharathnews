@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { verifyAdminRequest, getAdminApp } from '@/lib/firebase-admin-server';
-import { getFirestore } from 'firebase-admin/firestore';
+import { verifyAdminRequest } from '@/lib/supabase-admin';
+import { getSupabaseAdmin } from '@/lib/supabase-server';
+import { rowToApp } from '@/lib/db-mapper';
 import { onArticlePublished } from '@/lib/on-article-published';
 
 export async function POST(request) {
@@ -22,13 +23,13 @@ export async function POST(request) {
   }
 
   try {
-    const db = getFirestore(getAdminApp());
-    const snap = await db.collection('articles').doc(articleId).get();
-    if (!snap.exists) {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase.from('articles').select('*').eq('id', articleId).single();
+    if (error || !data) {
       return NextResponse.json({ error: 'Article not found.' }, { status: 404 });
     }
 
-    const article = { id: snap.id, ...snap.data() };
+    const article = rowToApp(data);
     await onArticlePublished(article);
 
     return NextResponse.json({ ok: true, telegramPostedAt: article.telegramPostedAt || 'attempted' });

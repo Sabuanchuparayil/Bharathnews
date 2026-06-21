@@ -39,7 +39,7 @@ const TrendingSection = ({ articles = [] }) => {
               <h4 className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2 group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors">
                 {article.title}
               </h4>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{getCategoryLabel(article.category)} · {(article.views || 0).toLocaleString()} views</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{getCategoryLabel(article.category)}</p>
             </div>
             <ArrowUpRight className="w-4 h-4 text-gray-300 group-hover:text-brand-500 transition-colors flex-shrink-0 mt-0.5" />
           </Link>

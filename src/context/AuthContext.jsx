@@ -1,8 +1,9 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { initClientFirebase } from '../config/firebase.config';
-import { toggleBookmark, toggleLike } from '../services/firestore';
+import { getSupabaseBrowser } from '@/lib/supabase-client';
+import { rowToApp } from '@/lib/db-mapper';
+import { toggleBookmark, toggleLike } from '../services/articles';
 import { setAuthCookies, clearAuthCookies } from '../lib/auth-cookies';
 import logger from '../utils/logger';
 
@@ -19,156 +20,135 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState(null);
 
+  const loadProfile = useCallback(async (supabase, userId) => {
+    const { data, error } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
+    if (error) {
+      logger.error('Failed to load user profile:', error);
+      return null;
+    }
+    if (data) return rowToApp(data);
+    return null;
+  }, []);
+
   useEffect(() => {
-    let unsubscribe;
+    const supabase = getSupabaseBrowser();
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
 
-    (async () => {
-      const fb = await initClientFirebase();
-      if (cancelled || !fb?.auth) {
-        setLoading(false);
-        return;
-      }
-
-      const { onAuthStateChanged } = await import('firebase/auth');
-      const { doc, setDoc, getDoc, serverTimestamp } = await import('firebase/firestore');
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (cancelled) return;
 
-      const { auth, db } = fb;
-      unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-        if (firebaseUser) {
-          setUser(firebaseUser);
-          try {
-            const profileRef = doc(db, 'users', firebaseUser.uid);
-            const profileSnap = await getDoc(profileRef);
-            if (profileSnap.exists()) {
-              const profile = profileSnap.data();
-              setUserProfile(profile);
-              setAuthCookies(profile.role || 'reader');
-            } else {
-              await setDoc(profileRef, {
-                displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
-                email: firebaseUser.email,
-                photoURL: firebaseUser.photoURL,
-                role: 'reader',
-                language: 'all',
-                createdAt: serverTimestamp(),
-                interests: {
-                  categories: {},
-                  topics: [],
-                  sources: {},
-                  readingTimes: {},
-                },
-                bookmarks: [],
-                likes: [],
-              });
-              const saved = await getDoc(profileRef);
-              setUserProfile(saved.data());
-              setAuthCookies('reader');
-            }
-          } catch (err) {
-            logger.error('Failed to load user profile:', err);
-            setUserProfile(null);
+      if (session?.user) {
+        setUser(session.user);
+        try {
+          let profile = await loadProfile(supabase, session.user.id);
+          if (!profile) {
+            await supabase.from('users').upsert({
+              id: session.user.id,
+              email: session.user.email,
+              display_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
+              photo_url: session.user.user_metadata?.avatar_url || null,
+              role: 'reader',
+              language: 'all',
+              interests: { categories: {}, topics: [], sources: {}, readingTimes: {} },
+              bookmarks: [],
+              likes: [],
+            });
+            profile = await loadProfile(supabase, session.user.id);
           }
-        } else {
-          setUser(null);
+          setUserProfile(profile);
+          setAuthCookies(profile?.role || 'reader');
+        } catch (err) {
+          logger.error('Failed to load user profile:', err);
           setUserProfile(null);
-          clearAuthCookies();
         }
-        setLoading(false);
-      });
-    })();
+      } else {
+        setUser(null);
+        setUserProfile(null);
+        clearAuthCookies();
+      }
+      setLoading(false);
+    });
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (cancelled) return;
+      if (!session) setLoading(false);
+    });
 
     return () => {
       cancelled = true;
-      unsubscribe?.();
+      subscription.unsubscribe();
     };
-  }, []);
+  }, [loadProfile]);
 
   const refreshUserProfile = useCallback(async () => {
     if (!user) return null;
-    const fb = await initClientFirebase();
-    if (!fb?.db) return null;
-    const { doc, getDoc } = await import('firebase/firestore');
-    const profileRef = doc(fb.db, 'users', user.uid);
-    const profileSnap = await getDoc(profileRef);
-    if (!profileSnap.exists()) return null;
-    const profile = profileSnap.data();
-    setUserProfile(profile);
-    setAuthCookies(profile.role || 'reader');
-    return profile;
-  }, [user]);
-
-  const loginWithGoogle = async () => {
-    const fb = await initClientFirebase();
-    if (!fb?.auth || !fb?.googleProvider) {
-      throw new Error('Authentication unavailable. Please refresh and try again.');
+    const supabase = getSupabaseBrowser();
+    if (!supabase) return null;
+    const profile = await loadProfile(supabase, user.id);
+    if (profile) {
+      setUserProfile(profile);
+      setAuthCookies(profile.role || 'reader');
     }
-    try {
-      const { signInWithPopup, signInWithRedirect } = await import('firebase/auth');
-      const inIframe = typeof window !== 'undefined' && window.self !== window.top;
-      if (inIframe) {
-        await signInWithRedirect(fb.auth, fb.googleProvider);
-        return;
-      }
-      await signInWithPopup(fb.auth, fb.googleProvider);
-    } catch (error) {
-      if (error?.code === 'auth/popup-blocked' || error?.code === 'auth/popup-closed-by-user') {
-        try {
-          const { signInWithRedirect } = await import('firebase/auth');
-          await signInWithRedirect(fb.auth, fb.googleProvider);
-          return;
-        } catch (redirectErr) {
-          logger.error('Google redirect login error:', redirectErr);
-          throw redirectErr;
-        }
-      }
+    return profile;
+  }, [user, loadProfile]);
+
+  const loginWithGoogle = async (nextPath = '/dashboard') => {
+    const supabase = getSupabaseBrowser();
+    if (!supabase) throw new Error('Authentication unavailable. Please refresh and try again.');
+    const safeNext = (nextPath?.startsWith('/') && !nextPath.startsWith('//')) ? nextPath : '/dashboard';
+    const redirectTo = typeof window !== 'undefined'
+      ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}`
+      : undefined;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo },
+    });
+    if (error) {
       logger.error('Login error:', error);
       throw error;
     }
   };
 
   const loginWithEmail = async (email, password) => {
-    const fb = await initClientFirebase();
-    if (!fb?.auth) throw new Error('Authentication unavailable. Please refresh and try again.');
-    try {
-      const { signInWithEmailAndPassword } = await import('firebase/auth');
-      await signInWithEmailAndPassword(fb.auth, email.trim(), password);
-    } catch (error) {
+    const supabase = getSupabaseBrowser();
+    if (!supabase) throw new Error('Authentication unavailable. Please refresh and try again.');
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+    if (error) {
       logger.error('Email login error:', error);
-      const code = error?.code || '';
-      if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') {
+      if (error.message?.includes('Invalid login')) {
         throw new Error('Invalid email or password.');
       }
-      if (code === 'auth/too-many-requests') {
-        throw new Error('Too many attempts. Please try again later.');
-      }
-      throw new Error(error?.message || 'Sign in failed.');
+      throw new Error(error.message || 'Sign in failed.');
     }
   };
 
   const logout = async () => {
-    const fb = await initClientFirebase();
-    if (!fb?.auth) return;
-    const { signOut } = await import('firebase/auth');
-    await signOut(fb.auth);
+    const supabase = getSupabaseBrowser();
+    if (!supabase) return;
+    await supabase.auth.signOut();
   };
 
   const updateUserInterests = async (interests) => {
     if (!user) return;
-    const fb = await initClientFirebase();
-    if (!fb?.db) return;
-    const { doc, updateDoc } = await import('firebase/firestore');
-    const profileRef = doc(fb.db, 'users', user.uid);
+    const supabase = getSupabaseBrowser();
+    if (!supabase) return;
     const updated = {
-      interests: {
-        ...userProfile?.interests,
-        ...interests,
-      },
-      onboardingComplete: true,
+      interests: { ...userProfile?.interests, ...interests },
+      onboarding_complete: true,
     };
-    await updateDoc(profileRef, updated);
-    setUserProfile(prev => ({ ...prev, ...updated }));
+    await supabase.from('users').update({
+      interests: updated.interests,
+      onboarding_complete: true,
+    }).eq('id', user.id);
+    setUserProfile(prev => ({ ...prev, ...updated, onboardingComplete: true }));
   };
 
   const isBookmarked = (articleId) => userProfile?.bookmarks?.includes(articleId) ?? false;
@@ -184,7 +164,7 @@ export const AuthProvider = ({ children }) => {
         : [...(prev.bookmarks || []), articleId],
     }));
     try {
-      await toggleBookmark(user.uid, articleId, bookmarked);
+      await toggleBookmark(user.id, articleId, bookmarked);
       return !bookmarked;
     } catch (error) {
       setUserProfile(prev => ({
@@ -208,7 +188,7 @@ export const AuthProvider = ({ children }) => {
         : [...(prev.likes || []), articleId],
     }));
     try {
-      await toggleLike(user.uid, articleId, liked);
+      await toggleLike(user.id, articleId, liked);
       return !liked;
     } catch (error) {
       setUserProfile(prev => ({

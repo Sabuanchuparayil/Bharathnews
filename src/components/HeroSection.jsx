@@ -2,13 +2,14 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, Clock } from 'lucide-react';
+import { TrendingUp, Clock, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import RelativeTime from './RelativeTime';
 import SafeImage from './SafeImage';
 import ShareButton from './ShareButton';
 import { getCategoryColor, getCategoryLabel } from '../utils/categoryColors';
 import { decodeHtmlEntities } from '../utils/formatters';
+import { articleDisplayDate } from '../utils/articleDates';
 
 const HeroSection = ({ featured = [] }) => {
   if (!featured.length || !featured[0]?.slug) return null;
@@ -55,11 +56,17 @@ const HeroSection = ({ featured = [] }) => {
                   <p className="text-sm text-gray-200 line-clamp-2 max-w-xl mb-4">
                     {decodeHtmlEntities(main.summary)}
                   </p>
-                  <div className="flex items-center space-x-4 text-xs text-gray-300">
-                    <span>{main.author}</span>
-                    <span className="flex items-center space-x-1">
-                      <Clock className="w-3 h-3" />
-                      <RelativeTime date={main.publishedAt} />
+                  <div className="flex items-center justify-between gap-4 mt-4">
+                    <div className="flex items-center space-x-4 text-xs text-gray-300">
+                      <span>{main.author}</span>
+                      <span className="flex items-center space-x-1">
+                        <Clock className="w-3 h-3" />
+                        <RelativeTime date={articleDisplayDate(main)} />
+                      </span>
+                    </div>
+                    <span className="inline-flex items-center gap-1 text-sm font-semibold text-white group-hover:underline">
+                      Read more
+                      <ArrowRight className="w-4 h-4" />
                     </span>
                   </div>
                 </div>
@@ -105,9 +112,15 @@ const HeroSection = ({ featured = [] }) => {
                         {article.title}
                       </h3>
                     </div>
-                    <div className="flex items-center space-x-2 text-xs text-gray-500 mt-2">
-                      <Clock className="w-3 h-3" />
-                      <RelativeTime date={article.publishedAt} />
+                    <div className="flex items-center justify-between gap-2 text-xs text-gray-500 mt-2">
+                      <span className="flex items-center space-x-2">
+                        <Clock className="w-3 h-3" />
+                        <RelativeTime date={articleDisplayDate(article)} />
+                      </span>
+                      <span className="inline-flex items-center gap-0.5 font-semibold text-brand-600 dark:text-brand-400 group-hover:underline">
+                        Read more
+                        <ArrowRight className="w-3 h-3" />
+                      </span>
                     </div>
                   </div>
                 </Link>

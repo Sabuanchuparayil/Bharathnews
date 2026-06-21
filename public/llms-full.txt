@@ -48,15 +48,16 @@ Each article contains:
 
 ### Languages Supported
 
-| Code | Language | Script |
-|------|----------|--------|
-| en | English | Latin |
-| hi | Hindi | Devanagari |
-| ml | Malayalam | Malayalam |
-| ta | Tamil | Tamil |
-| kn | Kannada | Kannada |
-| te | Telugu | Telugu |
-| bn | Bengali | Bengali |
+| Code | Language | Script | Primary Audience |
+|------|----------|--------|------------------|
+| en | English | Latin | Pan-India, International, NRI globally |
+| hi | Hindi | Devanagari | North India, National audience |
+| ml | Malayalam | Malayalam | Kerala, Gulf Malayali diaspora (UAE, Saudi, Qatar) |
+| ta | Tamil | Tamil | Tamil Nadu, Sri Lanka, Singapore, Malaysia |
+| kn | Kannada | Kannada | Karnataka, Bengaluru tech community |
+| te | Telugu | Telugu | Andhra Pradesh, Telangana, US Telugu diaspora |
+| bn | Bengali | Bengali | West Bengal, Bangladesh border |
+| ur | Urdu | Nastaliq | Urdu-speaking communities across India |
 
 ## URL Structure
 
@@ -69,4 +70,32 @@ Each article contains:
 
 ## Publishing
 
-Articles are published continuously throughout the day, sourced from verified RSS feeds of established news publishers. Content is classified and quality-scored using AI before publication.
+Articles are published continuously throughout the day (every 15 minutes), sourced from verified RSS feeds of established news publishers including BBC India, NDTV, The Hindu, Times of India, Economic Times, OneIndia, Google News India, and regional publishers. Content is classified and quality-scored using AI before publication.
+
+## RSS Feeds for Programmatic Access
+
+- All languages: https://www.thebharathnews.com/feed.xml
+- Malayalam only: https://www.thebharathnews.com/feed.xml?lang=ml
+- Hindi only: https://www.thebharathnews.com/feed.xml?lang=hi
+- Tamil only: https://www.thebharathnews.com/feed.xml?lang=ta
+- Telugu only: https://www.thebharathnews.com/feed.xml?lang=te
+- Kannada only: https://www.thebharathnews.com/feed.xml?lang=kn
+- Bengali only: https://www.thebharathnews.com/feed.xml?lang=bn
+
+## Social Distribution
+
+- Telegram: https://t.me/TheBharathNews (automated real-time posts)
+- Facebook (Main): https://www.facebook.com/TheBharathNewsIndia
+- Facebook (Malayalam): The Bharath News മലയാളം
+
+## Key Topics & Entities Frequently Covered
+
+India: Narendra Modi, BJP, Congress, Rahul Gandhi, Indian Parliament, Lok Sabha, Rajya Sabha, Supreme Court of India, Reserve Bank of India, SEBI, ISRO, Indian Railways, Digital India, Make in India, Ayushman Bharat, PM Kisan, Aadhaar, UPI, GST
+
+GCC/Gulf: Indian workers in Gulf, kafala system, Iqama rules, UAE golden visa, Saudi Vision 2030, expo Dubai, Indian schools Gulf, remittance to India, Indian restaurants Gulf, Indian associations UAE
+
+Cricket: BCCI, IPL 2026, T20 World Cup, Rohit Sharma, Virat Kohli, MS Dhoni, Jasprit Bumrah, India vs Australia, India vs England, World Test Championship
+
+Business: Sensex, Nifty 50, BSE, NSE, Reliance Industries, Tata Group, Adani Group, Infosys, TCS, Wipro, HDFC Bank, SBI, LIC IPO, mutual funds India, FDI India
+
+Technology: Bengaluru startups, Indian unicorns, AI India, 5G India, semiconductor manufacturing India, ONDC, CoWIN, Aarogya Setu

@@ -1,7 +1,7 @@
 import { REGIONAL_LANGUAGES } from './regional-feeds.js';
 
 /** Share of ingest/video slots reserved for regional-language sources. */
-export const REGIONAL_WEIGHT = 0.65;
+export const REGIONAL_WEIGHT = 0.80;
 
 export function isRegionalSource(source) {
   return REGIONAL_LANGUAGES.includes(source?.language);
@@ -11,7 +11,7 @@ export function isRegionalSource(source) {
  * Pick sources/channels for a run. Empty-category sources go first, then
  * ~65% regional (round-robin by language), then general English sources.
  */
-export function rotateSourcePick(sources, maxTotal, priorityCategories = new Set()) {
+export function rotateSourcePick(sources, maxTotal, priorityCategories = new Set(), priorityLanguages = new Set()) {
   const ts = (s) => (s.lastFetchedAt ? new Date(s.lastFetchedAt).getTime() : 0);
 
   const priority = [];
@@ -49,7 +49,12 @@ export function rotateSourcePick(sources, maxTotal, priorityCategories = new Set
     const lang = s.language || 'en';
     (byLang[lang] = byLang[lang] || []).push(s);
   }
-  const langs = Object.keys(byLang);
+  const langs = Object.keys(byLang).sort((a, b) => {
+    const aPri = priorityLanguages.has(a) ? 0 : 1;
+    const bPri = priorityLanguages.has(b) ? 0 : 1;
+    if (aPri !== bPri) return aPri - bPri;
+    return a.localeCompare(b);
+  });
   let added = true;
   while (picked.length < maxTotal && picked.filter(isRegionalSource).length < regionalQuota && added) {
     added = false;

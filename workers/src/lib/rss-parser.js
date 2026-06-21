@@ -57,6 +57,15 @@ function extractImage(itemXml) {
   return '';
 }
 
+function extractItemBody(block) {
+  const raw =
+    extractTag(block, 'content:encoded') ||
+    extractTag(block, 'content') ||
+    extractTag(block, 'description') ||
+    extractTag(block, 'summary');
+  return stripHtml(decodeEntities(raw)).slice(0, 15000);
+}
+
 function parseRSS(xml) {
   const items = [];
   const itemRegex = /<item[\s>]([\s\S]*?)<\/item>/gi;
@@ -64,12 +73,14 @@ function parseRSS(xml) {
 
   while ((match = itemRegex.exec(xml)) !== null) {
     const block = match[1];
+    const body = extractItemBody(block);
     items.push({
       // decodeEntities BEFORE stripHtml so CDATA-wrapped titles survive (stripHtml's
       // <[^>]*> regex would otherwise eat the whole <![CDATA[...]]> block).
       title: stripHtml(decodeEntities(extractTag(block, 'title'))),
       link: decodeEntities(extractTag(block, 'link') || extractTag(block, 'guid')).trim(),
-      description: stripHtml(decodeEntities(extractTag(block, 'description'))).slice(0, 500),
+      description: body,
+      body,
       pubDate: extractTag(block, 'pubDate') || extractTag(block, 'dc:date'),
       imageUrl: extractImage(block),
     });
@@ -85,12 +96,14 @@ function parseAtom(xml) {
   while ((match = entryRegex.exec(xml)) !== null) {
     const block = match[1];
     const link = extractAttr(block, 'link', 'href') || extractTag(block, 'link');
+    const body = stripHtml(decodeEntities(
+      extractTag(block, 'content') || extractTag(block, 'summary')
+    )).slice(0, 15000);
     items.push({
       title: stripHtml(decodeEntities(extractTag(block, 'title'))),
       link: decodeEntities(link).trim(),
-      description: stripHtml(decodeEntities(
-        extractTag(block, 'summary') || extractTag(block, 'content')
-      )).slice(0, 500),
+      description: body,
+      body,
       pubDate: extractTag(block, 'published') || extractTag(block, 'updated'),
       imageUrl: extractImage(block),
     });
@@ -116,13 +129,17 @@ async function fetchViaRss2Json(url) {
     if (!res.ok) return [];
     const data = await res.json();
     if (data.status !== 'ok' || !Array.isArray(data.items)) return [];
-    return data.items.map(item => ({
-      title: stripHtml(decodeEntities(item.title || '')),
-      link: item.link || item.guid || '',
-      description: stripHtml(decodeEntities(item.description || '')).slice(0, 500),
-      pubDate: item.pubDate || '',
-      imageUrl: item.thumbnail || item.enclosure?.link || '',
-    })).filter(i => i.title && i.link);
+    return data.items.map(item => {
+      const body = stripHtml(decodeEntities(item.description || item.content || '')).slice(0, 15000);
+      return {
+        title: stripHtml(decodeEntities(item.title || '')),
+        link: item.link || item.guid || '',
+        description: body,
+        body,
+        pubDate: item.pubDate || '',
+        imageUrl: item.thumbnail || item.enclosure?.link || '',
+      };
+    }).filter(i => i.title && i.link);
   } catch {
     return [];
   } finally {

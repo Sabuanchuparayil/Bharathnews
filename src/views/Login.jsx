@@ -50,7 +50,7 @@ export default function Login() {
     setError('');
     setSigningIn(true);
     try {
-      await loginWithGoogle();
+      await loginWithGoogle(next);
     } catch (err) {
       setError(err?.message || 'Sign in failed. Please try again.');
     } finally {

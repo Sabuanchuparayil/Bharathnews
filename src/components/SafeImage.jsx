@@ -1,40 +1,24 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { ImageOff } from 'lucide-react';
-import { getCategoryFallbackImage, LOCAL_PLACEHOLDER } from '../utils/articleImages';
+import { getUniqueFallbackImage, LOCAL_PLACEHOLDER } from '../utils/articleImages';
 
-const OPTIMIZABLE_HOSTS = new Set([
-  'images.unsplash.com',
-  'img.youtube.com',
-  'i.ytimg.com',
-  'firebasestorage.googleapis.com',
-  'ui-avatars.com',
-]);
+function isLocalPath(url) {
+  return url?.startsWith('/');
+}
 
-function canOptimize(url) {
-  if (!url || typeof url !== 'string') return false;
-  if (url.startsWith('/')) return true;
-  try {
-    const host = new URL(url).hostname;
-    if (OPTIMIZABLE_HOSTS.has(host)) return true;
-    for (const h of OPTIMIZABLE_HOSTS) {
-      if (host.endsWith('.' + h)) return true;
-    }
-    return host.endsWith('.googleusercontent.com')
-      || host.endsWith('.oneindia.com')
-      || host.endsWith('.hindustantimes.com')
-      || host.endsWith('.ndtv.com')
-      || host.endsWith('.indiatimes.com');
-  } catch {
-    return false;
-  }
+function useNextImage(url) {
+  if (!url) return false;
+  return isLocalPath(url) || url.startsWith('http');
 }
 
 const SafeImage = ({ src, alt = '', className = '', category, fallback, width = 800, height = 450, sizes, priority, ...props }) => {
-  const resolvedFallback = fallback || (category ? getCategoryFallbackImage(category, alt) : LOCAL_PLACEHOLDER);
-  const [imgSrc, setImgSrc] = useState(src || resolvedFallback);
+  const seed = alt || src || '';
+  const resolvedFallback = fallback || (category ? getUniqueFallbackImage(seed, category) : LOCAL_PLACEHOLDER);
+  const displaySrc = src || resolvedFallback;
+  const [imgSrc, setImgSrc] = useState(displaySrc);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
@@ -42,13 +26,38 @@ const SafeImage = ({ src, alt = '', className = '', category, fallback, width = 
     setFailed(false);
   }, [src, resolvedFallback]);
 
-  const optimized = useMemo(() => canOptimize(imgSrc), [imgSrc]);
+  const handleError = () => {
+    if (imgSrc !== resolvedFallback) {
+      setImgSrc(resolvedFallback);
+    } else if (imgSrc !== LOCAL_PLACEHOLDER) {
+      setImgSrc(LOCAL_PLACEHOLDER);
+    } else {
+      setFailed(true);
+    }
+  };
 
   if (failed) {
     return (
       <div className={`${className} bg-surface-2 dark:bg-dark-surface-2 flex items-center justify-center`}>
         <ImageOff className="w-[20%] max-w-8 min-w-5 text-gray-400" />
       </div>
+    );
+  }
+
+  // Native img for news CDNs — avoids Next.js optimizer issues and hotlink blocks
+  if (!useNextImage(imgSrc)) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={imgSrc}
+        alt={alt}
+        className={className}
+        loading={priority ? 'eager' : 'lazy'}
+        decoding="async"
+        referrerPolicy="no-referrer"
+        onError={handleError}
+        {...props}
+      />
     );
   }
 
@@ -62,16 +71,7 @@ const SafeImage = ({ src, alt = '', className = '', category, fallback, width = 
       loading={priority ? undefined : 'lazy'}
       priority={priority}
       sizes={sizes || '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw'}
-      unoptimized={!optimized}
-      onError={() => {
-        if (imgSrc !== resolvedFallback) {
-          setImgSrc(resolvedFallback);
-        } else if (imgSrc !== LOCAL_PLACEHOLDER) {
-          setImgSrc(LOCAL_PLACEHOLDER);
-        } else {
-          setFailed(true);
-        }
-      }}
+      onError={handleError}
       {...props}
     />
   );

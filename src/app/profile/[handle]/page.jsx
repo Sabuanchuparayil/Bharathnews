@@ -1,5 +1,5 @@
 import CreatorProfile from '@/views/CreatorProfile';
-import { getCreatorProfileBySlugServer } from '@/services/firestore-server';
+import { getCreatorProfileBySlugServer } from '@/services/articles-server';
 import { siteMetadata } from '@/lib/metadata';
 import { notFound } from 'next/navigation';
 

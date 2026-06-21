@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Plus, PenLine, BarChart3, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, PenLine, Clock, CheckCircle, XCircle } from 'lucide-react';
 import ShareButton from '../components/ShareButton';
 import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
@@ -69,7 +69,6 @@ const CreatorSpace = () => {
     total: posts.length,
     published: posts.filter(p => p.status === 'published').length,
     pending: posts.filter(p => p.status === 'pending').length,
-    views: posts.reduce((s, p) => s + (p.views || 0), 0),
   };
 
   return (
@@ -99,12 +98,11 @@ const CreatorSpace = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-3 gap-4 mb-8">
         {[
           { label: 'Total Posts', value: stats.total, icon: PenLine },
           { label: 'Published', value: stats.published, icon: CheckCircle },
           { label: 'Pending', value: stats.pending, icon: Clock },
-          { label: 'Total Views', value: stats.views, icon: BarChart3 },
         ].map(s => (
           <div key={s.label} className="glass-card-solid rounded-2xl p-4 text-center">
             <s.icon className="w-5 h-5 text-brand-600 mx-auto mb-2" />
@@ -147,8 +145,7 @@ const CreatorSpace = () => {
               <p className="text-xs text-gray-500">{post.type} · {getCategoryLabel(post.category)}</p>
             </div>
             <div className="text-right text-xs text-gray-400">
-              <p>{post.views || 0} views</p>
-              {post.status === 'rejected' && <XCircle className="w-4 h-4 text-red-500 ml-auto mt-1" />}
+              {post.status === 'rejected' && <XCircle className="w-4 h-4 text-red-500 ml-auto" />}
             </div>
           </Link>
         ))}

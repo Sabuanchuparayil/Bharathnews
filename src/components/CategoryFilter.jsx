@@ -6,7 +6,7 @@ import {
   LayoutGrid, Zap, Globe2, Building2, Briefcase, Cpu, Trophy, Clapperboard, HeartPulse,
   GraduationCap, UserSearch, Home, Plane, MessageSquareQuote,
 } from 'lucide-react';
-import { CATEGORIES, CATEGORY_ROUTES } from '../config/feeds.config';
+import { CATEGORIES, CATEGORY_ROUTES, SECTIONS } from '../config/feeds.config';
 import { getCategoryPillClasses } from '../utils/categoryColors';
 import { CATEGORY_ICONS } from '../utils/categoryIcons';
 
@@ -14,6 +14,8 @@ import { CATEGORY_ICONS } from '../utils/categoryIcons';
 export function getActiveCategoryFromPath(pathname, override) {
   if (override) return override;
   if (pathname === '/') return 'all';
+  const sectionMatch = Object.values(SECTIONS).find(s => s.path !== '/' && pathname.startsWith(s.path));
+  if (sectionMatch) return sectionMatch.id;
   const match = Object.entries(CATEGORY_ROUTES).find(([, route]) => route.path === pathname);
   return match ? match[0] : 'all';
 }
@@ -39,6 +41,11 @@ const CategoryFilter = ({
     if (catId === 'breaking') {
       if (pathname !== '/') router.push('/?category=breaking');
       else onCategoryChange?.('breaking');
+      return;
+    }
+    const section = SECTIONS[catId];
+    if (section) {
+      router.push(section.path);
       return;
     }
     const route = CATEGORY_ROUTES[catId];

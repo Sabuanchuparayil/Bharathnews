@@ -1,5 +1,5 @@
 import Article from '@/views/Article';
-import { getArticleBySlugServer } from '@/services/firestore-server';
+import { getArticleBySlugServer } from '@/services/articles-server';
 import { siteMetadata, articleJsonLd, breadcrumbJsonLd, safeJsonLd } from '@/lib/metadata';
 import { notFound } from 'next/navigation';
 

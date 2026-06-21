@@ -1,5 +1,5 @@
 import CreatorPost from '@/views/CreatorPost';
-import { getCreatorPostServer } from '@/services/firestore-server';
+import { getCreatorPostServer } from '@/services/articles-server';
 import { siteMetadata } from '@/lib/metadata';
 import { notFound } from 'next/navigation';
 

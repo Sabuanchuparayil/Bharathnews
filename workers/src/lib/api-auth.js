@@ -12,6 +12,11 @@ const PROTECTED_PREFIXES = [
   '/api/videos',
   '/api/newsletter',
   '/api/reset-rejected',
+  '/api/reset-pipeline',
+  '/api/fast-publish',
+  '/api/bulk-fill',
+  '/api/seo-update',
+  '/api/fix-slugs',
 ];
 
 export function isProtectedApiPath(pathname) {

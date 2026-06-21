@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, X, Zap } from 'lucide-react';
 import Link from 'next/link';
 import RelativeTime from './RelativeTime';
-import { getTrendingArticles } from '../services/firestore';
+import { articleDisplayDate } from '@/utils/articleDates';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 
 const NotificationsPanel = ({ isOpen, onClose }) => {
@@ -14,12 +14,15 @@ const NotificationsPanel = ({ isOpen, onClose }) => {
   const trapRef = useFocusTrap(isOpen);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) return undefined;
+    let cancelled = false;
     setLoading(true);
-    getTrendingArticles(6)
-      .then(setArticles)
-      .catch(() => setArticles([]))
-      .finally(() => setLoading(false));
+    import('../services/articles')
+      .then(({ getTrendingArticles }) => getTrendingArticles(6))
+      .then((data) => { if (!cancelled) setArticles(data); })
+      .catch(() => { if (!cancelled) setArticles([]); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [isOpen]);
 
   useEffect(() => {
@@ -82,7 +85,7 @@ const NotificationsPanel = ({ isOpen, onClose }) => {
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2">{article.title}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        <RelativeTime date={article.publishedAt} fallback="Just now" />
+                        <RelativeTime date={articleDisplayDate(article)} fallback="Just now" />
                       </p>
                     </div>
                   </Link>

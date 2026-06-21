@@ -1,174 +1,98 @@
 #!/usr/bin/env node
 /**
- * Create (or update) a Firebase Auth user with email/password and set Firestore role to admin.
- *
- * Usage:
- *   node scripts/create-admin-user.mjs <email> <password> [service-account.json]
+ * Create a new user with admin role (Supabase).
+ * Usage: node scripts/create-admin-user.mjs <email> <password> [displayName]
  */
-
 import { readFileSync, existsSync } from 'fs';
-import { createSign } from 'crypto';
+import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(__dirname, '..');
-const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'thebharathnews-app';
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+function loadEnv() {
+  for (const file of ['.env.local', '.env']) {
+    const path = join(ROOT, file);
+    if (!existsSync(path)) continue;
+    for (const line of readFileSync(path, 'utf8').split('\n')) {
+      const t = line.trim();
+      if (!t || t.startsWith('#')) continue;
+      const eq = t.indexOf('=');
+      if (eq <= 0) continue;
+      if (!process.env[t.slice(0, eq).trim()]) process.env[t.slice(0, eq).trim()] = t.slice(eq + 1).trim();
+    }
+  }
+}
+
+loadEnv();
+
+const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/$/, '');
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 const email = process.argv[2];
 const password = process.argv[3];
+const displayName = process.argv[4] || email?.split('@')[0] || 'Admin';
 
-if (!email?.includes('@') || !password) {
-  console.error('Usage: node scripts/create-admin-user.mjs <email> <password> [service-account.json]');
+if (!email || !email.includes('@') || !password || password.length < 8) {
+  console.error('Usage: node scripts/create-admin-user.mjs <email> <password> [displayName]');
+  console.error('  password must be at least 8 characters');
+  process.exit(1);
+}
+if (!SUPABASE_URL || !SERVICE_KEY) {
+  console.error('Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env.local');
   process.exit(1);
 }
 
-function resolveServiceAccountPath() {
-  let saPath = process.argv[4] || process.env.FIREBASE_SERVICE_ACCOUNT_JSON || process.env.GOOGLE_APPLICATION_CREDENTIALS || '';
-  if (!saPath) {
-    const secretsEnv = join(ROOT, 'workers/secrets.env');
-    if (existsSync(secretsEnv)) {
-      const line = readFileSync(secretsEnv, 'utf8')
-        .split('\n')
-        .find(l => l.startsWith('FIREBASE_SERVICE_ACCOUNT_JSON='));
-      if (line) saPath = line.split('=').slice(1).join('=').trim();
-    }
-  }
-  return saPath || null;
-}
+const headers = {
+  'Content-Type': 'application/json',
+  apikey: SERVICE_KEY,
+  Authorization: `Bearer ${SERVICE_KEY}`,
+};
 
-const saPath = resolveServiceAccountPath();
-if (!saPath || !existsSync(saPath)) {
-  console.error('Service account JSON not found.');
-  process.exit(1);
-}
-
-const sa = JSON.parse(readFileSync(saPath, 'utf8'));
-
-async function getAccessToken(scopes) {
-  const now = Math.floor(Date.now() / 1000);
-  const header = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
-  const payload = Buffer.from(JSON.stringify({
-    iss: sa.client_email,
-    sub: sa.client_email,
-    aud: 'https://oauth2.googleapis.com/token',
-    iat: now,
-    exp: now + 3600,
-    scope: scopes.join(' '),
-  })).toString('base64url');
-  const sign = createSign('RSA-SHA256');
-  sign.update(`${header}.${payload}`);
-  const sig = sign.sign(sa.private_key).toString('base64url');
-  const jwt = `${header}.${payload}.${sig}`;
-  const res = await fetch('https://oauth2.googleapis.com/token', {
+async function main() {
+  const createRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: jwt }),
-  });
-  const data = await res.json();
-  if (!data.access_token) throw new Error(data.error_description || data.error || 'Token request failed');
-  return data.access_token;
-}
-
-async function lookupUser(token, lookupEmail) {
-  const res = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${PROJECT_ID}/accounts:lookup`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ email: [lookupEmail] }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(JSON.stringify(data));
-  return data.users?.[0] || null;
-}
-
-async function createAuthUser(token) {
-  const res = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${PROJECT_ID}/accounts`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    headers,
     body: JSON.stringify({
       email,
       password,
-      emailVerified: true,
-      disabled: false,
+      email_confirm: true,
+      user_metadata: { full_name: displayName },
     }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(JSON.stringify(data));
-  return data.localId;
-}
 
-async function updateAuthPassword(token, localId) {
-  const res = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${PROJECT_ID}/accounts:update`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({
-      localId,
-      password,
-      emailVerified: true,
-      disabled: false,
-    }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(JSON.stringify(data));
-  return localId;
-}
-
-function toFields(obj) {
-  const fields = {};
-  for (const [k, v] of Object.entries(obj)) {
-    if (v === null || v === undefined) continue;
-    if (typeof v === 'string') fields[k] = { stringValue: v };
-    else if (typeof v === 'number') fields[k] = Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
-    else if (typeof v === 'boolean') fields[k] = { booleanValue: v };
-    else if (Array.isArray(v)) {
-      fields[k] = { arrayValue: { values: v.map(item => ({ stringValue: String(item) })) } };
+  const createData = await createRes.json();
+  if (!createRes.ok) {
+    if (createData.msg?.includes('already') || createRes.status === 422) {
+      console.error(`User ${email} already exists. Use 'npm run set-first-admin ${email}' to promote.`);
+    } else {
+      console.error('Failed to create user:', createData.msg || createData.message || JSON.stringify(createData));
     }
+    process.exit(1);
   }
-  return fields;
-}
 
-async function upsertFirestoreUser(token, uid) {
-  const docPath = `projects/${PROJECT_ID}/databases/(default)/documents/users/${uid}`;
-  const res = await fetch(`https://firestore.googleapis.com/v1/${docPath}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+  const userId = createData.id;
+
+  const upsertRes = await fetch(`${SUPABASE_URL}/rest/v1/users`, {
+    method: 'POST',
+    headers: { ...headers, Prefer: 'resolution=merge-duplicates,return=minimal' },
     body: JSON.stringify({
-      fields: toFields({
-        email,
-        displayName: email.split('@')[0],
-        role: 'admin',
-        language: 'all',
-        bookmarks: [],
-        likes: [],
-        interests: { categories: {}, topics: [], sources: {}, readingTimes: {} },
-      }),
+      id: userId,
+      email,
+      display_name: displayName,
+      role: 'admin',
+      language: 'all',
+      bookmarks: [],
+      likes: [],
+      interests: { categories: {}, topics: [], sources: {}, readingTimes: {} },
     }),
   });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Firestore upsert failed: ${err}`);
+
+  if (!upsertRes.ok) {
+    console.error('User created in Auth but profile upsert failed:', await upsertRes.text());
+    process.exit(1);
   }
+
+  console.log(`✓ Admin user created: ${email} (id: ${userId})`);
 }
 
-const authToken = await getAccessToken([
-  'https://www.googleapis.com/auth/identitytoolkit',
-  'https://www.googleapis.com/auth/cloud-platform',
-]);
-
-let uid;
-const existing = await lookupUser(authToken, email).catch(() => null);
-
-if (existing?.localId) {
-  uid = existing.localId;
-  console.log(`User already exists (${uid}), updating password and admin role…`);
-  await updateAuthPassword(authToken, uid);
-} else {
-  console.log('Creating new Firebase Auth user…');
-  uid = await createAuthUser(authToken);
-}
-
-const dbToken = await getAccessToken(['https://www.googleapis.com/auth/datastore']);
-await upsertFirestoreUser(dbToken, uid);
-
-console.log(`✓ Admin ready: ${email} (uid: ${uid})`);
-console.log('Sign in at /login with email and password.');
+main().catch(err => { console.error(err); process.exit(1); });

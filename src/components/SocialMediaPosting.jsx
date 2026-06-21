@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send, AlertCircle, TrendingUp, Copy, CheckCircle,
-  Zap, BarChart3, Eye, Heart, ExternalLink, ChevronDown, ChevronUp,
+  Zap, BarChart3, Heart, ExternalLink, ChevronDown, ChevronUp,
   Flame, ArrowUpRight, Calendar, Sparkles
 } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -71,7 +71,6 @@ const PostSuggestionCard = ({ suggestion, onPost }) => {
             </div>
             <h3 className="font-display font-bold text-base text-gray-900 dark:text-white line-clamp-2">{article.title}</h3>
             <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-              <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{(article.views || 0).toLocaleString()}</span>
               <span className="flex items-center gap-1"><Heart className="w-3 h-3" />{article.likes || 0}</span>
               <span>{getCategoryLabel(article.category)}</span>
             </div>

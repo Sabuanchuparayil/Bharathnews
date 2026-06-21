@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import {
   getArticleBySlugAdmin,
   saveArticleTranslation,
-} from '@/lib/firebase-admin-server';
+} from '@/lib/supabase-admin';
 import { getStoredTranslation } from '@/lib/article-translations';
 
 const WORKER_URL = (process.env.NEXT_PUBLIC_WORKER_URL || '').replace(/\/$/, '');

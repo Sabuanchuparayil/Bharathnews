@@ -1,38 +1,81 @@
 # The Bharath News
 
-> Breaking news from India and GCC regions. Business, technology, sports, entertainment, and community stories in English, Hindi, Malayalam, Tamil, Kannada, Telugu, and Bengali.
+> India's leading multilingual news aggregator serving breaking news from India and GCC/Gulf countries to 1.4 billion Indians and the global Indian diaspora. Real-time coverage in 8 languages.
 
 ## About
 
-The Bharath News is a multilingual digital news platform covering India and the Gulf Cooperation Council (GCC) regions. We aggregate, curate, and deliver news across multiple categories and regional languages.
+The Bharath News is a comprehensive multilingual digital news platform delivering real-time breaking news from India and the Gulf Cooperation Council (GCC) countries. We serve the Indian population domestically and the massive NRI (Non-Resident Indian) community across UAE, Saudi Arabia, Qatar, Bahrain, Kuwait, and Oman with news in their native languages.
+
+## Target Audience
+
+- Indians living in India seeking latest news in their regional language
+- NRI (Non-Resident Indians) in Gulf/GCC countries staying connected with home
+- Indian diaspora worldwide interested in India and Gulf affairs
+- Business professionals tracking Indian economy, stock markets, and startups
+- Cricket and sports enthusiasts following Indian sports
+- Students tracking exam results, education policy, and career opportunities
 
 ## Content Categories
 
-- India News: Politics, economy, and social affairs in India
-- GCC News: News from UAE, Saudi Arabia, Qatar, Kuwait, Bahrain, and Oman
-- Business: Stock markets, economy, corporate news, startups
-- Technology: Tech industry, AI, gadgets, startups, digital trends
-- Sports: Cricket, football, Olympics, IPL, and other sports
-- Entertainment: Bollywood, movies, TV, celebrities, OTT
-- Health & Wellness: Medical news, fitness, mental health
-- Education: Exams, universities, scholarships, education policy
-- Jobs & Careers: Government jobs, private sector, recruitment
-- Real Estate: Property market, housing, real estate investment
-- World News: International affairs, global politics
-- Lifestyle & Travel: Food, fashion, travel destinations
+- **India News**: Parliament sessions, state politics (all 28 states & 8 UTs), Supreme Court verdicts, election results, government schemes, Modi government updates, opposition news, policy changes
+- **GCC/Gulf News**: UAE laws affecting Indians, Saudi Arabia Iqama updates, Qatar labor laws, Indian community events in Gulf, Gulf job market, remittance policies, visa rules for Indians
+- **Kerala News (മലയാളം)**: State politics, festivals, Gulf Malayali community, Onam, education, floods, CPM-Congress politics, IT sector Technopark
+- **Tamil Nadu News (தமிழ்)**: Dravidian politics, Chennai developments, Jallikattu, Tamil cinema, AIADMK-DMK, auto sector
+- **Telugu News (తెలుగు)**: Andhra Pradesh, Telangana, Hyderabad IT, Telugu cinema Tollywood, Amaravati capital
+- **Karnataka News (ಕನ್ನಡ)**: Bengaluru tech hub, Karnataka politics, Kannada cinema Sandalwood
+- **Bengali News (বাংলা)**: West Bengal politics, Kolkata, Durga Puja, TMC-BJP, Bengal cultural events
+- **Hindi News (हिंदी)**: National politics, UP Bihar MP news, Bollywood, North India affairs, agriculture
+- **Business & Economy**: Sensex, Nifty, BSE/NSE stock market, Indian startups, IPO listings, RBI monetary policy, rupee exchange rate, gold prices India, cryptocurrency India
+- **Technology**: Indian tech companies (TCS, Infosys, Wipro), AI in India, Digital India, UPI, 5G rollout, EV market India, ISRO space missions
+- **Cricket & Sports**: BCCI, IPL, India national team, World Cup, T20, ODI, Test cricket, Virat Kohli, Rohit Sharma, Olympic athletes, ISL football, Pro Kabaddi
+- **Bollywood & Entertainment**: Hindi cinema, Shah Rukh Khan, Salman Khan, South Indian films, OTT releases, Bigg Boss, Indian Idol
+- **Education**: UPSC CSE results, JEE Advanced, NEET, CBSE board exams, UGC NET, state PSC, competitive exam notifications, scholarship programs
+- **Jobs & Careers**: Government jobs (Sarkari Naukri), SSC, Railway recruitment, bank exams, defense jobs, private sector hiring
+- **Health**: AIIMS, Indian healthcare, Ayurveda, yoga, pandemic updates, medical college admissions
+- **Real Estate**: Property prices Mumbai Delhi Bangalore, RERA updates, home loan rates, NRI property investment
 
-## Languages
+## Languages Supported
 
-Content is available in: English, Hindi, Malayalam, Tamil, Kannada, Telugu, Bengali
+- **English** (en) — Pan-India and international audience
+- **Hindi** (hi) — हिन्दी — North India, national language
+- **Malayalam** (ml) — മലയാളം — Kerala, Gulf Malayali community
+- **Tamil** (ta) — தமிழ் — Tamil Nadu, Sri Lankan Tamils, Singapore
+- **Telugu** (te) — తెలుగు — Andhra Pradesh, Telangana
+- **Kannada** (kn) — ಕನ್ನಡ — Karnataka
+- **Bengali** (bn) — বাংলা — West Bengal, Bangladesh border regions
+- **Urdu** (ur) — اردو — Urdu-speaking communities across India
 
-## Website
+## Geographic Coverage
 
-URL: https://www.thebharathnews.com
+### India (All States)
+Jammu & Kashmir, Himachal Pradesh, Punjab, Uttarakhand, Haryana, Delhi NCR, Rajasthan, Uttar Pradesh, Bihar, Jharkhand, West Bengal, Sikkim, Assam, Meghalaya, Tripura, Mizoram, Manipur, Nagaland, Arunachal Pradesh, Odisha, Chhattisgarh, Madhya Pradesh, Gujarat, Maharashtra, Goa, Karnataka, Andhra Pradesh, Telangana, Tamil Nadu, Kerala, Puducherry, Lakshadweep, Andaman Nicobar
 
-## API
+### Gulf Cooperation Council (GCC)
+United Arab Emirates (Dubai, Abu Dhabi, Sharjah), Saudi Arabia (Riyadh, Jeddah, Dammam), Qatar (Doha), Bahrain (Manama), Kuwait (Kuwait City), Oman (Muscat)
 
-Articles are available via the website. Each article has a canonical URL at /article/{slug}.
+## Access Points
+
+- **Website**: https://www.thebharathnews.com
+- **RSS Feed (All)**: https://www.thebharathnews.com/feed.xml
+- **RSS Feed (Malayalam)**: https://www.thebharathnews.com/feed.xml?lang=ml
+- **RSS Feed (Hindi)**: https://www.thebharathnews.com/feed.xml?lang=hi
+- **RSS Feed (Tamil)**: https://www.thebharathnews.com/feed.xml?lang=ta
+- **RSS Feed (Telugu)**: https://www.thebharathnews.com/feed.xml?lang=te
+- **RSS Feed (Kannada)**: https://www.thebharathnews.com/feed.xml?lang=kn
+- **RSS Feed (Bengali)**: https://www.thebharathnews.com/feed.xml?lang=bn
+- **Telegram Channel**: https://t.me/TheBharathNews
+- **Facebook**: https://www.facebook.com/TheBharathNewsIndia
+
+## Article Structure
+
+Each article has a canonical URL: `https://www.thebharathnews.com/article/{slug}`
+Articles include: title, summary, full content, category, language, source attribution, publication date, and images.
+
+## For AI Agents
+
+This site is fully accessible to AI crawlers. We welcome indexing by search engines and AI systems. Our content is factual news aggregation with source attribution. Articles are updated in real-time (every 15 minutes) from verified Indian and international news sources including BBC, NDTV, Times of India, The Hindu, Economic Times, OneIndia, Google News, and regional publishers.
 
 ## Contact
 
-Visit https://www.thebharathnews.com for more information.
+Website: https://www.thebharathnews.com/contact
+Email: bharathnewsweb@gmail.com

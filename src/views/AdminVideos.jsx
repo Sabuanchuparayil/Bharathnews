@@ -57,21 +57,25 @@ const AdminVideos = () => {
           <ArrowLeft className="w-4 h-4" /> Back to Dashboard
         </Link>
         <h1 className="font-display font-bold text-3xl mb-2">Video Catalog</h1>
-        <p className="text-gray-500 mb-8">{videos.length} videos in Firestore</p>
+        <p className="text-gray-500 mb-8">{videos.length} videos in catalog</p>
 
         <div className="space-y-2">
-          {videos.map(v => (
+          {videos.map(v => {
+            const thumb = v.thumbnail || (v.videoId ? `https://img.youtube.com/vi/${v.videoId}/mqdefault.jpg` : '');
+            const watchUrl = v.videoId ? `https://www.youtube.com/watch?v=${v.videoId}` : '';
+            const channelLabel = v.channelName || v.channel || v.channelId || 'Unknown channel';
+            return (
             <div key={v.id} className="glass-card-solid rounded-xl p-4 flex items-center gap-4">
-              {v.thumbnailUrl && (
-                <img src={v.thumbnailUrl} alt="" className="w-24 h-14 object-cover rounded-lg flex-shrink-0" />
+              {thumb && (
+                <img src={thumb} alt="" className="w-24 h-14 object-cover rounded-lg flex-shrink-0" />
               )}
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm truncate">{v.title || v.id}</p>
-                <p className="text-xs text-gray-500">{v.channelName || v.channelId} · {v.language || 'en'}</p>
+                <p className="text-xs text-gray-500">{channelLabel} · {v.language || 'en'}</p>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                {v.videoUrl && (
-                  <a href={v.videoUrl} target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+                {watchUrl && (
+                  <a href={watchUrl} target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
                     <ExternalLink className="w-4 h-4 text-gray-500" />
                   </a>
                 )}
@@ -80,7 +84,8 @@ const AdminVideos = () => {
                 </button>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </Layout>

@@ -29,8 +29,18 @@ const Privacy = () => (
         <a href="mailto:privacy@thebharathnews.com" className="text-brand-600 dark:text-brand-400 hover:underline">privacy@thebharathnews.com</a>.
         {' '}You can also lodge a complaint with your local data-protection authority.
       </p>
+      <h2 className="font-display font-bold text-xl text-gray-900 dark:text-white pt-2">Third-Party Integrations</h2>
+      <p>
+        We may share articles and content to our social media channels (Facebook, Telegram, Instagram) as part of our publishing workflow. If you interact with our content on these platforms, their respective privacy policies apply. We do not collect personal data from social media interactions unless you voluntarily engage with our platform directly.
+      </p>
       <h2 className="font-display font-bold text-xl text-gray-900 dark:text-white pt-2">Data Retention &amp; Security</h2>
       <p>We retain personal data only as long as necessary and use reasonable measures to protect it. No method of transmission over the internet is fully secure.</p>
+      <h2 className="font-display font-bold text-xl text-gray-900 dark:text-white pt-2">Data Deletion</h2>
+      <p>
+        You may request deletion of all your personal data at any time by emailing{' '}
+        <a href="mailto:privacy@thebharathnews.com" className="text-brand-600 dark:text-brand-400 hover:underline">privacy@thebharathnews.com</a>
+        {' '}with the subject line &quot;Data Deletion Request&quot;. We will process your request within 30 days and confirm once your data has been removed from our systems.
+      </p>
       <h2 className="font-display font-bold text-xl text-gray-900 dark:text-white pt-2">Contact</h2>
       <p>For privacy inquiries, contact us at privacy@thebharathnews.com</p>
     </div>

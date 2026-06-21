@@ -10,7 +10,8 @@ import {
   getPendingApplications, reviewRoleApplication,
   getPendingCreatorPosts, moderateCreatorPost,
 } from '../services/creator';
-import { getDbAsync, firestoreOps } from '@/lib/firebase-client';
+import { getSupabaseBrowser } from '@/lib/supabase-client';
+import { rowToApp } from '@/lib/db-mapper';
 import { getCategoryLabel } from '../utils/categoryColors';
 
 const AdminModeration = () => {
@@ -35,18 +36,17 @@ const AdminModeration = () => {
 
   const handleAppReview = async (app, approved) => {
     try {
-      const db = await getDbAsync();
-      if (!db) throw new Error('Firebase unavailable');
-      const { doc, getDoc } = await firestoreOps();
-      const userSnap = await getDoc(doc(db, 'users', app.userId));
-      const userData = userSnap.data() || {};
+      const supabase = getSupabaseBrowser();
+      if (!supabase) throw new Error('Database unavailable');
+      const { data: userData } = await supabase.from('users').select('*').eq('id', app.userId).maybeSingle();
+      const user = userData ? rowToApp(userData) : {};
       await reviewRoleApplication(app.id, {
         approved,
         feedback: feedback[`app-${app.id}`] || '',
         userId: app.userId,
         requestedRole: app.requestedRole,
-        displayName: userData.displayName || 'Creator',
-        photoURL: userData.photoURL || '',
+        displayName: user.displayName || 'Creator',
+        photoURL: user.photoURL || '',
       });
       toast.success(approved ? 'Application approved' : 'Application rejected');
       load();

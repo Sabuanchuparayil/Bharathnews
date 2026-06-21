@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, CheckCircle, ArrowRight, Users } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { subscribeNewsletter, getSubscriberCount } from '../services/firestore';
+import { subscribeNewsletter, getSubscriberCount } from '../services/articles';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 
 const NewsletterSignup = () => {

@@ -1,0 +1,17 @@
+{
+  "schema_version": "v1",
+  "name_for_human": "The Bharath News",
+  "name_for_model": "thebharathnews",
+  "description_for_human": "India's multilingual breaking news platform covering India and GCC/Gulf countries in 8 languages.",
+  "description_for_model": "The Bharath News is a multilingual Indian news aggregation platform. It publishes breaking news from India (all states), Gulf/GCC countries (UAE, Saudi Arabia, Qatar, Bahrain, Kuwait, Oman) in English, Hindi, Malayalam, Tamil, Telugu, Kannada, Bengali, and Urdu. Categories include: India politics, GCC/Gulf NRI news, business/stock market (Sensex/Nifty), technology/AI/startups, cricket/IPL/sports, Bollywood/entertainment, health, education (UPSC/JEE/NEET), jobs, real estate, world news, and lifestyle. Target audience includes Indians in India and NRI/Indian diaspora in Gulf countries. The site has an RSS feed for each language, a Telegram channel, and Facebook pages. Articles are updated every 15 minutes from verified sources.",
+  "auth": {
+    "type": "none"
+  },
+  "api": {
+    "type": "openapi",
+    "url": "https://www.thebharathnews.com/feed.xml"
+  },
+  "logo_url": "https://www.thebharathnews.com/icons/icon-512x512.png",
+  "contact_email": "bharathnewsweb@gmail.com",
+  "legal_info_url": "https://www.thebharathnews.com/terms"
+}

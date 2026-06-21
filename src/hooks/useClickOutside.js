@@ -13,5 +13,5 @@ export const useClickOutside = (ref, isActive, onClose) => {
     };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
-  }, [ref, isActive]);
+  }, [ref, isActive, onCloseRef]);
 };

@@ -4,10 +4,20 @@ compatibility_date = "2024-01-01"
 account_id = "911b68ad483550a94c3105c3a69df043"
 
 [triggers]
-crons = ["*/15 * * * *", "0 8 * * *"]
+# Free plan: max 5 crons. Logic is split in code; */5 = publish+distribute, */10 = ingest
+crons = ["*/5 * * * *", "*/10 * * * *", "0 8 * * *", "0 2 * * *"]
+
+# When traffic grows and you upgrade to Workers Paid ($5/mo):
+#   1. Set PIPELINE_TIER = "paid" below
+#   2. Uncomment [limits] subrequests = 200
+#   3. cd workers && npx wrangler deploy
+#   4. Check /api/pipeline-status?k=run7x9k → tier:"paid"
+# [limits]
+# subrequests = 200
 
 [vars]
 ENVIRONMENT = "production"
+PIPELINE_TIER = "free"
 MAIN_SITE_HOST = "thebharathnews.com"
 MAIN_SITE_URL = "https://www.thebharathnews.com"
 
@@ -15,16 +25,15 @@ MAIN_SITE_URL = "https://www.thebharathnews.com"
 binding = "AI"
 
 # Secrets (run from workers/ after wrangler login):
-#   npx wrangler secret put FIREBASE_PROJECT_ID                # your-project-id
-#   npx wrangler secret put FIREBASE_SERVICE_ACCOUNT_JSON      # full JSON (preferred, auto-renews)
-#   npx wrangler secret put FIREBASE_TOKEN                     # OR static bearer token (expires 1h)
+#   npx wrangler secret put SUPABASE_URL
+#   npx wrangler secret put SUPABASE_SERVICE_KEY
 #   npx wrangler secret put TELEGRAM_BOT_TOKEN
 #   npx wrangler secret put TELEGRAM_CHANNEL_ID
 #   npx wrangler secret put ANTHROPIC_API_KEY            # Claude Haiku for classification
 #   npx wrangler secret put CLAUDE_MODEL                 # optional, default claude-haiku-4-5-20251001
 #   npx wrangler secret put RESEND_API_KEY               # Newsletter digest
 #   npx wrangler secret put WORKER_API_SECRET            # Protect POST /api/* manual triggers
-#   npx wrangler secret put GOOGLE_TRANSLATE_API_KEY     # Optional; else uses FIREBASE_SERVICE_ACCOUNT_JSON OAuth
+#   npx wrangler secret put GOOGLE_TRANSLATE_API_KEY     # Optional translation API key
 # Optional:
 #   npx wrangler secret put FACEBOOK_PAGE_TOKEN
 #   npx wrangler secret put FACEBOOK_PAGE_ID

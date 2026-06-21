@@ -1,5 +1,5 @@
 import { postToTelegram, articleTelegramUrl } from '@/lib/telegram';
-import { markArticleTelegramPosted } from '@/lib/firebase-admin-server';
+import { markArticleTelegramPosted } from '@/lib/supabase-admin';
 
 function isPublished(article) {
   const status = article.status || article.editorialStatus;

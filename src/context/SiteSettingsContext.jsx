@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useMemo } from 'react';
-import { getDbAsync, firestoreOps } from '@/lib/firebase-client';
+import { getSupabaseBrowser } from '@/lib/supabase-client';
 import { mergeSiteSettings, buildSocialChannels } from '@/lib/site-settings';
 
 const SiteSettingsContext = createContext(null);
@@ -12,15 +12,14 @@ export function SiteSettingsProvider({ children }) {
     let cancelled = false;
     (async () => {
       try {
-        const db = await getDbAsync();
-        if (!db) return;
-        const { doc, getDoc } = await firestoreOps();
-        const snap = await getDoc(doc(db, 'settings', 'site'));
-        if (!cancelled && snap.exists()) {
-          setSettings(mergeSiteSettings(snap.data()));
+        const supabase = getSupabaseBrowser();
+        if (!supabase) return;
+        const { data } = await supabase.from('site_settings').select('value').eq('key', 'site').maybeSingle();
+        if (!cancelled && data?.value) {
+          setSettings(mergeSiteSettings(data.value));
         }
       } catch {
-        // keep defaults
+        /* keep defaults */
       } finally {
         if (!cancelled) setLoading(false);
       }

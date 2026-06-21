@@ -1,17 +1,10 @@
 import { loadEnabledSources, updateSourceHealth, loadSiteSettings } from '../lib/sources-loader.js';
 import { fetchAndParseFeed } from '../lib/rss-parser.js';
-import { getFirebaseToken } from '../lib/firebase-auth.js';
-import { FIRESTORE_BASE } from '../lib/firestore-rest.js';
+import { upsertRow } from '../lib/supabase-rest.js';
 import { rotateSourcePick } from '../lib/regional-rotation.js';
 
-/** Channels per run — 6 × (1 fetch + 3 stores + 1 health) ≈ 30 subrequests. */
-const MAX_CHANNELS_PER_RUN = 6;
-const ITEMS_PER_CHANNEL = 3;
-
-function safeISODate(value) {
-  const d = value ? new Date(value) : new Date();
-  return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
-}
+const MAX_CHANNELS_PER_RUN = 14;
+const ITEMS_PER_CHANNEL = 10;
 
 export async function handleVideoFetch(env) {
   const settings = await loadSiteSettings(env);
@@ -20,14 +13,21 @@ export async function handleVideoFetch(env) {
     return [];
   }
 
-  const token = await getFirebaseToken(env);
   const allChannels = await loadEnabledSources(env, 'youtube');
+  if (!allChannels.length) {
+    console.log('Video fetch skipped: no enabled YouTube sources');
+    return [];
+  }
+
   const channels = rotateSourcePick(allChannels, MAX_CHANNELS_PER_RUN);
   const results = [];
 
   for (const channel of channels) {
     try {
-      const feedUrl = channel.url || `https://www.youtube.com/feeds/videos.xml?channel_id=${channel.channelId}`;
+      const channelId = resolveChannelId(channel);
+      const feedUrl = channel.url || `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
+      if (!feedUrl) continue;
+
       const items = await fetchAndParseFeed(feedUrl);
       let stored = 0;
 
@@ -39,25 +39,44 @@ export async function handleVideoFetch(env) {
           title: item.title,
           videoId,
           channelName: channel.name,
-          channelId: channel.channelId || '',
+          channelId,
           thumbnail: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
-          publishedAt: item.pubDate || new Date().toISOString(),
           category: channel.category || 'india',
           language: channel.language || 'en',
-        }, token);
+          publishedAt: parsePubDate(item.pubDate),
+        });
 
         if (ok) { stored++; results.push(item.title); }
       }
 
-      await updateSourceHealth(env, channel.id, { itemCount: stored, lastError: '' }, token);
+      await updateSourceHealth(env, channel.id, { itemCount: stored, lastError: '' });
     } catch (error) {
       console.error(`Error fetching videos for ${channel.name}:`, error.message);
-      await updateSourceHealth(env, channel.id, { itemCount: 0, lastError: error.message.slice(0, 200) }, token);
+      await updateSourceHealth(env, channel.id, { itemCount: 0, lastError: error.message.slice(0, 200) });
     }
   }
 
   console.log(`Video fetch complete: ${results.length} new videos`);
   return results;
+}
+
+function resolveChannelId(channel) {
+  if (channel.channelId) return channel.channelId;
+  const fromUrl = extractChannelIdFromUrl(channel.url);
+  if (fromUrl) return fromUrl;
+  return null;
+}
+
+function extractChannelIdFromUrl(url) {
+  if (!url) return null;
+  const m = url.match(/channel_id=([A-Za-z0-9_-]+)/);
+  return m ? m[1] : null;
+}
+
+function parsePubDate(pubDate) {
+  if (!pubDate) return null;
+  const d = new Date(pubDate);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
 function extractVideoId(link) {
@@ -76,37 +95,25 @@ function extractVideoId(link) {
   return null;
 }
 
-async function storeVideo(env, video, token) {
-  const docUrl = `${FIRESTORE_BASE(env.FIREBASE_PROJECT_ID)}/videos/${video.videoId}?currentDocument.exists=false`;
+async function storeVideo(env, video) {
+  const sortDate = video.publishedAt || new Date().toISOString();
+  const core = {
+    video_id: video.videoId,
+    title: video.title,
+    thumbnail: video.thumbnail,
+    channel: video.channelName,
+    category: video.category,
+    language: video.language || 'en',
+    // Use YouTube publish time for sorting until published_at column is migrated
+    fetched_at: sortDate,
+  };
+  const extended = {
+    ...core,
+    ...(video.channelId ? { channel_id: video.channelId } : {}),
+    published_at: sortDate,
+  };
 
-  const res = await fetch(docUrl, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      fields: {
-        title: { stringValue: video.title },
-        videoId: { stringValue: video.videoId },
-        channelName: { stringValue: video.channelName },
-        channelId: { stringValue: video.channelId },
-        thumbnail: { stringValue: video.thumbnail },
-        publishedAt: { timestampValue: safeISODate(video.publishedAt) },
-        fetchedAt: { timestampValue: new Date().toISOString() },
-        category: { stringValue: video.category },
-        language: { stringValue: video.language || 'en' },
-        embedUrl: { stringValue: `https://www.youtube.com/embed/${video.videoId}` },
-        views: { integerValue: '0' },
-      },
-    }),
-  });
-
-  if (res.status === 409) return false;
-  if (!res.ok) {
-    const err = await res.text();
-    console.error(`Video store failed "${video.title.slice(0, 40)}":`, err.slice(0, 150));
-    return false;
-  }
-  return true;
+  const ok = await upsertRow(env, 'videos', extended, 'video_id');
+  if (ok) return true;
+  return upsertRow(env, 'videos', core, 'video_id');
 }

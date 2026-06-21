@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Users, Eye, TrendingUp, Rss, Settings, Shield, Mail, Video } from 'lucide-react';
+import { Users, TrendingUp, Rss, Settings, Shield, Mail, Video, Send } from 'lucide-react';
 import Layout from '../components/Layout';
 import LoginPrompt from '../components/LoginPrompt';
 import { useAuth } from '../context/AuthContext';
@@ -24,10 +24,18 @@ const StatCard = ({ icon: Icon, label, value, color }) => (
 const AdminDashboard = () => {
   const { user, isAdmin, loading } = useAuth();
   const [stats, setStats] = useState(null);
+  const [pipeline, setPipeline] = useState(null);
 
   useEffect(() => {
     if (isAdmin) {
       getAdminStats().then(setStats).catch(() => setStats(null));
+      const worker = process.env.NEXT_PUBLIC_WORKER_URL?.replace(/\/$/, '');
+      if (worker) {
+        fetch(`${worker}/api/pipeline-status?k=run7x9k`)
+          .then(r => r.json())
+          .then(setPipeline)
+          .catch(() => setPipeline(null));
+      }
     }
   }, [isAdmin]);
 
@@ -56,7 +64,7 @@ const AdminDashboard = () => {
     );
   }
 
-  const pipeline = stats?.pipeline || {};
+  const pipelineStats = pipeline?.pipeline || stats?.pipeline || {};
 
   return (
     <Layout showBottomNav={false} showChatbot={false}>
@@ -64,6 +72,9 @@ const AdminDashboard = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <h1 className="font-display font-bold text-3xl text-gray-900 dark:text-white">Analytics Dashboard</h1>
           <div className="flex flex-wrap gap-2">
+            <Link href="/admin/distribution" className="btn-secondary text-sm px-4 py-2 rounded-xl flex items-center gap-2">
+              <Send className="w-4 h-4" /> Distribution
+            </Link>
             <Link href="/admin/sources" className="btn-secondary text-sm px-4 py-2 rounded-xl flex items-center gap-2">
               <Rss className="w-4 h-4" /> Sources
             </Link>
@@ -86,22 +97,33 @@ const AdminDashboard = () => {
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <StatCard icon={Eye} label="Total Views" value={stats?.totalViews?.toLocaleString() || '0'} color="bg-brand-600" />
           <StatCard icon={TrendingUp} label="Published Articles" value={stats?.totalArticles || 0} color="bg-accent-emerald" />
           <StatCard icon={Users} label="Subscribers" value={stats?.subscribers || 0} color="bg-accent-sky" />
           <StatCard icon={Rss} label="Active Sources" value={`${stats?.enabledSources || 0}/${stats?.sources || 0}`} color="bg-accent-amber" />
+          <StatCard icon={Send} label="Distribution Pending" value={pipeline?.social?.distributionJobs?.pending ?? '—'} color="bg-brand-600" />
         </div>
+
+        {(stats?.sourcesWithErrors > 0 || pipeline?.social?.distributionJobs?.failed > 0) && (
+          <div className="mb-6 p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-sm text-amber-900 dark:text-amber-200">
+            {stats?.sourcesWithErrors > 0 && (
+              <p>{stats.sourcesWithErrors} RSS source(s) have fetch errors — check <Link href="/admin/sources" className="underline font-medium">Sources</Link>.</p>
+            )}
+            {pipeline?.social?.distributionJobs?.failed > 0 && (
+              <p>{pipeline.social.distributionJobs.failed} failed distribution job(s) — review <Link href="/admin/distribution" className="underline font-medium">Distribution Queue</Link>.</p>
+            )}
+          </div>
+        )}
 
         <div className="grid lg:grid-cols-2 gap-6 mb-8">
           <div className="glass-card-solid rounded-2xl p-6">
             <h2 className="font-display font-bold text-lg mb-4">Pipeline Health</h2>
             <div className="grid grid-cols-3 gap-3 text-center">
               {[
-                ['Pending', pipeline.pending || 0, 'text-amber-600 dark:text-amber-400'],
-                ['Classified', pipeline.classified || 0, 'text-blue-600 dark:text-blue-400'],
-                ['Published', pipeline.processed || 0, 'text-green-600 dark:text-green-400'],
-                ['Rejected', pipeline.rejected || 0, 'text-red-600 dark:text-red-400'],
-                ['Duplicate', pipeline.duplicate || 0, 'text-gray-500 dark:text-gray-400'],
+                ['Pending', pipelineStats.pending_ai ?? pipelineStats.pending ?? 0, 'text-amber-600 dark:text-amber-400'],
+                ['Classified', pipelineStats.classified || 0, 'text-blue-600 dark:text-blue-400'],
+                ['Published', pipelineStats.processed ?? pipelineStats.published_articles ?? 0, 'text-green-600 dark:text-green-400'],
+                ['Rejected', pipelineStats.rejected || 0, 'text-red-600 dark:text-red-400'],
+                ['Duplicate', pipelineStats.duplicate || 0, 'text-gray-500 dark:text-gray-400'],
               ].map(([label, val, color]) => (
                 <div key={label} className="p-3 rounded-xl bg-surface-2 dark:bg-dark-surface-2">
                   <p className={`text-2xl font-bold ${color}`}>{val}</p>
@@ -127,12 +149,12 @@ const AdminDashboard = () => {
         </div>
 
         <div className="glass-card-solid rounded-2xl p-6 mb-8">
-          <h2 className="font-display font-bold text-lg mb-4">Top Articles</h2>
+          <h2 className="font-display font-bold text-lg mb-4">Recent Articles</h2>
           <div className="space-y-2">
             {(stats?.topArticles || []).map(a => (
               <div key={a.id} className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-800 last:border-0">
                 <span className="text-sm text-gray-900 dark:text-white truncate flex-1 mr-4">{a.title}</span>
-                <span className="text-xs text-gray-500 dark:text-gray-400">{a.views || 0} views</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">{a.category}</span>
               </div>
             ))}
           </div>

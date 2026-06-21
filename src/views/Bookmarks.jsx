@@ -6,7 +6,7 @@ import Layout from '../components/Layout';
 import NewsCard from '../components/NewsCard';
 import EmptyState from '../components/EmptyState';
 import { useAuth } from '../context/AuthContext';
-import { getBookmarks, getArticlesByIds } from '../services/firestore';
+import { getBookmarks, getArticlesByIds } from '../services/articles';
 
 const Bookmarks = () => {
   const { user, loginWithGoogle } = useAuth();

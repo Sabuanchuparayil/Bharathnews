@@ -18,5 +18,8 @@ export const CATEGORY_ICONS = {
   realestate: Home,
   lifestyle: Plane,
   opinion: MessageSquareQuote,
+  money: Briefcase,
+  tech: Cpu,
+  life: Plane,
   world: Globe2,
 };

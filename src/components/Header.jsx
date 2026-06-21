@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Search, Bell, Sun, Moon, LogIn, BookmarkIcon, Settings as SettingsIcon } from 'lucide-react';
 import Link from 'next/link'
@@ -10,9 +10,9 @@ import { useTheme } from '../context/ThemeContext';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { HEADER_NAV } from '../config/feeds.config';
+import NavDropdown from './NavDropdown';
 import LanguageSwitcher from './LanguageSwitcher';
-
-const NotificationsPanel = lazy(() => import('./NotificationsPanel'));
+import NotificationsPanel from './NotificationsPanel';
 
 let _trendingCache = { value: null, ts: 0 };
 const TRENDING_CACHE_MS = 5 * 60 * 1000;
@@ -39,7 +39,7 @@ const Header = () => {
       setHasTrending(_trendingCache.value);
       return;
     }
-    import('../services/firestore').then(({ getTrendingArticles }) =>
+    import('../services/articles').then(({ getTrendingArticles }) =>
       getTrendingArticles(1).then(articles => {
         const has = articles.length > 0;
         _trendingCache = { value: has, ts: Date.now() };
@@ -88,17 +88,7 @@ const Header = () => {
 
             <nav className="hidden lg:flex items-center space-x-1">
               {HEADER_NAV.map(link => (
-                <Link
-                  key={link.path}
-                  href={link.path}
-                  className={`px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-                    isActive(link.path)
-                      ? 'bg-brand-50 dark:bg-brand-950/50 text-brand-700 dark:text-brand-300'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-surface-2 dark:hover:bg-dark-surface-2'
-                  }`}
-                >
-                  {link.label}
-                </Link>
+                <NavDropdown key={link.path} link={link} isActive={isActive(link.path)} />
               ))}
             </nav>
 
@@ -111,8 +101,14 @@ const Header = () => {
                 <Search className="w-5 h-5" />
               </button>
 
-              <div className="hidden md:flex items-center space-x-1">
+              <div className="sm:hidden">
+                <LanguageSwitcher compact />
+              </div>
+              <div className="hidden sm:block">
                 <LanguageSwitcher />
+              </div>
+
+              <div className="hidden md:flex items-center space-x-1">
                 <button
                   onClick={toggleTheme}
                   className="btn-ghost touch-target rounded-xl"
@@ -134,9 +130,7 @@ const Header = () => {
                 )}
               </button>
               {notificationsOpen && (
-                <Suspense fallback={null}>
-                  <NotificationsPanel isOpen={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
-                </Suspense>
+                <NotificationsPanel isOpen={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
               )}
 
               {user ? (
@@ -303,9 +297,8 @@ const Header = () => {
                 ))}
               </nav>
               <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800 space-y-3">
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide px-1">Preferences</p>
-                <div className="flex items-center justify-between px-2">
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Language</span>
+                <p className="px-4 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Language</p>
+                <div className="px-2">
                   <LanguageSwitcher />
                 </div>
                 <button

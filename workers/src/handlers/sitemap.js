@@ -1,5 +1,4 @@
-import { getFirebaseToken } from '../lib/firebase-auth.js';
-import { runQuery } from '../lib/firestore-rest.js';
+import { selectRows } from '../lib/supabase-rest.js';
 
 const DEFAULT_SITE_URL = 'https://www.thebharathnews.com';
 
@@ -9,19 +8,12 @@ function escapeXml(str) {
 
 export async function handleSitemap(env) {
   const site = env.MAIN_SITE_URL || DEFAULT_SITE_URL;
-  const token = await getFirebaseToken(env);
-  const docs = await runQuery(env, {
-    from: [{ collectionId: 'articles' }],
-    where: {
-      fieldFilter: {
-        field: { fieldPath: 'status' },
-        op: 'EQUAL',
-        value: { stringValue: 'published' },
-      },
-    },
-    orderBy: [{ field: { fieldPath: 'publishedAt' }, direction: 'DESCENDING' }],
+  const docs = await selectRows(env, 'articles', {
+    filters: { editorial_status: 'published' },
+    order: 'published_at',
+    ascending: false,
     limit: 1000,
-  }, token);
+  });
 
   const articleUrls = docs
     .filter(d => d.slug)

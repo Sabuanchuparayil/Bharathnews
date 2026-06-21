@@ -1,20 +1,20 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { SUPPORTED_LANGUAGES } from '@/config/languages.config';
+import { DEFAULT_LANGUAGE, SELECTABLE_LANGUAGES, normalizeLanguageCode } from '@/config/languages.config';
 import { useAuth } from './AuthContext';
-import { getDbAsync, firestoreOps } from '@/lib/firebase-client';
+import { getSupabaseBrowser } from '@/lib/supabase-client';
 
 const LanguageContext = createContext(null);
 const STORAGE_KEY = 'bharathnews_lang';
 
 function getInitialLanguage() {
-  if (typeof window === 'undefined') return 'all';
+  if (typeof window === 'undefined') return DEFAULT_LANGUAGE;
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved && SUPPORTED_LANGUAGES.some(l => l.code === saved)) return saved;
+    if (saved) return normalizeLanguageCode(saved);
   } catch {}
-  return 'all';
+  return DEFAULT_LANGUAGE;
 }
 
 export function LanguageProvider({ children }) {
@@ -23,38 +23,48 @@ export function LanguageProvider({ children }) {
   const profileSyncedRef = useRef(false);
 
   useEffect(() => {
+    const normalized = normalizeLanguageCode(language);
+    if (normalized !== language) {
+      setLanguageState(normalized);
+      localStorage.setItem(STORAGE_KEY, normalized);
+    }
+  }, [language]);
+
+  useEffect(() => {
     if (!userProfile?.language) {
       profileSyncedRef.current = false;
       return;
     }
     if (profileSyncedRef.current) return;
-    if (SUPPORTED_LANGUAGES.some(l => l.code === userProfile.language)) {
-      setLanguageState(userProfile.language);
-      localStorage.setItem(STORAGE_KEY, userProfile.language);
+    const profileLang = normalizeLanguageCode(userProfile.language);
+    if (SELECTABLE_LANGUAGES.some(l => l.code === profileLang)) {
+      setLanguageState(profileLang);
+      localStorage.setItem(STORAGE_KEY, profileLang);
       profileSyncedRef.current = true;
     }
   }, [userProfile?.language]);
 
   const setLanguage = useCallback(async (code) => {
-    if (!SUPPORTED_LANGUAGES.some(l => l.code === code)) return;
-    setLanguageState(code);
-    localStorage.setItem(STORAGE_KEY, code);
+    const next = normalizeLanguageCode(code);
+    if (!SELECTABLE_LANGUAGES.some(l => l.code === next)) return;
+    setLanguageState(next);
+    localStorage.setItem(STORAGE_KEY, next);
     profileSyncedRef.current = true;
 
     if (user) {
       try {
-        const db = await getDbAsync();
-        if (!db) return;
-        const { doc, updateDoc } = await firestoreOps();
-        await updateDoc(doc(db, 'users', user.uid), { language: code });
+        const supabase = getSupabaseBrowser();
+        if (!supabase) return;
+        await supabase.from('users').update({ language: next }).eq('id', user.id);
       } catch {}
     }
   }, [user]);
 
-  const currentLang = SUPPORTED_LANGUAGES.find(l => l.code === language) || SUPPORTED_LANGUAGES[0];
+  const currentLang = SELECTABLE_LANGUAGES.find(l => l.code === language)
+    || SELECTABLE_LANGUAGES.find(l => l.code === DEFAULT_LANGUAGE);
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, currentLang, languages: SUPPORTED_LANGUAGES }}>
+    <LanguageContext.Provider value={{ language, setLanguage, currentLang, languages: SELECTABLE_LANGUAGES }}>
       {children}
     </LanguageContext.Provider>
   );

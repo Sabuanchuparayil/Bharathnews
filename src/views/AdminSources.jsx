@@ -176,9 +176,14 @@ const AdminSources = () => {
                     <div className="flex flex-wrap gap-2 mt-1">
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand-50 text-brand-700">{getCategoryLabel(src.category)}</span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{src.type}</span>
+                      {src.lastFetchedAt && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-50 text-green-700">
+                          Fetched {src._lastFetchedAtIso ? new Date(src._lastFetchedAtIso).toLocaleString() : 'recently'}
+                        </span>
+                      )}
                       {src.lastError && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-50 text-red-600 flex items-center gap-1">
-                          <AlertCircle className="w-3 h-3" /> Error
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-50 text-red-600 flex items-center gap-1" title={src.lastError}>
+                          <AlertCircle className="w-3 h-3" /> {src.lastError.slice(0, 60)}{src.lastError.length > 60 ? '…' : ''}
                         </span>
                       )}
                     </div>

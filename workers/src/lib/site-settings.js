@@ -2,7 +2,7 @@
 
 export const DEFAULT_SITE_SETTINGS = {
   qualityThreshold: 6,
-  targetLanguages: ['ml', 'hi', 'ta', 'te', 'kn', 'bn'],
+  targetLanguages: ['ml', 'hi', 'ta', 'te', 'kn', 'bn', 'ur'],
   siteName: 'The Bharath News',
   tagline: 'Breaking news from India and GCC regions',
   headerText: 'The Bharath News',
@@ -26,9 +26,17 @@ export const DEFAULT_SITE_SETTINGS = {
       digestSubject: 'Your Weekly Digest — The Bharath News',
     },
     facebook: {
-      enabled: false,
-      pageUrl: 'https://facebook.com/thebharathnews',
+      enabled: true,
+      pageUrl: 'https://facebook.com/TheBharathNewsIndia',
       minScoreToPost: 7,
+      // false = dlvr.it posts via RSS feed; true = Worker Graph API (needs page token)
+      graphApiEnabled: false,
+      dlvrItFeedUrl: 'https://www.thebharathnews.com/feed.xml?lang=ml&limit=25&hours=24',
+      dlvrItEnglishFeedUrl: 'https://www.thebharathnews.com/feed.xml?lang=en&limit=25&hours=24',
+      dlvrItMalayalamFeedUrl: 'https://www.thebharathnews.com/feed.xml?lang=ml&limit=25&hours=24',
+      dlvrItMaxPostsPerDay: 25,
+      postLanguage: 'ml',
+      catchupBatchSize: 1,
     },
     youtube: {
       enabled: true,
@@ -93,10 +101,17 @@ export function resolveEmailConfig(settings, env) {
 
 export function resolveFacebookConfig(settings, env) {
   const cfg = mergeSiteSettings(settings).integrations?.facebook || {};
+  const hasToken = Boolean(env.FACEBOOK_PAGE_TOKEN && env.FACEBOOK_PAGE_ID);
+  const graphApiEnabled = cfg.graphApiEnabled === true && hasToken;
   return {
-    enabled: cfg.enabled === true,
+    enabled: cfg.enabled !== false,
+    graphApiEnabled,
+    dlvrItMode: !graphApiEnabled,
+    dlvrItFeedUrl: cfg.dlvrItFeedUrl || 'https://www.thebharathnews.com/feed.xml?lang=ml&limit=25&hours=24',
     minScore: cfg.minScoreToPost ?? 7,
-    hasToken: Boolean(env.FACEBOOK_PAGE_TOKEN && env.FACEBOOK_PAGE_ID),
+    postLanguage: cfg.postLanguage || env.FACEBOOK_POST_LANGUAGE || 'ml',
+    catchupBatchSize: Math.min(Math.max(cfg.catchupBatchSize ?? 1, 1), 3),
+    hasToken,
   };
 }
 

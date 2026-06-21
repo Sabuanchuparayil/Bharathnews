@@ -8,8 +8,8 @@
 - Placements: sidebar, article top/bottom (configure `NEXT_PUBLIC_ADSENSE_SLOT_*`)
 
 ### 2. Sponsored Content (CMS)
-- Firestore `sponsors` collection drives sidebar advertorials
-- Admin adds docs: `{ title, description, imageUrl, linkUrl, sponsoredBy, placement, active: true }`
+- Supabase `sponsors` table drives sidebar advertorials
+- Admin adds rows: `{ title, description, image_url, link_url, sponsored_by, placement, active: true }`
 - Rendered in `PageSidebar` via `getActiveSponsors()`
 
 ### 3. Newsletter
@@ -37,7 +37,7 @@
 
 ### Premium Subscription
 - Stripe Checkout for ad-free + early access tier
-- Gate premium content with `article.isPremium` + Firebase custom claims
+- Gate premium content with `article.isPremium` + Supabase user role checks
 - Estimated effort: 2-3 days
 
 ### Push Notifications (FCM)

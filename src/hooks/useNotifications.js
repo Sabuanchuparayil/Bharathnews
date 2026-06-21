@@ -1,26 +1,28 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getMessagingInstance } from '../config/firebase.config';
-import { getToken, onMessage } from 'firebase/messaging';
 
+/** Web Push via native VAPID (replaces Firebase Cloud Messaging). */
 export function useNotifications() {
   const [permission, setPermission] = useState(
     typeof Notification !== 'undefined' ? Notification.permission : 'default'
   );
-  const [token, setToken] = useState(null);
+  const [subscription, setSubscription] = useState(null);
 
   const requestPermission = async () => {
     try {
+      if (typeof Notification === 'undefined') return;
       const result = await Notification.requestPermission();
       setPermission(result);
-      if (result === 'granted') {
-        const messaging = await getMessagingInstance();
-        if (messaging) {
-          const fcmToken = await getToken(messaging, {
-            vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+      if (result === 'granted' && 'serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.ready;
+        const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+        if (vapidKey && reg.pushManager) {
+          const sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(vapidKey),
           });
-          setToken(fcmToken);
+          setSubscription(sub);
         }
       }
     } catch (error) {
@@ -29,16 +31,23 @@ export function useNotifications() {
   };
 
   useEffect(() => {
-    const setupMessaging = async () => {
-      const messaging = await getMessagingInstance();
-      if (messaging) {
-        onMessage(messaging, (payload) => {
-          console.log('Foreground message:', payload);
-        });
-      }
-    };
-    setupMessaging();
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.ready.then(async (reg) => {
+      const sub = await reg.pushManager?.getSubscription();
+      if (sub) setSubscription(sub);
+    }).catch(() => {});
   }, []);
 
-  return { permission, token, requestPermission };
+  return { permission, subscription, requestPermission };
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
 }

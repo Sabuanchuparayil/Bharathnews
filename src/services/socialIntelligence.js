@@ -1,6 +1,7 @@
 'use client';
 
-import { withFirestore } from '@/lib/firebase-client';
+import { getSupabaseBrowser } from '@/lib/supabase-client';
+import { rowsToApp } from '@/lib/db-mapper';
 import { SITE_URL } from '@/lib/site-url';
 
 const ENGAGEMENT_WEIGHTS = {
@@ -84,67 +85,51 @@ const getRecommendedPlatforms = (article) => {
   return platforms;
 };
 
-export const getSmartPostSuggestions = async (count = 5) =>
-  withFirestore(async (db, { collection, query, orderBy, limit, getDocs }) => {
-    const q = query(
-      collection(db, 'articles'),
-      orderBy('publishedAt', 'desc'),
-      limit(50)
-    );
-    const snapshot = await getDocs(q);
-    const articles = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+export const getSmartPostSuggestions = async (count = 5) => {
+  const supabase = getSupabaseBrowser();
+  if (!supabase) return [];
 
-    const scored = articles.map(article => ({
-      ...article,
-      trendScore: calculateTrendScore(article),
-    }));
+  const { data } = await supabase
+    .from('articles')
+    .select('*')
+    .or('editorial_status.eq.published,editorial_status.is.null')
+    .order('published_at', { ascending: false })
+    .limit(50);
 
-    scored.sort((a, b) => b.trendScore - a.trendScore);
+  const articles = rowsToApp(data || []);
+  const scored = articles.map(article => ({
+    ...article,
+    trendScore: calculateTrendScore(article),
+  }));
 
-    return scored.slice(0, count).map(article => ({
-      article,
-      trendScore: article.trendScore,
-      tier: article.trendScore > 500 ? 'viral' : article.trendScore > 200 ? 'trending' : article.trendScore > 50 ? 'rising' : 'standard',
-      recommendedPlatforms: getRecommendedPlatforms(article),
-      generatedPosts: Object.fromEntries(
-        Object.entries(PLATFORM_TEMPLATES).map(([platform, template]) => [
-          platform,
-          template.format(article),
-        ])
-      ),
-    }));
-  });
+  scored.sort((a, b) => b.trendScore - a.trendScore);
 
-export const getOptimalPostingTimes = () => {
-  const windows = [
-    { time: '7:00 AM IST / 5:30 AM GST', label: 'Morning commute', quality: 'high' },
-    { time: '12:30 PM IST / 11:00 AM GST', label: 'Lunch break', quality: 'high' },
-    { time: '6:00 PM IST / 4:30 PM GST', label: 'Evening peak', quality: 'highest' },
-    { time: '9:00 PM IST / 7:30 PM GST', label: 'Night wind-down', quality: 'medium' },
-  ];
-
-  return windows;
+  return scored.slice(0, count).map(article => ({
+    article,
+    trendScore: article.trendScore,
+    tier: article.trendScore > 500 ? 'viral' : article.trendScore > 200 ? 'trending' : article.trendScore > 50 ? 'rising' : 'standard',
+    recommendedPlatforms: getRecommendedPlatforms(article),
+    generatedPosts: Object.fromEntries(
+      Object.entries(PLATFORM_TEMPLATES).map(([platform, template]) => [
+        platform,
+        template.format(article),
+      ])
+    ),
+  }));
 };
 
-export const logSocialPost = async (articleId, platforms, userId) =>
-  withFirestore(async (db, { collection, addDoc, serverTimestamp }) => {
-    await addDoc(collection(db, 'socialPosts'), {
-      articleId,
-      platforms,
-      postedBy: userId,
-      postedAt: serverTimestamp(),
-    });
-  });
+export const getOptimalPostingTimes = () => [
+  { time: '7:00 AM IST / 5:30 AM GST', label: 'Morning commute', quality: 'high' },
+  { time: '12:30 PM IST / 11:00 AM GST', label: 'Lunch break', quality: 'high' },
+  { time: '6:00 PM IST / 4:30 PM GST', label: 'Evening peak', quality: 'highest' },
+  { time: '9:00 PM IST / 7:30 PM GST', label: 'Night wind-down', quality: 'medium' },
+];
 
-export const getSocialPostHistory = async (count = 20) =>
-  withFirestore(async (db, { collection, query, orderBy, limit, getDocs }) => {
-    const q = query(
-      collection(db, 'socialPosts'),
-      orderBy('postedAt', 'desc'),
-      limit(count)
-    );
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-  });
+export const logSocialPost = async (articleId, platforms, userId) => {
+  void articleId; void platforms; void userId;
+  /* social_posts table optional */
+};
+
+export const getSocialPostHistory = async (_count = 20) => [];
 
 export { PLATFORM_TEMPLATES, calculateTrendScore };

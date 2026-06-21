@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Eye, Heart, ArrowLeft } from 'lucide-react';
+import { Heart, ArrowLeft } from 'lucide-react';
 import ShareButton from '../components/ShareButton';
 import Layout from '../components/Layout';
 
@@ -11,7 +11,7 @@ const extractYouTubeId = (url) => {
   return match ? match[1] : null;
 };
 import { useAuth } from '../context/AuthContext';
-import { getCreatorPost, trackCreatorPostView } from '../services/creator';
+import { getCreatorPost } from '../services/creator';
 import { getCategoryColor, getCategoryLabel } from '../utils/categoryColors';
 
 const CreatorPost = ({ postId: postIdProp, initialPost = null }) => {
@@ -21,14 +21,10 @@ const CreatorPost = ({ postId: postIdProp, initialPost = null }) => {
   const [loading, setLoading] = useState(!initialPost);
 
   useEffect(() => {
-    if (initialPost) {
-      if (initialPost.status === 'published') trackCreatorPostView(postId);
-      return;
-    }
+    if (initialPost) return;
     getCreatorPost(postId).then(p => {
       setPost(p);
       setLoading(false);
-      if (p?.status === 'published') trackCreatorPostView(postId);
     }).catch(() => setLoading(false));
   }, [postId, initialPost]);
 
@@ -81,7 +77,6 @@ const CreatorPost = ({ postId: postIdProp, initialPost = null }) => {
       <div className="flex items-center justify-between gap-4 text-sm text-gray-500 mb-8">
         <div className="flex items-center gap-4">
           <Link href={`/@${post.authorSlug}`} className="text-brand-600 hover:underline">{post.authorName}</Link>
-          <span className="flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> {post.views || 0}</span>
           <span className="flex items-center gap-1"><Heart className="w-3.5 h-3.5" /> {post.likes || 0}</span>
         </div>
         <ShareButton

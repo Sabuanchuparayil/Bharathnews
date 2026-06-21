@@ -1,6 +1,7 @@
 'use client';
 
-import { getDbAsync, firestoreOps } from '@/lib/firebase-client';
+import { getSupabaseBrowser } from '@/lib/supabase-client';
+import { rowToApp, rowsToApp } from '@/lib/db-mapper';
 import { mergeSiteSettings } from '@/lib/site-settings';
 
 function filterPublished(articles) {
@@ -10,21 +11,20 @@ function filterPublished(articles) {
 }
 
 export async function getAdminStats() {
-  const db = await getDbAsync();
-  if (!db) return null;
-  const { collection, getDocs, query, orderBy, limit, where } = await firestoreOps();
+  const supabase = getSupabaseBrowser();
+  if (!supabase) return null;
 
-  const [articlesSnap, rawSnap, sourcesSnap, subsSnap, usersSnap] = await Promise.all([
-    getDocs(query(collection(db, 'articles'), orderBy('publishedAt', 'desc'), limit(200))),
-    getDocs(collection(db, 'raw_articles')),
-    getDocs(collection(db, 'sources')),
-    getDocs(collection(db, 'subscribers')),
-    getDocs(query(collection(db, 'users'), limit(500))),
+  const [articlesRes, rawRes, sourcesRes, subsRes, usersRes] = await Promise.all([
+    supabase.from('articles').select('*').order('published_at', { ascending: false }).limit(200),
+    supabase.from('raw_articles').select('status'),
+    supabase.from('sources').select('*'),
+    supabase.from('subscribers').select('*', { count: 'exact', head: true }),
+    supabase.from('users').select('*', { count: 'exact' }).limit(500),
   ]);
 
-  const articles = articlesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-  const rawArticles = rawSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-  const sources = sourcesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const articles = rowsToApp(articlesRes.data || []);
+  const rawArticles = rowsToApp(rawRes.data || []);
+  const sources = rowsToApp(sourcesRes.data || []);
 
   const pipeline = { pending: 0, classified: 0, processed: 0, rejected: 0, duplicate: 0 };
   for (const r of rawArticles) {
@@ -35,49 +35,41 @@ export async function getAdminStats() {
 
   const byCategory = {};
   const byLanguage = {};
-  let totalViews = 0;
   for (const a of articles) {
     byCategory[a.category] = (byCategory[a.category] || 0) + 1;
     byLanguage[a.language || 'en'] = (byLanguage[a.language || 'en'] || 0) + 1;
-    totalViews += a.views || 0;
   }
 
-  const topArticles = [...articles]
-    .sort((a, b) => (b.views || 0) - (a.views || 0))
-    .slice(0, 5);
+  const topArticles = articles.slice(0, 5);
+  const sourcesWithErrors = sources.filter(s => s.enabled !== false && s.lastError).length;
 
   return {
     totalArticles: articles.length,
-    totalViews,
-    subscribers: subsSnap.size,
-    users: usersSnap.size,
+    subscribers: subsRes.count || 0,
+    users: usersRes.count || 0,
     sources: sources.length,
     enabledSources: sources.filter(s => s.enabled).length,
+    sourcesWithErrors,
     pipeline,
     byCategory: Object.entries(byCategory).map(([name, count]) => ({ name, count })),
     byLanguage: Object.entries(byLanguage).map(([name, count]) => ({ name, count })),
     topArticles,
-    dailyViews: articles.slice(0, 7).map((a, i) => ({
-      day: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][i % 7],
-      views: a.views || 0,
-    })),
   };
 }
 
 export async function getSources() {
-  const db = await getDbAsync();
-  if (!db) return [];
-  const { collection, getDocs, orderBy, query } = await firestoreOps();
-  const snap = await getDocs(query(collection(db, 'sources'), orderBy('name')));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const supabase = getSupabaseBrowser();
+  if (!supabase) return [];
+  const { data } = await supabase.from('sources').select('*').order('name');
+  return rowsToApp(data || []);
 }
 
 export async function createSource(data) {
-  const db = await getDbAsync();
-  if (!db) throw new Error('Firebase unavailable');
-  const { collection, doc, setDoc, serverTimestamp } = await firestoreOps();
+  const supabase = getSupabaseBrowser();
+  if (!supabase) throw new Error('Database unavailable');
   const id = data.id || slugifySourceId(data.name);
-  await setDoc(doc(db, 'sources', id), {
+  const { error } = await supabase.from('sources').insert({
+    id,
     name: data.name,
     url: data.url || '',
     category: data.category || 'india',
@@ -85,18 +77,16 @@ export async function createSource(data) {
     type: data.type || 'rss',
     region: data.region || '',
     enabled: data.enabled !== false,
-    trustWeight: data.trustWeight ?? 0.85,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
+    trust_weight: data.trustWeight ?? 0.85,
   });
+  if (error) throw error;
   return id;
 }
 
 export async function deleteSource(sourceId) {
-  const db = await getDbAsync();
-  if (!db) throw new Error('Firebase unavailable');
-  const { doc, deleteDoc } = await firestoreOps();
-  await deleteDoc(doc(db, 'sources', sourceId));
+  const supabase = getSupabaseBrowser();
+  if (!supabase) throw new Error('Database unavailable');
+  await supabase.from('sources').delete().eq('id', sourceId);
 }
 
 function slugifySourceId(name) {
@@ -108,70 +98,73 @@ function slugifySourceId(name) {
 }
 
 export async function getSubscribers(limitCount = 100) {
-  const db = await getDbAsync();
-  if (!db) return [];
-  const { collection, getDocs, query, limit } = await firestoreOps();
-  const snap = await getDocs(query(collection(db, 'subscribers'), limit(limitCount)));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const supabase = getSupabaseBrowser();
+  if (!supabase) return [];
+  const { data } = await supabase.from('subscribers').select('*').limit(limitCount);
+  return rowsToApp(data || []);
 }
 
 export async function getVideos(limitCount = 50) {
-  const db = await getDbAsync();
-  if (!db) return [];
-  const { collection, getDocs, query, limit, orderBy } = await firestoreOps();
-  const snap = await getDocs(query(collection(db, 'videos'), orderBy('fetchedAt', 'desc'), limit(limitCount)));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const supabase = getSupabaseBrowser();
+  if (!supabase) return [];
+  const { data } = await supabase.from('videos').select('*').order('fetched_at', { ascending: false }).limit(limitCount);
+  return rowsToApp(data || []);
 }
 
 export async function updateVideo(videoId, data) {
-  const db = await getDbAsync();
-  if (!db) throw new Error('Firebase unavailable');
-  const { doc, updateDoc } = await firestoreOps();
-  await updateDoc(doc(db, 'videos', videoId), data);
+  const supabase = getSupabaseBrowser();
+  if (!supabase) throw new Error('Database unavailable');
+  const row = {};
+  if (data.title !== undefined) row.title = data.title;
+  if (data.category !== undefined) row.category = data.category;
+  await supabase.from('videos').update(row).eq('id', videoId);
 }
 
 export async function deleteVideo(videoId) {
-  const db = await getDbAsync();
-  if (!db) throw new Error('Firebase unavailable');
-  const { doc, deleteDoc } = await firestoreOps();
-  await deleteDoc(doc(db, 'videos', videoId));
+  const supabase = getSupabaseBrowser();
+  if (!supabase) throw new Error('Database unavailable');
+  await supabase.from('videos').delete().eq('id', videoId);
 }
 
 export async function updateSource(sourceId, data) {
-  const db = await getDbAsync();
-  if (!db) throw new Error('Firebase unavailable');
-  const { doc, updateDoc } = await firestoreOps();
-  await updateDoc(doc(db, 'sources', sourceId), data);
+  const supabase = getSupabaseBrowser();
+  if (!supabase) throw new Error('Database unavailable');
+  const row = {};
+  Object.entries(data).forEach(([k, v]) => {
+    row[k.replace(/([A-Z])/g, '_$1').toLowerCase()] = v;
+  });
+  await supabase.from('sources').update(row).eq('id', sourceId);
 }
 
 export async function getSiteSettings() {
-  const db = await getDbAsync();
-  if (!db) return mergeSiteSettings();
-  const { doc, getDoc } = await firestoreOps();
-  const snap = await getDoc(doc(db, 'settings', 'site'));
-  return snap.exists() ? mergeSiteSettings(snap.data()) : mergeSiteSettings();
+  const supabase = getSupabaseBrowser();
+  if (!supabase) return mergeSiteSettings();
+  const { data } = await supabase.from('site_settings').select('value').eq('key', 'site').maybeSingle();
+  return data?.value ? mergeSiteSettings(data.value) : mergeSiteSettings();
 }
 
 export async function updateSiteSettings(data) {
-  const db = await getDbAsync();
-  if (!db) throw new Error('Firebase unavailable');
-  const { doc, setDoc } = await firestoreOps();
-  await setDoc(doc(db, 'settings', 'site'), data, { merge: true });
+  const supabase = getSupabaseBrowser();
+  if (!supabase) throw new Error('Database unavailable');
+  const current = await getSiteSettings();
+  await supabase.from('site_settings').upsert({
+    key: 'site',
+    value: { ...current, ...data },
+  });
 }
 
 export async function getUsers({ pageSize = 25, startAfterDoc = null, search = '' } = {}) {
-  const db = await getDbAsync();
-  if (!db) return { users: [], hasMore: false, lastDoc: null };
-  const { collection, getDocs, query, limit, orderBy, startAfter } = await firestoreOps();
+  const supabase = getSupabaseBrowser();
+  if (!supabase) return { users: [], hasMore: false, lastDoc: null };
 
-  let q = query(collection(db, 'users'), orderBy('email'), limit(pageSize + 1));
-  if (startAfterDoc) {
-    q = query(collection(db, 'users'), orderBy('email'), startAfter(startAfterDoc), limit(pageSize + 1));
-  }
+  const offset = startAfterDoc?._offset || 0;
+  const { data } = await supabase
+    .from('users')
+    .select('*')
+    .order('email')
+    .range(offset, offset + pageSize);
 
-  const snap = await getDocs(q);
-  let users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-
+  let users = rowsToApp(data || []);
   if (search.trim()) {
     const term = search.trim().toLowerCase();
     users = users.filter(u =>
@@ -180,15 +173,16 @@ export async function getUsers({ pageSize = 25, startAfterDoc = null, search = '
     );
   }
 
-  const hasMore = snap.docs.length > pageSize;
-  const pageDocs = hasMore ? snap.docs.slice(0, pageSize) : snap.docs;
+  const hasMore = (data?.length || 0) > pageSize;
   if (hasMore) users = users.slice(0, pageSize);
 
-  const lastDoc = pageDocs.length ? pageDocs[pageDocs.length - 1] : null;
-  return { users, hasMore, lastDoc };
+  return {
+    users,
+    hasMore,
+    lastDoc: hasMore ? { _offset: offset + pageSize } : null,
+  };
 }
 
-/** @deprecated Use getUsers({ pageSize }) */
 export async function getUsersLegacy(limitCount = 50) {
   const { users } = await getUsers({ pageSize: limitCount });
   return users;
@@ -196,17 +190,16 @@ export async function getUsersLegacy(limitCount = 50) {
 
 export const ALLOWED_ROLES = ['reader', 'contributor', 'vlogger', 'content_writer', 'admin'];
 
-async function getAdminIdToken() {
-  const { initClientFirebase } = await import('@/config/firebase.config');
-  const fb = await initClientFirebase();
-  const currentUser = fb?.auth?.currentUser;
-  if (!currentUser) throw new Error('You must be signed in as admin.');
-  return currentUser.getIdToken();
+async function getAdminAccessToken() {
+  const supabase = getSupabaseBrowser();
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) throw new Error('You must be signed in as admin.');
+  return session.access_token;
 }
 
 export async function createAdminUser({ email, password, displayName, role }) {
   if (!ALLOWED_ROLES.includes(role)) throw new Error(`Invalid role: ${role}`);
-  const token = await getAdminIdToken();
+  const token = await getAdminAccessToken();
   const res = await fetch('/api/admin/users', {
     method: 'POST',
     headers: {
@@ -223,10 +216,9 @@ export async function createAdminUser({ email, password, displayName, role }) {
 export async function setUserRole(userId, role) {
   if (!userId || typeof userId !== 'string') throw new Error('Invalid userId');
   if (!ALLOWED_ROLES.includes(role)) throw new Error(`Invalid role: ${role}`);
-  const db = await getDbAsync();
-  if (!db) throw new Error('Firebase unavailable');
-  const { doc, updateDoc } = await firestoreOps();
-  await updateDoc(doc(db, 'users', userId), { role });
+  const supabase = getSupabaseBrowser();
+  if (!supabase) throw new Error('Database unavailable');
+  await supabase.from('users').update({ role }).eq('id', userId);
 }
 
 export { filterPublished };

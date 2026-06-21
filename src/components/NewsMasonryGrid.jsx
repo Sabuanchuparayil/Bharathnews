@@ -4,7 +4,7 @@ import React from 'react';
 import NewsCard from './NewsCard';
 import NewsletterSignup from './NewsletterSignup';
 
-const NewsMasonryGrid = ({ articles = [], loading = false, showMobileNewsletter = false }) => {
+const NewsMasonryGrid = ({ articles = [], loading = false, showMobileNewsletter = false, cardVariant = 'default' }) => {
   if (loading) {
     return (
       <div className="masonry-grid">
@@ -31,7 +31,7 @@ const NewsMasonryGrid = ({ articles = [], loading = false, showMobileNewsletter 
         <NewsCard
           article={article}
           index={index}
-          variant="default"
+          variant={cardVariant}
         />
       </div>
     );
