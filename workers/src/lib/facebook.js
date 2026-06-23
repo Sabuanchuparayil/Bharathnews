@@ -70,6 +70,7 @@ export async function postToFacebook(env, article, settings = {}, { skipPatch = 
   const articleUrl = `${siteUrl}/article/${encodeURIComponent(article.slug)}`;
   const message = buildPostMessage(article, articleUrl);
   const imageUrl = resolveSocialImageUrl(article, siteUrl);
+  if (!imageUrl) return { skipped: 'no_real_image' };
 
   try {
     // Photo post with explicit URL — bypasses FB link-scraper cache

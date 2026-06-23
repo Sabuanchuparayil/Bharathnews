@@ -93,15 +93,21 @@ export function isCategoryFallbackImage(url) {
   return false;
 }
 
-/** Pick the best publicly-fetchable image URL for social posting. */
+/** True when URL is a real article thumbnail (not Unsplash placeholder). */
+export function isRealArticleImage(url) {
+  if (!url || typeof url !== 'string') return false;
+  if (isCategoryFallbackImage(url)) return false;
+  if (isGenericPublisherImage(url)) return false;
+  return url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/');
+}
+
+/** Pick the best publicly-fetchable image URL for social posting. Returns '' if none. */
 export function resolveSocialImageUrl(article, siteUrl = 'https://www.thebharathnews.com') {
   const raw = article?.image_url || article?.imageUrl || '';
-  if (raw && !isCategoryFallbackImage(raw) && !isGenericPublisherImage(raw)) {
-    if (raw.startsWith('http')) return raw;
-    if (raw.startsWith('/')) return `${siteUrl.replace(/\/$/, '')}${raw}`;
-  }
-  const seed = article?.slug || article?.title || article?.source_url || article?.sourceUrl || '';
-  return getUniqueFallbackImage(seed, article?.category || 'india');
+  if (!isRealArticleImage(raw)) return '';
+  if (raw.startsWith('http')) return raw.replace(/^http:\/\//, 'https://');
+  if (raw.startsWith('/')) return `${siteUrl.replace(/\/$/, '')}${raw}`;
+  return '';
 }
 
 async function fetchOgImage(url, timeoutMs = 4000) {
@@ -137,14 +143,12 @@ async function fetchOgImage(url, timeoutMs = 4000) {
   }
 }
 
-/** Resolve the best available image URL for an article at publish time. */
+/** Resolve the best available image URL for an article at publish time. Returns '' if none found. */
 export async function resolveArticleImage({ imageUrl, sourceUrl, category, slug, title, ogTimeoutMs = 4000 }) {
-  if (imageUrl && !isCategoryFallbackImage(imageUrl) && !isGenericPublisherImage(imageUrl)) {
-    return imageUrl;
-  }
+  if (imageUrl && isRealArticleImage(imageUrl)) return imageUrl;
   if (sourceUrl) {
     const og = await fetchOgImage(sourceUrl, ogTimeoutMs);
-    if (og) return og;
+    if (og && isRealArticleImage(og)) return og;
   }
-  return getUniqueFallbackImage(slug || title || sourceUrl || '', category);
+  return '';
 }

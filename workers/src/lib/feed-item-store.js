@@ -2,7 +2,7 @@
  * Store RSS items — skip already-published URLs, scan deeper into feeds.
  */
 import { upsertRow, patchRawArticle } from './supabase-rest.js';
-import { getCategoryFallbackImage, isGenericPublisherImage } from './image-resolver.js';
+import { isGenericPublisherImage } from './image-resolver.js';
 import { slugifyArticle } from './article-slug.js';
 import { inferSubcategoryTag, subcategoryFromFeed } from './subcategory-tagger.js';
 
@@ -117,7 +117,7 @@ export async function ingestFeedItems(env, feed, lang, items, options = {}) {
       subcategory,
       region: feed.region || 'india',
       language: lang,
-      image_url: rssImage || getCategoryFallbackImage(category, slug),
+      image_url: rssImage,
       status: 'pending_ai',
       editorial_status: 'pending',
       published_at: item.pubDate || now,

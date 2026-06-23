@@ -74,7 +74,7 @@ async function patchImage(slug, imageUrl) {
 async function processBatch(articles, concurrency = 6) {
   let updated = 0;
   let real = 0;
-  let unique = 0;
+  let cleared = 0;
 
   for (let i = 0; i < articles.length; i += concurrency) {
     const batch = articles.slice(i, i + concurrency);
@@ -89,16 +89,16 @@ async function processBatch(articles, concurrency = 6) {
 
       if (best === article.image_url) return;
 
-      if (!isStoredPlaceholderImage(best) && !best.includes('picsum.photos')) real++;
-      else unique++;
+      if (best && !isStoredPlaceholderImage(best)) real++;
+      else if (!best) cleared++;
 
-      const ok = await patchImage(article.slug, best);
+      const ok = await patchImage(article.slug, best || null);
       if (ok) updated++;
     }));
     process.stdout.write(`  Fixed ${Math.min(i + concurrency, articles.length)}/${articles.length}\r`);
   }
 
-  return { updated, real, unique };
+  return { updated, real, cleared };
 }
 
 async function main() {
@@ -120,7 +120,7 @@ async function main() {
   }
 
   const result = await processBatch(needsFix);
-  console.log(`\nDone: ${result.updated} updated (${result.real} source images, ${result.unique} unique fallbacks)`);
+  console.log(`\nDone: ${result.updated} updated (${result.real} source images, ${result.cleared} placeholders cleared)`);
 }
 
 main().catch(err => {

@@ -1,10 +1,11 @@
 import { SITE_URL } from '@/lib/site-url';
+import { isStoredPlaceholderImage } from '@/utils/articleImages';
 const SITE_NAME = 'The Bharath News';
 
 const DEFAULT_OG_IMAGE = `${SITE_URL}/og-default.png`;
 
 function getAccessibleImageUrl(imageUrl) {
-  if (!imageUrl) return DEFAULT_OG_IMAGE;
+  if (!imageUrl || isStoredPlaceholderImage(imageUrl)) return DEFAULT_OG_IMAGE;
   if (imageUrl.startsWith(SITE_URL)) return imageUrl;
   if (imageUrl.startsWith('/')) return `${SITE_URL}${imageUrl}`;
   // Direct HTTPS URL for social crawlers (Facebook/Telegram) — avoids Next.js proxy cache collisions

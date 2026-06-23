@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase-server';
 import { SITE_URL } from '@/lib/site-url';
+import { getDirectSocialImageUrl } from '@/utils/articleImages';
 
 function escapeXml(str) {
   if (!str) return '';
@@ -89,7 +90,8 @@ export async function GET(request) {
   let hours = hoursParam > 0 ? Math.min(hoursParam, 168) : 0;
 
   // dlvr.it URLs are read-only after creation — enforce social window for en/ml feeds.
-  if (lang && SOCIAL_FEED_LANGS.has(lang)) {
+  const isSocialFeed = lang && SOCIAL_FEED_LANGS.has(lang);
+  if (isSocialFeed) {
     limit = Math.min(limit, SOCIAL_FEED_MAX_ITEMS);
     if (!hours) hours = SOCIAL_FEED_DEFAULT_HOURS;
   }
@@ -97,12 +99,14 @@ export async function GET(request) {
   let articles = [];
   try {
     const supabase = getSupabaseAdmin();
+    // Social feeds skip articles without real source images — fetch extra to fill the cap.
+    const queryLimit = isSocialFeed ? Math.min(limit * 4, 100) : limit;
     let query = supabase
       .from('articles')
       .select('title, slug, summary, published_at, created_at, category, source, image_url, language')
       .or('editorial_status.eq.published,editorial_status.is.null')
       .order('created_at', { ascending: false })
-      .limit(limit);
+      .limit(queryLimit);
 
     if (lang) query = query.eq('language', lang);
     if (hours > 0) {
@@ -112,7 +116,7 @@ export async function GET(request) {
 
     const { data } = await query;
 
-    articles = (data || []).map(d => {
+    const mapped = (data || []).map(d => {
       // Use the time WE added the article (created_at) for the feed item date so
       // RSS consumers (dlvr.it, etc.) reliably see freshly-ingested items as new,
       // even when the original source published date is older.
@@ -122,6 +126,9 @@ export async function GET(request) {
       const itemLang = d.language || lang || 'en';
       const hashtags = buildHashtags(category, itemLang);
       const baseDescription = d.summary || '';
+      const image = isSocialFeed
+        ? getDirectSocialImageUrl(d.image_url, SITE_URL)
+        : (d.image_url ? getProxiedImageUrl(d.image_url) : '');
       return {
         title: d.title || '',
         link: `${SITE_URL}/article/${d.slug}`,
@@ -129,9 +136,13 @@ export async function GET(request) {
         pubDate: pubDate.toUTCString(),
         category,
         author: d.source || 'The Bharath News',
-        image: d.image_url ? getProxiedImageUrl(d.image_url) : '',
+        image,
       };
     });
+
+    articles = isSocialFeed
+      ? mapped.filter(a => a.image).slice(0, SOCIAL_FEED_MAX_ITEMS)
+      : mapped;
   } catch (err) {
     console.error('[feed.xml] Failed to fetch articles:', err.message);
   }

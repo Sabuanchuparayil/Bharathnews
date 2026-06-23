@@ -209,7 +209,7 @@ export async function resolveBestArticleImage({ imageUrl, sourceUrl, category, s
     const og = await fetchOgImage(sourceUrl);
     if (og && !isStoredPlaceholderImage(og)) return og;
   }
-  return getUniqueFallbackImage(slug || title || sourceUrl || '', category);
+  return '';
 }
 
 export function resolveArticleImage(article) {
@@ -219,6 +219,26 @@ export function resolveArticleImage(article) {
     if (url.startsWith('http') && !isGenericPublisherImage(url)) return url;
   }
   return getUniqueFallbackImage(article?.slug || article?.title || '', article?.category);
+}
+
+/** True when URL is a real article thumbnail suitable for social/RSS (not Unsplash placeholder). */
+export function isRealArticleImage(url) {
+  if (!url || typeof url !== 'string') return false;
+  if (isStoredPlaceholderImage(url)) return false;
+  if (isGenericPublisherImage(url)) return false;
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/')) return true;
+  return false;
+}
+
+/** Direct HTTPS URL for RSS/social crawlers — never use Next.js image proxy. */
+export function getDirectSocialImageUrl(imageUrl, siteUrl = '') {
+  if (!isRealArticleImage(imageUrl)) return '';
+  if (imageUrl.startsWith('/')) {
+    const base = (siteUrl || '').replace(/\/$/, '');
+    return base ? `${base}${imageUrl}` : '';
+  }
+  if (imageUrl.startsWith('http://')) return imageUrl.replace(/^http:\/\//, 'https://');
+  return imageUrl;
 }
 
 export function shouldReplaceImage(url, duplicateCount = 1) {
