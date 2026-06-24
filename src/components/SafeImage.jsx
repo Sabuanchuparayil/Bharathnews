@@ -1,18 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Image from 'next/image';
 import { ImageOff } from 'lucide-react';
 import { getUniqueFallbackImage, LOCAL_PLACEHOLDER } from '../utils/articleImages';
-
-function isLocalPath(url) {
-  return url?.startsWith('/');
-}
-
-function useNextImage(url) {
-  if (!url) return false;
-  return isLocalPath(url) || url.startsWith('http');
-}
 
 const SafeImage = ({ src, alt = '', className = '', category, fallback, width = 800, height = 450, sizes, priority, ...props }) => {
   const seed = alt || src || '';
@@ -44,33 +34,18 @@ const SafeImage = ({ src, alt = '', className = '', category, fallback, width = 
     );
   }
 
-  // Native img for news CDNs — avoids Next.js optimizer issues and hotlink blocks
-  if (!useNextImage(imgSrc)) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={imgSrc}
-        alt={alt}
-        className={className}
-        loading={priority ? 'eager' : 'lazy'}
-        decoding="async"
-        referrerPolicy="no-referrer"
-        onError={handleError}
-        {...props}
-      />
-    );
-  }
-
+  // External news CDNs + YouTube/Unsplash — load directly; Next.js optimizer causes HTTP/2 errors on Railway.
   return (
-    <Image
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
       src={imgSrc}
       alt={alt}
+      className={className}
       width={width}
       height={height}
-      className={className}
-      loading={priority ? undefined : 'lazy'}
-      priority={priority}
-      sizes={sizes || '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw'}
+      loading={priority ? 'eager' : 'lazy'}
+      decoding="async"
+      referrerPolicy="no-referrer"
       onError={handleError}
       {...props}
     />

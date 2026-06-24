@@ -1,8 +1,8 @@
 import { categoryMetadata } from '@/lib/category-metadata';
-import SectionPage from '@/views/SectionPage';
+import CategoryPage from '@/views/CategoryPage';
 
 export const metadata = categoryMetadata('tech');
 
 export default function Page() {
-  return <SectionPage sectionId="tech" title="Tech & Science" />;
+  return <CategoryPage sectionId="tech" title="Tech & Science" />;
 }

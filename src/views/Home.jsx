@@ -171,15 +171,6 @@ const Home = () => {
         <StoriesCarousel articles={carouselArticles} />
       )}
 
-      {!showHomeSections && isTopStoriesSubView && (
-        <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 pt-6">
-          <h1 className="font-display font-bold text-2xl sm:text-3xl text-gray-900 dark:text-white mb-4">
-            {sectionTitle}
-          </h1>
-          <SubcategoryFilter sectionId="top-stories" activeSubcategory={activeSub} basePath="/" />
-        </div>
-      )}
-
       {showHomeSections && <NriRatesWidget />}
 
       {/* Zone 2 — Videos + For You carousel */}
@@ -198,14 +189,19 @@ const Home = () => {
         )}
 
         <div className="sticky-section-header -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 mb-4 min-w-0">
-          <h2 className="font-display font-bold text-lg text-gray-900 dark:text-white mb-3">
-            {sectionTitle}
-          </h2>
-          {showHomeSections && (
-            <div className="mb-3">
-              <SubcategoryFilter sectionId="top-stories" activeSubcategory={activeSub} basePath="/" />
-            </div>
+          {!showHomeSections && (
+            <h1 className="font-display font-bold text-2xl sm:text-3xl text-gray-900 dark:text-white mb-3">
+              {sectionTitle}
+            </h1>
           )}
+          {showHomeSections && (
+            <h2 className="font-display font-bold text-lg text-gray-900 dark:text-white mb-3">
+              {sectionTitle}
+            </h2>
+          )}
+          <div className="mb-3">
+            <SubcategoryFilter sectionId="top-stories" activeSubcategory={activeSub} basePath="/" />
+          </div>
           {showHomeSections && (
             <CategoryFilter
               onCategoryChange={setActiveCategory}

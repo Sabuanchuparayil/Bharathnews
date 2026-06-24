@@ -1,8 +1,8 @@
 import { categoryMetadata } from '@/lib/category-metadata';
-import SectionPage from '@/views/SectionPage';
+import CategoryPage from '@/views/CategoryPage';
 
 export const metadata = categoryMetadata('money');
 
 export default function Page() {
-  return <SectionPage sectionId="money" title="Money & Markets" layoutVariant="money" />;
+  return <CategoryPage sectionId="money" title="Money & Markets" layoutVariant="money" />;
 }
