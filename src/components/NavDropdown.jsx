@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { ChevronDown } from 'lucide-react';
 import { getSubcategoriesForSection } from '../config/feeds.config';
@@ -9,8 +9,18 @@ import { useClickOutside } from '../hooks/useClickOutside';
 
 const NavDropdown = ({ link, isActive }) => {
   const [open, setOpen] = useState(false);
+  const [canHover, setCanHover] = useState(false);
   const ref = useRef(null);
   useClickOutside(ref, open, () => setOpen(false));
+
+  useEffect(() => {
+    // Prevent "double click" on touch devices where first tap triggers hover.
+    try {
+      setCanHover(Boolean(window.matchMedia?.('(hover: hover)').matches));
+    } catch {
+      setCanHover(false);
+    }
+  }, []);
 
   const subcategories = link.sectionId
     ? getSubcategoriesForSection(link.sectionId).filter(s => s.id !== 'all')
@@ -35,8 +45,8 @@ const NavDropdown = ({ link, isActive }) => {
     <div
       ref={ref}
       className="relative"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
+      onMouseEnter={canHover ? () => setOpen(true) : undefined}
+      onMouseLeave={canHover ? () => setOpen(false) : undefined}
     >
       <div className="inline-flex items-center">
         <Link

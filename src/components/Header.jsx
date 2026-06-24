@@ -296,6 +296,7 @@ const Header = () => {
                       <Link
                         key={link.path}
                         href={link.path}
+                        onClick={() => setMobileMenuOpen(false)}
                         className={`block px-4 py-3 rounded-xl font-medium transition-colors min-h-[44px] flex items-center ${
                           isActive(link.path)
                             ? 'bg-brand-50 dark:bg-brand-950/50 text-brand-700 dark:text-brand-300'
@@ -312,6 +313,7 @@ const Header = () => {
                       <div className="flex items-stretch">
                         <Link
                           href={link.path}
+                          onClick={() => setMobileMenuOpen(false)}
                           className={`flex-1 px-4 py-3 font-medium transition-colors min-h-[44px] flex items-center ${
                             isActive(link.path)
                               ? 'bg-brand-50 dark:bg-brand-950/50 text-brand-700 dark:text-brand-300'
