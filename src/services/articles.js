@@ -171,6 +171,52 @@ export const getArticlesPageForSection = async (
   const supabase = getClient();
   if (!supabase) return emptyPage;
 
+  if (sectionId === 'top-stories') {
+    if (subcategoryId === 'most-read') {
+      const articles = await getMostReadArticles(pageSize, language);
+      return { articles, lastDoc: null, hasMore: false };
+    }
+    if (subcategoryId === 'breaking') {
+      return getBreakingArticlesPage(lastDoc, pageSize, language);
+    }
+
+    const fetchSize = subcategoryId && subcategoryId !== 'all' ? pageSize * 4 : pageSize;
+    let query = supabase
+      .from('articles')
+      .select('*')
+      .or('editorial_status.eq.published,editorial_status.is.null')
+      .order('created_at', { ascending: false })
+      .limit(fetchSize);
+
+    query = applyLanguageFilter(query, language);
+
+    if (lastDoc?._offset) {
+      query = query.range(lastDoc._offset, lastDoc._offset + fetchSize - 1);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.error('getArticlesPageForSection top-stories:', error.message);
+      return emptyPage;
+    }
+
+    const allArticles = rowsToApp(data || []);
+    const seenSlugs = new Set();
+    let articles = filterByLanguage(allArticles, language).filter(a => {
+      if (!a.slug || seenSlugs.has(a.slug)) return false;
+      seenSlugs.add(a.slug);
+      return true;
+    });
+
+    articles = filterBySubcategory(articles, sectionId, subcategoryId).slice(0, pageSize);
+    const offset = (lastDoc?._offset || 0) + (data?.length || 0);
+    return {
+      articles,
+      lastDoc: (data?.length || 0) >= fetchSize ? { _offset: offset } : null,
+      hasMore: (data?.length || 0) >= fetchSize,
+    };
+  }
+
   const legacyCategories = getLegacyCategoriesForSection(sectionId, subcategoryId);
   if (!legacyCategories?.length) {
     return getArticlesPage(null, lastDoc, pageSize, language);
@@ -499,6 +545,7 @@ export const getVideoFeeds = async (category = null, count = 100, language = nul
   let query = supabase
     .from('videos')
     .select('*')
+    .order('published_at', { ascending: false, nullsFirst: false })
     .order('fetched_at', { ascending: false })
     .limit(count);
   if (category) query = query.eq('category', category);

@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Search, Bell, Sun, Moon, LogIn, BookmarkIcon, Settings as SettingsIcon } from 'lucide-react';
+import { Menu, X, Search, Bell, Sun, Moon, LogIn, BookmarkIcon, Settings as SettingsIcon, ChevronDown } from 'lucide-react';
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { useClickOutside } from '../hooks/useClickOutside';
-import { HEADER_NAV } from '../config/feeds.config';
+import { HEADER_NAV, getSubcategoriesForSection, buildNavSubcategoryHref } from '../config/feeds.config';
 import NavDropdown from './NavDropdown';
 import LanguageSwitcher from './LanguageSwitcher';
 import NotificationsPanel from './NotificationsPanel';
@@ -23,6 +23,7 @@ const Header = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [expandedMobileSection, setExpandedMobileSection] = useState(null);
   const [hasTrending, setHasTrending] = useState(_trendingCache.value ?? false);
   const profileRef = useRef(null);
   const searchTrapRef = useFocusTrap(searchOpen);
@@ -57,6 +58,7 @@ const Header = () => {
   useEffect(() => {
     setMobileMenuOpen(false);
     setSearchOpen(false);
+    setExpandedMobileSection(null);
   }, [pathname]);
 
   const isActive = (path) => (path === '/' ? pathname === '/' : pathname.startsWith(path));
@@ -282,19 +284,72 @@ const Header = () => {
                 </button>
               </div>
               <nav className="space-y-1">
-                {HEADER_NAV.map(link => (
-                  <Link
-                    key={link.path}
-                    href={link.path}
-                    className={`block px-4 py-3 rounded-xl font-medium transition-colors min-h-[44px] flex items-center ${
-                      isActive(link.path)
-                        ? 'bg-brand-50 dark:bg-brand-950/50 text-brand-700 dark:text-brand-300'
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-surface-2 dark:hover:bg-dark-surface-2'
-                    }`}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
+                {HEADER_NAV.map(link => {
+                  const subs = link.sectionId
+                    ? getSubcategoriesForSection(link.sectionId).filter(s => s.id !== 'all')
+                    : [];
+                  const expanded = expandedMobileSection === link.path;
+
+                  if (!subs.length) {
+                    return (
+                      <Link
+                        key={link.path}
+                        href={link.path}
+                        className={`block px-4 py-3 rounded-xl font-medium transition-colors min-h-[44px] flex items-center ${
+                          isActive(link.path)
+                            ? 'bg-brand-50 dark:bg-brand-950/50 text-brand-700 dark:text-brand-300'
+                            : 'text-gray-700 dark:text-gray-300 hover:bg-surface-2 dark:hover:bg-dark-surface-2'
+                        }`}
+                      >
+                        {link.label}
+                      </Link>
+                    );
+                  }
+
+                  return (
+                    <div key={link.path} className="rounded-xl overflow-hidden">
+                      <div className="flex items-stretch">
+                        <Link
+                          href={link.path}
+                          className={`flex-1 px-4 py-3 font-medium transition-colors min-h-[44px] flex items-center ${
+                            isActive(link.path)
+                              ? 'bg-brand-50 dark:bg-brand-950/50 text-brand-700 dark:text-brand-300'
+                              : 'text-gray-700 dark:text-gray-300 hover:bg-surface-2 dark:hover:bg-dark-surface-2'
+                          }`}
+                        >
+                          {link.label}
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => setExpandedMobileSection(expanded ? null : link.path)}
+                          aria-expanded={expanded}
+                          aria-label={`${link.label} sections`}
+                          className={`px-3 min-h-[44px] flex items-center ${
+                            isActive(link.path)
+                              ? 'bg-brand-50 dark:bg-brand-950/50 text-brand-700 dark:text-brand-300'
+                              : 'text-gray-700 dark:text-gray-300 hover:bg-surface-2 dark:hover:bg-dark-surface-2'
+                          }`}
+                        >
+                          <ChevronDown className={`w-4 h-4 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+                        </button>
+                      </div>
+                      {expanded && (
+                        <div className="pb-1 pl-2">
+                          {subs.map(sub => (
+                            <Link
+                              key={sub.id}
+                              href={buildNavSubcategoryHref(link, sub.id)}
+                              onClick={() => setMobileMenuOpen(false)}
+                              className="block px-4 py-2.5 ml-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:bg-surface-2 dark:hover:bg-dark-surface-2 hover:text-brand-700 dark:hover:text-brand-300"
+                            >
+                              {sub.label}
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </nav>
               <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800 space-y-3">
                 <p className="px-4 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Language</p>

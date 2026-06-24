@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import {
   LayoutGrid, Zap, Globe2, Building2, Briefcase, Cpu, Trophy, Clapperboard, HeartPulse,
   GraduationCap, UserSearch, Home, Plane, MessageSquareQuote,
@@ -11,8 +11,9 @@ import { getCategoryPillClasses } from '../utils/categoryColors';
 import { CATEGORY_ICONS } from '../utils/categoryIcons';
 
 /** Resolve active category from the current route when not overridden. */
-export function getActiveCategoryFromPath(pathname, override) {
+export function getActiveCategoryFromPath(pathname, override, searchSub = null) {
   if (override) return override;
+  if (searchSub === 'breaking') return 'breaking';
   if (pathname === '/') return 'all';
   const sectionMatch = Object.values(SECTIONS).find(s => s.path !== '/' && pathname.startsWith(s.path));
   if (sectionMatch) return sectionMatch.id;
@@ -30,7 +31,8 @@ const CategoryFilter = ({
 }) => {
   const router = useRouter();
   const pathname = usePathname();
-  const resolvedActive = getActiveCategoryFromPath(pathname, activeCategory);
+  const searchParams = useSearchParams();
+  const resolvedActive = getActiveCategoryFromPath(pathname, activeCategory, searchParams.get('sub'));
 
   const handleClick = (catId) => {
     if (catId === 'all') {
@@ -39,8 +41,8 @@ const CategoryFilter = ({
       return;
     }
     if (catId === 'breaking') {
-      if (pathname !== '/') router.push('/?category=breaking');
-      else onCategoryChange?.('breaking');
+      router.push('/?sub=breaking');
+      onCategoryChange?.('breaking');
       return;
     }
     const section = SECTIONS[catId];
