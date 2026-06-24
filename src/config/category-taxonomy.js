@@ -104,15 +104,6 @@ export const SECTIONS = {
   },
 };
 
-export function buildNavSubcategoryHref(link, subId) {
-  if (!subId || subId === 'all') return link.path || '/';
-  if (link.sectionId === 'top-stories') {
-    return `/?sub=${encodeURIComponent(subId)}`;
-  }
-  const base = link.path || '/';
-  return `${base}?sub=${encodeURIComponent(subId)}`;
-}
-
 /** Primary header navigation — 6 top-level sections */
 export const HEADER_NAV = [
   { path: '/', label: 'Top Stories', sectionId: 'top-stories' },

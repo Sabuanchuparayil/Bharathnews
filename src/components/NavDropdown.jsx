@@ -3,7 +3,8 @@
 import React, { useState, useRef } from 'react';
 import Link from 'next/link';
 import { ChevronDown } from 'lucide-react';
-import { getSubcategoriesForSection, buildNavSubcategoryHref } from '../config/feeds.config';
+import { getSubcategoriesForSection } from '../config/feeds.config';
+import { buildNavSubcategoryHref } from '../utils/navLinks';
 import { useClickOutside } from '../hooks/useClickOutside';
 
 const NavDropdown = ({ link, isActive }) => {

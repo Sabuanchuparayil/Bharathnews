@@ -39,11 +39,11 @@ const InstallPWA = () => {
     }
 
     const handler = (e) => {
+      // Only suppress the native banner when we will show our own install UI.
+      if (dismissed || visits < 2) return;
       e.preventDefault();
       setDeferredPrompt(e);
-      if (visits >= 2 && !dismissed) {
-        setShowBanner(true);
-      }
+      setShowBanner(true);
     };
 
     window.addEventListener('beforeinstallprompt', handler);
