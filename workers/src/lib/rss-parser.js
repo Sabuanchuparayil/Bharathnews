@@ -119,6 +119,12 @@ function needsRss2JsonProxy(url) {
   return url.includes('news.google.com/') || url.includes('oneindia.com/');
 }
 
+function extractImgFromHtml(html) {
+  if (!html) return '';
+  const m = String(html).match(/<img[^>]+src=["']([^"']+)["']/i);
+  return m ? m[1].trim() : '';
+}
+
 async function fetchViaRss2Json(url) {
   // Free tier: no `count` param (requires API key); returns 10 items by default.
   const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}`;
@@ -130,14 +136,19 @@ async function fetchViaRss2Json(url) {
     const data = await res.json();
     if (data.status !== 'ok' || !Array.isArray(data.items)) return [];
     return data.items.map(item => {
-      const body = stripHtml(decodeEntities(item.description || item.content || '')).slice(0, 15000);
+      const rawDesc = item.description || item.content || '';
+      const body = stripHtml(decodeEntities(rawDesc)).slice(0, 15000);
+      const imageUrl = item.thumbnail
+        || item.enclosure?.link
+        || extractImgFromHtml(rawDesc)
+        || '';
       return {
         title: stripHtml(decodeEntities(item.title || '')),
         link: item.link || item.guid || '',
         description: body,
         body,
         pubDate: item.pubDate || '',
-        imageUrl: item.thumbnail || item.enclosure?.link || '',
+        imageUrl,
       };
     }).filter(i => i.title && i.link);
   } catch {

@@ -149,20 +149,37 @@ export async function GET(request) {
 
   const feedTitle = lang ? (LANG_TITLE[lang] || 'The Bharath News') : 'The Bharath News';
   const feedLangCode = lang ? (LANG_RSS_CODE[lang] || 'en-in') : 'en-in';
-  const selfUrl = lang ? `${SITE_URL}/feed.xml?lang=${lang}` : `${SITE_URL}/feed.xml`;
+  const selfUrl = (() => {
+    try {
+      const reqPath = new URL(request.url).pathname;
+      if (reqPath.includes('social-')) return `${SITE_URL}${reqPath}`;
+    } catch { /* ignore */ }
+    return lang ? `${SITE_URL}/feed.xml?lang=${lang}` : `${SITE_URL}/feed.xml`;
+  })();
 
-  const items = articles.map(a => `    <item>
+  const items = articles.map(a => {
+    const plainDescription = escapeXml(a.description);
+    // dlvr.it checks feed item body first for photo posts — include <img> in description.
+    const descriptionBody = (isSocialFeed && a.image)
+      ? `<![CDATA[<p>${plainDescription}</p><p><a href="${a.link}"><img src="${escapeXml(a.image)}" alt="${escapeXml(a.title)}" width="1200" height="630" /></a></p>]]>`
+      : plainDescription;
+    const contentEncoded = (isSocialFeed && a.image)
+      ? `<content:encoded><![CDATA[<p>${plainDescription}</p><p><a href="${a.link}"><img src="${escapeXml(a.image)}" alt="${escapeXml(a.title)}" /></a></p><p><a href="${a.link}">Read more</a></p>]]></content:encoded>`
+      : '';
+    return `    <item>
       <title>${escapeXml(a.title)}</title>
       <link>${a.link}</link>
       <guid isPermaLink="true">${a.link}</guid>
-      <description>${escapeXml(a.description)}</description>
+      <description>${descriptionBody}</description>
+      ${contentEncoded}
       <pubDate>${a.pubDate}</pubDate>
       <category>${escapeXml(a.category)}</category>
       <author>${escapeXml(a.author)}</author>${a.image ? `
-      <enclosure url="${escapeXml(a.image)}" type="image/jpeg" />
+      <enclosure url="${escapeXml(a.image)}" type="image/jpeg" length="0" />
       <media:content url="${escapeXml(a.image)}" medium="image" type="image/jpeg" />
       <media:thumbnail url="${escapeXml(a.image)}" />` : ''}
-    </item>`).join('\n');
+    </item>`;
+  }).join('\n');
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/" xmlns:content="http://purl.org/rss/1.0/modules/content/">

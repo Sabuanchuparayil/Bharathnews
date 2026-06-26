@@ -1,4 +1,4 @@
-import { REGIONAL_RSS_SOURCES, REGIONAL_LANGUAGES } from '../lib/regional-feeds.js';
+import { REGIONAL_RSS_SOURCES, REGIONAL_LANGUAGES, MALAYALAM_RSS_SOURCES, DISABLED_ML_FEED_URLS } from '../lib/regional-feeds.js';
 import { FALLBACK_RSS_FEEDS, GOOGLE_NEWS_TOPIC_FEEDS } from '../lib/feeds.js';
 import { fetchAndParseFeed } from '../lib/rss-parser.js';
 import { loadEnabledSources, updateSourceHealth } from '../lib/sources-loader.js';
@@ -74,19 +74,36 @@ async function resolveRegionalSources(env, lang, maxSources) {
     ? rotateSourcePick(gn, gnSlots, new Set(), new Set([lang]))
     : [];
 
-  const combined = [...pickedDirect, ...pickedGn];
-  if (combined.length) return combined;
+  let combined = [...pickedDirect, ...pickedGn];
 
-  return REGIONAL_RSS_SOURCES.filter(s => s.language === lang).slice(0, maxSources);
+  if (lang === 'ml') {
+    const mlFallback = MALAYALAM_RSS_SOURCES.map(f => ({
+      ...f,
+      id: f.id || f.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      enabled: true,
+      trustWeight: 0.9,
+    }));
+    combined = dedupeByUrl([...combined, ...mlFallback])
+      .filter(s => s.language === 'ml' && !DISABLED_ML_FEED_URLS.has(s.url));
+  }
+
+  if (combined.length) {
+    return rotateSourcePick(combined, maxSources, new Set(), new Set([lang]));
+  }
+
+  return REGIONAL_RSS_SOURCES
+    .filter(s => s.language === lang && !DISABLED_ML_FEED_URLS.has(s.url))
+    .slice(0, maxSources);
 }
 
-async function ingestOneSource(env, feed, lang, itemsPerSource, feedOffset = 0, knownUrls) {
+async function ingestOneSource(env, feed, lang, itemsPerSource, feedOffset = 0, knownUrls, extraOptions = {}) {
   try {
     const items = await fetchAndParseFeed(feed.url);
     const { stored } = await ingestFeedItems(env, feed, lang, items, {
       itemsPerSource,
       feedOffset,
       knownUrls,
+      feedScanDepth: extraOptions.feedScanDepth,
     });
     await updateSourceHealth(env, feed.id, { itemCount: stored, lastError: '' });
     return stored;
@@ -106,9 +123,14 @@ export async function handleIngestLang(env, options = {}) {
   const maxSources = options.maxSources ?? (lang === 'en'
     ? L.ENGLISH_SOURCES_PER_TICK
     : L.REGIONAL_SOURCES_DEFAULT);
-  const itemsPerSource = options.itemsPerSource ?? L.ITEMS_PER_SOURCE;
+  const itemsPerSource = lang === 'ml'
+    ? (options.itemsPerSource ?? 5)
+    : (options.itemsPerSource ?? L.ITEMS_PER_SOURCE);
   const publish = options.publish !== false;
   const feedOffset = options.feedOffset ?? Math.floor(Date.now() / (10 * 60 * 1000)) % 5;
+  const mlOpts = lang === 'ml'
+    ? { feedScanDepth: 15, itemsPerSource: options.itemsPerSource ?? 5 }
+    : {};
 
   const sources = lang === 'en'
     ? await resolveEnglishSources(env, maxSources)
@@ -126,7 +148,9 @@ export async function handleIngestLang(env, options = {}) {
 
   for (const feed of sources) {
     try {
-      results.ingested += await ingestOneSource(env, feed, lang, itemsPerSource, feedOffset, knownUrls);
+      results.ingested += await ingestOneSource(
+        env, feed, lang, itemsPerSource, feedOffset, knownUrls, mlOpts,
+      );
     } catch (e) {
       results.errors.push({ source: feed.name, error: e.message });
     }
@@ -203,9 +227,16 @@ export async function handleRegionalIngestCron(env, options = {}) {
   }
 
   let published = 0;
+  let malayalamPublished = 0;
   if (!skipPublish) {
     const pub = await handleFastPublish(env, getCronPublishOpts(env));
     published = pub.published || 0;
+    if (languages.includes('ml')) {
+      const { handlePublishMalayalam } = await import('./fast-publish.js');
+      const mlPub = await handlePublishMalayalam(env, { batchSize: 6, maxRounds: 2 });
+      malayalamPublished = mlPub.published || 0;
+      published += malayalamPublished;
+    }
   }
 
   const summary = {
@@ -213,6 +244,7 @@ export async function handleRegionalIngestCron(env, options = {}) {
     languageCodes: languages,
     totalIngested,
     published,
+    malayalamPublished,
     maxSources,
     itemsPerSource,
     byLang: results.map(r => ({ lang: r.lang, ingested: r.ingested, sources: r.sourceNames })),

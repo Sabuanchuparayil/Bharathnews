@@ -1,6 +1,7 @@
 import { handleFastPublish } from '../handlers/fast-publish.js';
 import { handleEnglishIngestCron, handleRegionalIngestCron, handleIngestLang } from '../handlers/ingest-lang.js';
 import { handleRSSIngest } from '../handlers/rss-ingest.js';
+import { handleVideoFetch } from '../handlers/video-fetch.js';
 import { loadSiteSettings } from './sources-loader.js';
 import { getLimits, getCronPublishOpts } from './cf-limits.js';
 import { processDistributionJobs, backfillDistributionJobs } from './distribution-jobs.js';
@@ -71,6 +72,21 @@ export async function runIngestTick(env) {
 
   console.log('[cron] ingest done:', summary);
   return { stage: 'ingest', result: summary };
+}
+
+/** Sync YouTube feeds into Supabase — rotates channels each tick. */
+export async function runVideoFetchTick(env) {
+  const L = getLimits(env);
+  console.log(`[cron] video-fetch at ${new Date().toISOString()} tier=${L.TIER}`);
+  try {
+    const titles = await handleVideoFetch(env);
+    const result = { stored: titles.length };
+    console.log('[cron] video-fetch done:', result);
+    return { stage: 'video-fetch', result };
+  } catch (err) {
+    console.error('[cron] video-fetch failed:', err.message);
+    return { stage: 'video-fetch', error: err.message };
+  }
 }
 
 /** Phase 3 — one language per tick for even regional coverage (~35 min cycle). */

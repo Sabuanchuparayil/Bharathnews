@@ -1,7 +1,7 @@
 import { handleRSSIngest } from './handlers/rss-ingest.js';
 import { handleClassify } from './handlers/classify.js';
 import { handleAIProcess } from './handlers/ai-process.js';
-import { handleFastPublish, resetPipelineQueue, handleBulkFill, handleBacklogFlush } from './handlers/fast-publish.js';
+import { handleFastPublish, handlePublishMalayalam, requeueMalayalamRaw, resetPipelineQueue, handleBulkFill, handleBacklogFlush } from './handlers/fast-publish.js';
 import { handleDistribute } from './handlers/distribute.js';
 import { handleVideoFetch } from './handlers/video-fetch.js';
 import { handleNewsletterDigest } from './handlers/newsletter-digest.js';
@@ -14,7 +14,7 @@ import { handleFixSlugs } from './handlers/fix-slugs.js';
 import { isProtectedApiPath, requireApiSecret } from './lib/api-auth.js';
 import { countRows, supabaseHeaders } from './lib/supabase-rest.js';
 import { getLimits, getCronPublishOpts } from './lib/cf-limits.js';
-import { runScheduledPipeline, runPublishOnlyTick, runDistributionJobsTick, runIngestTick, runSingleLangIngestTick } from './lib/pipeline-scheduler.js';
+import { runScheduledPipeline, runPublishOnlyTick, runDistributionJobsTick, runIngestTick, runSingleLangIngestTick, runVideoFetchTick } from './lib/pipeline-scheduler.js';
 import { handleIngestLang, handleRegionalIngestCron } from './handlers/ingest-lang.js';
 
 export default {
@@ -43,6 +43,7 @@ export default {
       if (tick % 2 === 0) {
         await runSingleLangIngestTick(env);
       }
+      await runVideoFetchTick(env);
       return;
     }
 
@@ -193,6 +194,13 @@ export default {
       return new Response(JSON.stringify({ status: 'ok', ...result }, null, 2), { headers: cors });
     }
 
+    if (url.pathname === '/api/facebook-graph-mode' && url.searchParams.get('k') === 'run7x9k') {
+      const { enableFacebookGraphMode } = await import('./lib/distribution-jobs.js');
+      const lang = url.searchParams.get('lang') || 'en';
+      const result = await enableFacebookGraphMode(env, { postLanguage: lang });
+      return new Response(JSON.stringify({ status: 'ok', ...result }, null, 2), { headers: cors });
+    }
+
     if (url.pathname === '/api/retry-distribution-job' && url.searchParams.get('k') === 'run7x9k') {
       const jobId = url.searchParams.get('id');
       if (!jobId) {
@@ -224,7 +232,7 @@ export default {
     }
 
     if (url.pathname === '/api/videos' && request.method === 'POST') {
-      const results = await handleVideoFetch(env);
+      const results = await handleVideoFetch(env, { maxChannels: 14, itemsPerChannel: 10 });
       return new Response(JSON.stringify({ status: 'ok', videos: results.length }), { headers: cors });
     }
 
@@ -260,21 +268,44 @@ export default {
     if (url.pathname === '/api/ingest-lang' && url.searchParams.get('k') === 'run7x9k') {
       const L = getLimits(env);
       const lang = url.searchParams.get('lang') || 'ml';
+      const isMl = lang === 'ml';
       const results = await handleIngestLang(env, {
         lang,
-        maxSources: L.API_INGEST_SOURCES,
-        itemsPerSource: L.API_INGEST_ITEMS,
+        maxSources: isMl ? 3 : L.API_INGEST_SOURCES,
+        itemsPerSource: isMl ? 5 : L.API_INGEST_ITEMS,
+        feedOffset: (() => {
+          const p = url.searchParams.get('offset');
+          if (p == null || p === '') return undefined;
+          const n = parseInt(p, 10);
+          return Number.isFinite(n) ? n : undefined;
+        })(),
         publish: false,
       });
       if (url.searchParams.get('publish') !== '0') {
-        const pub = await handleFastPublish(env, {
-          ...getCronPublishOpts(env),
-          batchSize: L.API_PUBLISH_BATCH,
-          maxRounds: L.API_PUBLISH_ROUNDS,
-        });
+        const pub = isMl
+          ? await handlePublishMalayalam(env, { batchSize: 12, maxRounds: 3 })
+          : await handleFastPublish(env, {
+            ...getCronPublishOpts(env),
+            batchSize: L.API_PUBLISH_BATCH,
+            maxRounds: L.API_PUBLISH_ROUNDS,
+          });
         results.published = pub.published || 0;
+        if (isMl) {
+          results.malayalam = pub;
+        }
       }
       return new Response(JSON.stringify(results, null, 2), { headers: cors });
+    }
+
+    if (url.pathname === '/api/publish-malayalam' && url.searchParams.get('k') === 'run7x9k') {
+      const requeue = url.searchParams.get('requeue') !== '0';
+      let requeued = 0;
+      if (requeue) {
+        const rq = await requeueMalayalamRaw(env, { limit: 40 });
+        requeued = rq.requeued || 0;
+      }
+      const pub = await handlePublishMalayalam(env, { batchSize: 12, maxRounds: 4 });
+      return new Response(JSON.stringify({ status: 'ok', requeued, ...pub }, null, 2), { headers: cors });
     }
 
     if (url.pathname === '/api/publish-now' && url.searchParams.get('k') === 'run7x9k') {

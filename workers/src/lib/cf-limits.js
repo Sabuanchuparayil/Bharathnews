@@ -40,6 +40,10 @@ export const FREE_LIMITS = {
   API_INGEST_ITEMS: 2,
   API_PUBLISH_BATCH: 4,
   API_PUBLISH_ROUNDS: 1,
+
+  /** YouTube sync — kept small to stay within 45 subrequest budget on Free. */
+  VIDEO_CHANNELS_PER_RUN: 3,
+  VIDEO_ITEMS_PER_CHANNEL: 5,
 };
 
 /** Workers Paid — enable via PIPELINE_TIER=paid after traffic grows. */
@@ -66,6 +70,9 @@ export const PAID_LIMITS = {
   API_INGEST_ITEMS: 3,
   API_PUBLISH_BATCH: 8,
   API_PUBLISH_ROUNDS: 2,
+
+  VIDEO_CHANNELS_PER_RUN: 8,
+  VIDEO_ITEMS_PER_CHANNEL: 8,
 };
 
 /** @deprecated Use getLimits(env) — kept for static imports during migration. */

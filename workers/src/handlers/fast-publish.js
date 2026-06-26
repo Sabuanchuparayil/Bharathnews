@@ -2,9 +2,9 @@
  * Fast publish — skip Claude classification and Llama rewriting.
  * Publishes RSS content directly to the articles table for maximum throughput.
  */
-import { isCategoryFallbackImage, resolveArticleImage } from '../lib/image-resolver.js';
+import { isCategoryFallbackImage, resolveArticleImage, isRealArticleImage } from '../lib/image-resolver.js';
 import { resolveArticleBody } from '../lib/article-content.js';
-import { runQuery, upsertRow, patchRawArticle, patchRow, selectRows } from '../lib/supabase-rest.js';
+import { runQuery, upsertRow, patchRawArticle, patchRow, selectRows, supabaseHeaders } from '../lib/supabase-rest.js';
 import { onArticlePublished } from '../lib/on-article-published.js';
 import { postToFacebook } from '../lib/facebook.js';
 import { loadSiteSettings } from '../lib/sources-loader.js';
@@ -28,7 +28,7 @@ async function fetchPending(env, status, limit) {
   }, null);
 }
 
-async function publishOne(env, raw, { skipImageResolve = false, skipSourceFetch = false } = {}) {
+async function publishOne(env, raw, { skipImageResolve = false, skipSourceFetch = false, requireRealImage = false } = {}) {
   const slug = raw.slug || raw.id;
   if (!slug || !raw.title?.trim()) return 'skipped';
 
@@ -41,20 +41,29 @@ async function publishOne(env, raw, { skipImageResolve = false, skipSourceFetch 
   }
 
   const category = raw.category || 'india';
+  const lang = raw.language || raw.detectedLanguage || raw.detected_language || 'en';
+  const needsRealImage = requireRealImage || lang === 'ml';
   const body = await resolveArticleBody(raw, { skipSourceFetch: skipSourceFetch || skipImageResolve });
+
+  let imageUrl = raw.imageUrl || raw.image_url || '';
+  if (needsRealImage || !skipImageResolve) {
+    imageUrl = await resolveArticleImage({
+      imageUrl: raw.imageUrl || raw.image_url || '',
+      sourceUrl: raw.sourceUrl || raw.source_url || '',
+      category,
+      slug,
+      title: raw.title,
+      ogTimeoutMs: needsRealImage ? 4000 : 2500,
+    });
+  } else if (!imageUrl || isCategoryFallbackImage(imageUrl)) {
+    imageUrl = raw.imageUrl || raw.image_url || '';
+  }
+
+  if (needsRealImage && !isRealArticleImage(imageUrl)) {
+    return 'skipped';
+  }
+
   const summary = body.slice(0, 300) || raw.title.slice(0, 300);
-  const imageUrl = skipImageResolve
-    ? (raw.imageUrl || raw.image_url || '')
-    : ((!raw.imageUrl || isCategoryFallbackImage(raw.imageUrl))
-      ? await resolveArticleImage({
-          imageUrl: raw.imageUrl || raw.image_url || '',
-          sourceUrl: raw.sourceUrl || raw.source_url || '',
-          category,
-          slug,
-          title: raw.title,
-          ogTimeoutMs: 2500,
-        })
-      : (raw.imageUrl || raw.image_url));
 
   try {
     const ok = await upsertRow(env, 'articles', {
@@ -66,7 +75,7 @@ async function publishOne(env, raw, { skipImageResolve = false, skipSourceFetch 
       category,
       subcategory: raw.subcategory || null,
       region: raw.region || 'india',
-      language: raw.language || raw.detectedLanguage || 'en',
+      language: lang,
       source: raw.source || 'RSS',
       source_url: raw.sourceUrl || raw.source_url || '',
       author: 'The Bharath News',
@@ -189,6 +198,73 @@ export async function handleFastPublish(env, options = {}) {
 
   console.log('Fast publish complete:', totals);
   return totals;
+}
+
+/** Publish Malayalam raw articles only — resolves OG images, skips items without real thumbnails. */
+export async function handlePublishMalayalam(env, options = {}) {
+  const batchSize = options.batchSize ?? 8;
+  const maxRounds = options.maxRounds ?? 3;
+  const totals = { published: 0, failed: 0, skipped: 0, queue: 0, noImage: 0 };
+
+  for (let round = 0; round < maxRounds; round++) {
+    let queue = [];
+    try {
+      queue = await selectRows(env, 'raw_articles', {
+        filters: { status: 'pending_ai', language: 'ml' },
+        order: 'created_at',
+        ascending: false,
+        limit: batchSize,
+      });
+    } catch (err) {
+      console.error('[publish-malayalam] fetch failed:', err.message);
+      break;
+    }
+
+    if (!queue.length) break;
+    totals.queue += queue.length;
+
+    for (const raw of queue) {
+      const outcome = await publishOne(env, raw, {
+        skipImageResolve: false,
+        requireRealImage: true,
+      });
+      if (outcome === 'published') totals.published++;
+      else if (outcome === 'failed') totals.failed++;
+      else {
+        totals.skipped++;
+        totals.noImage++;
+      }
+    }
+
+    if (queue.length < batchSize) break;
+  }
+
+  console.log('[publish-malayalam] complete:', totals);
+  return totals;
+}
+
+/** Re-queue processed Malayalam raw rows that never made it to articles (e.g. missing OG image). */
+export async function requeueMalayalamRaw(env, { limit = 30 } = {}) {
+  const base = (env.SUPABASE_URL || '').replace(/\/$/, '') + '/rest/v1';
+  const h = supabaseHeaders(env);
+  const res = await fetch(
+    `${base}/raw_articles?language=eq.ml&status=eq.processed&order=created_at.desc&limit=${limit}&select=slug`,
+    { headers: h },
+  );
+  if (!res.ok) return { requeued: 0, error: res.status };
+  const rows = await res.json();
+  let requeued = 0;
+  for (const row of rows || []) {
+    const slug = row.slug;
+    if (!slug) continue;
+    const art = await fetch(`${base}/articles?slug=eq.${encodeURIComponent(slug)}&language=eq.ml&select=slug,image_url&limit=1`, { headers: h });
+    if (!art.ok) continue;
+    const published = await art.json();
+    if (published?.[0]?.slug && isRealArticleImage(published[0].image_url)) continue;
+    const ok = await patchRawArticle(env, slug, { status: 'pending_ai', editorial_status: 'pending' });
+    if (ok) requeued++;
+  }
+  return { requeued, scanned: (rows || []).length };
 }
 
 /** Drain pending raw_articles — light mode to stay within subrequest limits. */

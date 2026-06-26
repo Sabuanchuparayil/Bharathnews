@@ -375,8 +375,10 @@ export async function enableDlvrItFacebookMode(env) {
   merged.integrations.facebook = {
     ...merged.integrations.facebook,
     graphApiEnabled: false,
-    dlvrItFeedUrl: merged.integrations.facebook?.dlvrItFeedUrl
-      || 'https://www.thebharathnews.com/feed.xml?lang=ml',
+    dlvrItFeedUrl: 'https://www.thebharathnews.com/feed/social-ml.xml',
+    dlvrItMalayalamFeedUrl: 'https://www.thebharathnews.com/feed/social-ml.xml',
+    dlvrItEnglishFeedUrl: merged.integrations.facebook?.dlvrItEnglishFeedUrl
+      || 'https://www.thebharathnews.com/feed/social-en.xml',
   };
 
   const patchRes = await fetch(`${supabaseBase(env)}/site_settings?key=eq.site`, {
@@ -421,5 +423,72 @@ export async function enableDlvrItFacebookMode(env) {
     graphApiEnabled: false,
     dlvrItFeedUrl: merged.integrations.facebook.dlvrItFeedUrl,
     facebookJobsSkipped: skipped,
+  };
+}
+
+/** Switch Facebook to Worker Graph API — enable direct posting and re-queue recent articles. */
+export async function enableFacebookGraphMode(env, { postLanguage = 'en' } = {}) {
+  const current = (await getSiteSettingsRow(env)) || {};
+  const merged = mergeSiteSettings(current);
+  merged.integrations = merged.integrations || {};
+  merged.integrations.facebook = {
+    ...merged.integrations.facebook,
+    graphApiEnabled: true,
+    postLanguage,
+  };
+
+  const patchRes = await fetch(`${supabaseBase(env)}/site_settings?key=eq.site`, {
+    method: 'PATCH',
+    headers: headers(env, 'return=minimal'),
+    body: JSON.stringify({ value: merged }),
+  });
+
+  if (!patchRes.ok) {
+    const insertRes = await fetch(`${supabaseBase(env)}/site_settings`, {
+      method: 'POST',
+      headers: headers(env, 'resolution=merge-duplicates,return=minimal'),
+      body: JSON.stringify({ key: 'site', value: merged }),
+    });
+    if (!insertRes.ok) {
+      return { ok: false, error: `site_settings update failed: ${patchRes.status}` };
+    }
+  }
+
+  const fb = resolveFacebookConfig(merged, env);
+  if (!fb.hasToken) {
+    return {
+      ok: true,
+      graphApiEnabled: true,
+      postLanguage,
+      warning: 'FACEBOOK_PAGE_TOKEN not set — add token then run npm run distribute:now',
+      jobsEnqueued: 0,
+    };
+  }
+
+  const base = supabaseBase(env);
+  const h = headers(env);
+  const langFilter = postLanguage ? `&language=eq.${encodeURIComponent(postLanguage)}` : '';
+  const res = await fetch(
+    `${base}/articles?editorial_status=eq.published&or=(distributed->facebook.is.null,distributed->facebook.eq.false)${langFilter}&order=created_at.desc&limit=30&select=id`,
+    { headers: h }
+  );
+  const articles = res.ok ? await res.json() : [];
+  let jobsEnqueued = 0;
+
+  for (const { id } of articles) {
+    const ins = await fetch(`${base}/distribution_jobs`, {
+      method: 'POST',
+      headers: headers(env, 'resolution=ignore-duplicates,return=minimal'),
+      body: JSON.stringify({ article_id: id, channel: 'facebook', status: 'pending' }),
+    });
+    if (ins.ok || ins.status === 409) jobsEnqueued++;
+  }
+
+  return {
+    ok: true,
+    graphApiEnabled: true,
+    postLanguage,
+    jobsEnqueued,
+    hint: 'Run npm run distribute:now to post immediately',
   };
 }

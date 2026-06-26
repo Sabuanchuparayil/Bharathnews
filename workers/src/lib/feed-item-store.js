@@ -67,7 +67,7 @@ export async function ingestFeedItems(env, feed, lang, items, options = {}) {
   const knownUrls = options.knownUrls ?? new Set();
   const list = items || [];
   const start = list.length ? feedOffset % list.length : 0;
-  const scanDepth = L.FEED_SCAN_DEPTH;
+  const scanDepth = options.feedScanDepth ?? L.FEED_SCAN_DEPTH;
   const rotated = [...list.slice(start), ...list.slice(0, start)].slice(0, scanDepth);
 
   const newCandidates = rotated
