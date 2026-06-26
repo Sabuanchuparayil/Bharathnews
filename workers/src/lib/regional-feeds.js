@@ -5,16 +5,23 @@
 
 /** Malayalam feeds verified working — used first for ml ingest (Facebook/dlvr.it). */
 export const MALAYALAM_RSS_SOURCES = [
+  { url: 'https://www.asianetnews.com/rss', name: 'Asianet News Malayalam', category: 'india', region: 'kerala', language: 'ml', type: 'rss' },
+  { url: 'https://feeds.feedburner.com/Mathrubhumi', name: 'Mathrubhumi', category: 'india', region: 'kerala', language: 'ml', type: 'rss' },
+  { url: 'https://www.mediaoneonline.com/google_feeds.xml', name: 'Media One', category: 'india', region: 'kerala', language: 'ml', type: 'rss' },
+  { url: 'https://www.suprabhaatham.com/feed', name: 'Suprabhaatham', category: 'india', region: 'kerala', language: 'ml', type: 'rss' },
+  { url: 'https://www.keralakaumudi.com/ml/feed', name: 'Kerala Kaumudi', category: 'india', region: 'kerala', language: 'ml', type: 'rss' },
+  { url: 'https://news.google.com/rss/search?q=site:manoramaonline.com&hl=ml&gl=IN&ceid=IN:ml', name: 'Malayala Manorama (GN)', category: 'india', region: 'kerala', language: 'ml', type: 'googlenews' },
+  { url: 'https://news.google.com/rss/search?q=site:madhyamam.com&hl=ml&gl=IN&ceid=IN:ml', name: 'Madhyamam (GN)', category: 'india', region: 'kerala', language: 'ml', type: 'googlenews' },
   { url: 'https://malayalam.oneindia.com/rss/malayalam-news-fb.xml', name: 'OneIndia Malayalam', category: 'india', region: 'kerala', language: 'ml', type: 'rss' },
-  { url: 'https://news.google.com/rss/search?q=Kerala+news&hl=ml-IN&gl=IN&ceid=IN:ml', name: 'GN Kerala News', category: 'india', region: 'kerala', language: 'ml', type: 'googlenews' },
-  { url: 'https://newsable.asianetnews.com/rss', name: 'Asianet Newsable', category: 'india', region: 'kerala', language: 'ml', type: 'rss' },
 ];
 
-/** Feeds that fail from Workers (403/500/empty) — excluded from ml rotation. */
+/** Feeds that fail from Workers (403/500/empty) or serve wrong language — excluded from ml rotation. */
 export const DISABLED_ML_FEED_URLS = new Set([
   'https://news.google.com/rss?hl=ml-IN&gl=IN&ceid=IN:ml',
+  'https://news.google.com/rss/search?q=Kerala+news&hl=ml-IN&gl=IN&ceid=IN:ml',
   'https://www.twentyfournews.com/feed',
   'https://keralakaumudi.com/rss/news',
+  'https://newsable.asianetnews.com/rss',
 ]);
 
 export const REGIONAL_RSS_SOURCES = [

@@ -9,6 +9,31 @@ import { inferSubcategoryTag, subcategoryFromFeed } from './subcategory-tagger.j
 import { getLimits } from './cf-limits.js';
 import { isBlockedPublisher } from './blocked-sources.js';
 
+const MALAYALAM_CHAR_RE = /[\u0D00-\u0D7F]/;
+const DEVANAGARI_CHAR_RE = /[\u0900-\u097F]/;
+const TAMIL_CHAR_RE = /[\u0B80-\u0BFF]/;
+const TELUGU_CHAR_RE = /[\u0C00-\u0C7F]/;
+const KANNADA_CHAR_RE = /[\u0C80-\u0CFF]/;
+const BENGALI_CHAR_RE = /[\u0980-\u09FF]/;
+const ARABIC_CHAR_RE = /[\u0600-\u06FF]/;
+
+const SCRIPT_MAP = {
+  ml: MALAYALAM_CHAR_RE,
+  hi: DEVANAGARI_CHAR_RE,
+  ta: TAMIL_CHAR_RE,
+  te: TELUGU_CHAR_RE,
+  kn: KANNADA_CHAR_RE,
+  bn: BENGALI_CHAR_RE,
+  ur: ARABIC_CHAR_RE,
+};
+
+function hasExpectedScript(title, lang) {
+  if (lang === 'en' || !lang) return true;
+  const re = SCRIPT_MAP[lang];
+  if (!re) return true;
+  return re.test(title);
+}
+
 function normalizeUrl(url) {
   return (url || '').trim().replace(/#.*$/, '');
 }
@@ -96,6 +121,11 @@ export async function ingestFeedItems(env, feed, lang, items, options = {}) {
     }
 
     if (isBlockedPublisher({ name: feed.name, sourceUrl: item.link })) {
+      skipped++;
+      continue;
+    }
+
+    if (!hasExpectedScript(item.title, lang)) {
       skipped++;
       continue;
     }

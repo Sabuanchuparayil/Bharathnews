@@ -70,7 +70,7 @@ Rules:
 - relevanceToAudience 0-10: how interesting to Indians / Indian expats globally. Most India, GCC, world, business, tech, sports, health, education news scores 6+. Only niche local foreign news with zero India connection scores below 5.
 - dedupKey: lowercase normalized key capturing the core news event (not the headline verbatim)
 - Default to publishing. When in doubt, give qualityScore 7 and relevanceToAudience 7.
-- If source language hint is ml/ta/te/kn/bn/hi, set detectedLanguage to that code unless the headline is clearly English.`;
+- If source language hint is ml/ta/te/kn/bn/hi, verify the headline actually uses that script. If the headline is clearly English (Latin script only), set detectedLanguage to "en" regardless of the source hint.`;
 
   try {
     const text = await callClaude(env, prompt, { maxTokens: 512, temperature: 0.2 });
