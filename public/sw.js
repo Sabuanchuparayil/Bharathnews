@@ -1,5 +1,5 @@
 /* BharathNews PWA service worker — required for Android/iOS installability. */
-const CACHE = 'bharathnews-v2';
+const CACHE = 'bharathnews-v3';
 const SHELL = [
   '/offline.html',
   '/manifest.json',
@@ -33,22 +33,19 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  event.respondWith(
-    fetch(request)
-      .then((response) => {
-        if (response.ok && request.mode === 'navigate') {
-          const copy = response.clone();
-          caches.open(CACHE).then((cache) => cache.put(request, copy));
-        }
-        return response;
-      })
-      .catch(async () => {
-        const cached = await caches.match(request);
-        if (cached) return cached;
-        if (request.mode === 'navigate') {
-          return caches.match('/offline.html');
-        }
-        return Response.error();
-      }),
-  );
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .catch(() => caches.match('/offline.html')),
+    );
+    return;
+  }
+
+  const isShellAsset = SHELL.some((path) => url.pathname === path);
+  if (isShellAsset) {
+    event.respondWith(
+      caches.match(request).then((cached) => cached || fetch(request)),
+    );
+    return;
+  }
 });
