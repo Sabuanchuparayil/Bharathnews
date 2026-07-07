@@ -1,6 +1,7 @@
 import './globals.css';
 import Providers from './providers';
 import Script from 'next/script';
+import YandexMetrika from '@/components/YandexMetrika';
 import { Inter, Amaranth, JetBrains_Mono } from 'next/font/google';
 import { safeJsonLd } from '@/lib/metadata';
 import { SITE_URL } from '@/lib/site-url';
@@ -258,6 +259,7 @@ export default function RootLayout({ children }) {
             strategy="afterInteractive"
           />
         )}
+        <YandexMetrika />
         <Providers>{children}</Providers>
       </body>
     </html>
