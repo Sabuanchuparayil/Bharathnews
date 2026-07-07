@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { YOUTUBE_CHANNELS } from '../config/feeds.config';
+import { channelsForVideoLanguage } from '../config/video-languages';
 import { getVideoFeeds } from '../services/articles';
 import { useLanguage } from '../context/LanguageContext';
 import { toFirestoreLanguageFilter } from '@/config/languages.config';
@@ -88,14 +89,20 @@ function sortVideosByRecency(videos) {
   });
 }
 
-function resolveVideoLanguageFilter(langFilter) {
-  // Regional YouTube feeds are ml/ta/te/kn/bn — English/Hindi site language should still show them
-  if (!langFilter || langFilter === 'all' || langFilter === 'en' || langFilter === 'hi') return null;
-  return langFilter;
+/**
+ * @param {string|null} langCode - language code or 'all'
+ * @param {boolean} explicitPick - true when user chose language on /videos
+ */
+function resolveVideoLanguageFilter(langCode, explicitPick = false) {
+  if (!langCode || langCode === 'all') return null;
+  if (explicitPick) return langCode;
+  // Site language: en/hi have no dedicated YouTube channels — show all regional feeds
+  if (langCode === 'en' || langCode === 'hi') return null;
+  return langCode;
 }
 
-async function fetchFromFirestore(channelId, langFilter) {
-  const videoLang = resolveVideoLanguageFilter(langFilter);
+async function fetchFromFirestore(channelId, langFilter, explicitPick) {
+  const videoLang = resolveVideoLanguageFilter(langFilter, explicitPick);
   const category = channelId === 'all' ? null : YOUTUBE_CHANNELS.find(c => c.channelId === channelId)?.category || null;
   const count = channelId === 'all' ? 120 : 40;
 
@@ -106,24 +113,27 @@ async function fetchFromFirestore(channelId, langFilter) {
     videos = videos.filter(v => (v.language || 'en') === videoLang);
   }
 
-  const filtered = channelId === 'all'
+  let filtered = channelId === 'all'
     ? videos
     : videos.filter(v => channelIdForVideo(v) === channelId);
+
+  if (videoLang) {
+    filtered = filtered.filter(v => (v.language || 'en') === videoLang);
+  }
 
   return sortVideosByRecency(
     filtered.map(normalizeFirestoreVideo).filter(v => v.videoId)
   );
 }
 
-async function fetchFromRss2Json(channelId, langFilter) {
-  const videoLang = resolveVideoLanguageFilter(langFilter);
+async function fetchFromRss2Json(channelId, langFilter, explicitPick) {
+  const videoLang = resolveVideoLanguageFilter(langFilter, explicitPick);
   let channels = channelId === 'all'
-    ? YOUTUBE_CHANNELS
+    ? channelsForVideoLanguage(videoLang ? videoLang : 'all')
     : YOUTUBE_CHANNELS.filter(c => c.channelId === channelId);
 
   if (videoLang) {
-    const langChannels = channels.filter(c => c.language === videoLang);
-    if (langChannels.length) channels = langChannels;
+    channels = channels.filter(c => c.language === videoLang);
   }
 
   const results = await Promise.allSettled(
@@ -138,9 +148,19 @@ async function fetchFromRss2Json(channelId, langFilter) {
   return allVideos;
 }
 
-export function useVideos(channelId = 'all') {
-  const { language } = useLanguage();
-  const langFilter = toFirestoreLanguageFilter(language);
+/**
+ * @param {string} channelId - 'all' or a YouTube channel id
+ * @param {{ videoLanguage?: string|null }} options
+ *   videoLanguage: explicit language on /videos ('all', 'ml', 'ta', …). Omit to follow site language.
+ */
+export function useVideos(channelId = 'all', { videoLanguage = null } = {}) {
+  const { language: siteLanguage } = useLanguage();
+  const explicitPick = videoLanguage != null;
+  const langFilter = explicitPick
+    ? (videoLanguage === 'all' ? null : videoLanguage)
+    : toFirestoreLanguageFilter(siteLanguage);
+  const cacheLangKey = explicitPick ? (videoLanguage || 'all') : siteLanguage;
+
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const abortRef = useRef(false);
@@ -148,7 +168,7 @@ export function useVideos(channelId = 'all') {
   useEffect(() => {
     abortRef.current = false;
 
-    const cacheKey = `${channelId}:${language}`;
+    const cacheKey = `${channelId}:${cacheLangKey}`;
     const cached = videoCache.get(cacheKey);
     if (cached && Date.now() - cached.ts < CACHE_TTL) {
       setVideos(cached.data);
@@ -159,10 +179,10 @@ export function useVideos(channelId = 'all') {
     const fetchVideos = async () => {
       setLoading(true);
       try {
-        let allVideos = await fetchFromFirestore(channelId, langFilter);
+        let allVideos = await fetchFromFirestore(channelId, langFilter, explicitPick);
 
         if (!allVideos.length) {
-          allVideos = await fetchFromRss2Json(channelId, langFilter);
+          allVideos = await fetchFromRss2Json(channelId, langFilter, explicitPick);
         }
 
         if (abortRef.current) return;
@@ -177,7 +197,7 @@ export function useVideos(channelId = 'all') {
 
     fetchVideos();
     return () => { abortRef.current = true; };
-  }, [channelId, language, langFilter]);
+  }, [channelId, langFilter, cacheLangKey, explicitPick]);
 
   return { videos, loading };
 }

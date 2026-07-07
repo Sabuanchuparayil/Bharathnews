@@ -446,7 +446,7 @@ const AdminSettings = () => {
                   <input
                     type="url"
                     readOnly
-                    value={i.facebook?.dlvrItMalayalamFeedUrl || i.facebook?.dlvrItFeedUrl || 'https://www.thebharathnews.com/feed.xml?lang=ml&limit=25&hours=24'}
+                    value={i.facebook?.dlvrItMalayalamFeedUrl || i.facebook?.dlvrItFeedUrl || 'https://www.thebharathnews.com/feed/social-ml.xml'}
                     className={`${inputClass} bg-gray-50 dark:bg-gray-900`}
                   />
                 </Field>

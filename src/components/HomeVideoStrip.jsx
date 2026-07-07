@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { Play, ChevronRight } from 'lucide-react';
 import SafeImage from './SafeImage';
 import { useVideos } from '../hooks/useVideos';
+import { useLanguage } from '../context/LanguageContext';
+import { toFirestoreLanguageFilter } from '@/config/languages.config';
+import { isVideoLanguageCode } from '@/config/video-languages';
 
 function VideoSkeleton() {
   return (
@@ -17,7 +20,11 @@ function VideoSkeleton() {
 }
 
 export default function HomeVideoStrip() {
-  const { videos, loading } = useVideos('all');
+  const { language } = useLanguage();
+  const siteLang = toFirestoreLanguageFilter(language);
+  const videoLang = siteLang && isVideoLanguageCode(siteLang) ? siteLang : 'all';
+  const { videos, loading } = useVideos('all', { videoLanguage: videoLang });
+  const viewAllHref = videoLang === 'all' ? '/videos' : `/videos?lang=${videoLang}`;
 
   if (!loading && videos.length === 0) return null;
 
@@ -34,7 +41,7 @@ export default function HomeVideoStrip() {
             </h2>
           </div>
           <Link
-            href="/videos"
+            href={viewAllHref}
             className="flex items-center gap-0.5 text-sm font-medium text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300"
           >
             View all

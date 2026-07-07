@@ -2,11 +2,12 @@ import { loadEnabledSources, updateSourceHealth, loadSiteSettings } from '../lib
 import { fetchAndParseFeed } from '../lib/rss-parser.js';
 import { upsertRow } from '../lib/supabase-rest.js';
 import { rotateSourcePick } from '../lib/regional-rotation.js';
+import { getLimits } from '../lib/cf-limits.js';
 
-const MAX_CHANNELS_PER_RUN = 14;
-const ITEMS_PER_CHANNEL = 10;
-
-export async function handleVideoFetch(env) {
+export async function handleVideoFetch(env, options = {}) {
+  const L = getLimits(env);
+  const maxChannels = options.maxChannels ?? L.VIDEO_CHANNELS_PER_RUN ?? 3;
+  const itemsPerChannel = options.itemsPerChannel ?? L.VIDEO_ITEMS_PER_CHANNEL ?? 5;
   const settings = await loadSiteSettings(env);
   if (settings.pipeline?.videoFetchEnabled === false) {
     console.log('Video fetch skipped: disabled in site settings');
@@ -19,7 +20,7 @@ export async function handleVideoFetch(env) {
     return [];
   }
 
-  const channels = rotateSourcePick(allChannels, MAX_CHANNELS_PER_RUN);
+  const channels = rotateSourcePick(allChannels, maxChannels);
   const results = [];
 
   for (const channel of channels) {
@@ -31,7 +32,7 @@ export async function handleVideoFetch(env) {
       const items = await fetchAndParseFeed(feedUrl);
       let stored = 0;
 
-      for (const item of items.slice(0, ITEMS_PER_CHANNEL)) {
+      for (const item of items.slice(0, itemsPerChannel)) {
         const videoId = extractVideoId(item.link);
         if (!videoId) continue;
 
