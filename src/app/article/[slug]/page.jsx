@@ -1,6 +1,6 @@
 import Article from '@/views/Article';
 import { getArticleBySlugServer } from '@/services/articles-server';
-import { siteMetadata, articleJsonLd, breadcrumbJsonLd, safeJsonLd } from '@/lib/metadata';
+import { siteMetadata, articleJsonLd, breadcrumbJsonLd, safeJsonLd, articleLanguageAlternates } from '@/lib/metadata';
 import { notFound } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
@@ -17,16 +17,19 @@ export async function generateMetadata({ params }) {
     ? new Date(article.updatedAt.seconds * 1000).toISOString()
     : publishedTime;
 
-  return siteMetadata({
-    title: article.seo?.metaTitle || article.title,
-    description: article.seo?.metaDescription || article.summary,
-    path: `/article/${slug}`,
-    image: article.imageUrl,
-    type: 'article',
-    keywords: article.tags,
-    publishedTime,
-    modifiedTime,
-  });
+  return {
+    ...siteMetadata({
+      title: article.seo?.metaTitle || article.title,
+      description: article.seo?.metaDescription || article.summary,
+      path: `/article/${slug}`,
+      image: article.imageUrl,
+      type: 'article',
+      keywords: article.tags,
+      publishedTime,
+      modifiedTime,
+    }),
+    alternates: articleLanguageAlternates(slug, article.language || 'en'),
+  };
 }
 
 export default async function ArticlePage({ params }) {

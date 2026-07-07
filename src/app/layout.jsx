@@ -87,14 +87,20 @@ export const metadata = {
       'te-IN': `${SITE_URL}?lang=te`,
       'kn-IN': `${SITE_URL}?lang=kn`,
       'bn-IN': `${SITE_URL}?lang=bn`,
+      'ur-IN': `${SITE_URL}?lang=ur`,
+      'x-default': SITE_URL,
     },
     types: {
       'application/rss+xml': [
         { url: `${SITE_URL}/feed.xml`, title: 'The Bharath News — All Articles' },
+        { url: `${SITE_URL}/feed.xml?lang=en`, title: 'The Bharath News — English' },
         { url: `${SITE_URL}/feed.xml?lang=ml`, title: 'The Bharath News — Malayalam' },
         { url: `${SITE_URL}/feed.xml?lang=hi`, title: 'The Bharath News — Hindi' },
         { url: `${SITE_URL}/feed.xml?lang=ta`, title: 'The Bharath News — Tamil' },
         { url: `${SITE_URL}/feed.xml?lang=te`, title: 'The Bharath News — Telugu' },
+        { url: `${SITE_URL}/feed.xml?lang=kn`, title: 'The Bharath News — Kannada' },
+        { url: `${SITE_URL}/feed.xml?lang=bn`, title: 'The Bharath News — Bengali' },
+        { url: `${SITE_URL}/feed.xml?lang=ur`, title: 'The Bharath News — Urdu' },
       ],
     },
   },
@@ -210,6 +216,12 @@ const organizationJsonLd = {
   ],
   knowsLanguage: ['en', 'hi', 'ml', 'ta', 'te', 'kn', 'bn', 'ur'],
   publishingPrinciples: `${SITE_URL}/editorial`,
+  contactPoint: {
+    '@type': 'ContactPoint',
+    contactType: 'customer support',
+    email: 'bharathnewsweb@gmail.com',
+    availableLanguage: ['English', 'Malayalam', 'Hindi', 'Tamil'],
+  },
   sameAs: [
     'https://t.me/TheBharathNews',
     'https://www.facebook.com/TheBharathNewsIndia',

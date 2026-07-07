@@ -1,6 +1,7 @@
 import { postArticleToTelegram } from './telegram.js';
 import { resolveTelegramConfig } from './site-settings.js';
 import { supabaseHeaders } from './supabase-rest.js';
+import { pingArticlePublished } from './indexnow.js';
 
 function isPublished(article) {
   const status = article.editorial_status || article.status || article.editorialStatus;
@@ -28,7 +29,15 @@ async function markTelegramPosted(env, article) {
 
 export async function onArticlePublished(env, article, _token, settings = {}) {
   if (!article?.id || !article?.slug || !article?.title) return;
-  if (!isPublished(article) || hasTelegramPosted(article)) return;
+  if (!isPublished(article)) return;
+
+  try {
+    await pingArticlePublished(env, article);
+  } catch (err) {
+    console.warn('[onArticlePublished] IndexNow ping skipped:', err?.message || err);
+  }
+
+  if (hasTelegramPosted(article)) return;
 
   const tg = resolveTelegramConfig(settings, env);
   if (!tg.enabled || !tg.hasBotToken) return;

@@ -17,11 +17,13 @@ const Privacy = () => (
       <p>We use cookies and similar technologies for functionality, analytics, and advertising. You can control cookies through your browser settings.</p>
       <h2 className="font-display font-bold text-xl text-gray-900 dark:text-white pt-2">Advertising</h2>
       <p>
-        We use third-party advertising, including Google AdSense, to support our journalism. Third-party vendors, including Google, use cookies to serve ads based on your prior visits to this and other websites. Google&apos;s use of advertising cookies enables it and its partners to serve ads based on your visit to our site and others on the internet. You may opt out of personalised advertising via{' '}
+        We use third-party advertising, including Google AdSense, to support our journalism. Third-party vendors, including Google, use cookies (such as the DART cookie) to serve ads based on your prior visits to this and other websites. Google&apos;s use of advertising cookies enables it and its partners to serve ads based on your visit to our site and others on the internet. You may opt out of personalised advertising via{' '}
         <a href="https://google.com/settings/ads" className="text-brand-600 dark:text-brand-400 hover:underline" target="_blank" rel="noopener noreferrer">Google Ads Settings</a>
-        {' '}or{' '}
+        , the{' '}
+        <a href="https://policies.google.com/technologies/ads" className="text-brand-600 dark:text-brand-400 hover:underline" target="_blank" rel="noopener noreferrer">Google advertising technology policy</a>
+        , or{' '}
         <a href="https://www.aboutads.info" className="text-brand-600 dark:text-brand-400 hover:underline" target="_blank" rel="noopener noreferrer">aboutads.info</a>.
-        {' '}Where required (EU, UK, and applicable GCC users), we request consent before setting non-essential cookies.
+        {' '}Our advertising partners may include Google AdSense and social distribution platforms (Facebook, Telegram). Where required (EU, UK, and applicable GCC users), we request consent before setting non-essential cookies.
       </p>
       <h2 className="font-display font-bold text-xl text-gray-900 dark:text-white pt-2">Your Rights</h2>
       <p>

@@ -73,6 +73,7 @@ const Footer = () => {
             <h4 className="font-display font-bold text-sm text-gray-900 dark:text-white mb-4">Legal</h4>
             <ul className="space-y-2.5">
               {[
+                ['About', '/about'],
                 ['Privacy', '/privacy'],
                 ['Terms', '/terms'],
                 ['Editorial Policy', '/editorial'],

@@ -51,6 +51,44 @@ export function siteMetadata({ title, description, path = '', image, type = 'web
 
 const LANG_MAP = { en: 'en', hi: 'hi', ml: 'ml', ta: 'ta', kn: 'kn', te: 'te', bn: 'bn', ur: 'ur' };
 
+const HREFLANG_MAP = {
+  en: 'en-IN',
+  hi: 'hi-IN',
+  ml: 'ml-IN',
+  ta: 'ta-IN',
+  te: 'te-IN',
+  kn: 'kn-IN',
+  bn: 'bn-IN',
+  ur: 'ur-IN',
+};
+
+export function siteLanguageAlternates(path = '') {
+  const suffix = path.startsWith('/') ? path : path ? `/${path}` : '';
+  return {
+    'en-IN': `${SITE_URL}${suffix}`,
+    'hi-IN': `${SITE_URL}${suffix}?lang=hi`,
+    'ml-IN': `${SITE_URL}${suffix}?lang=ml`,
+    'ta-IN': `${SITE_URL}${suffix}?lang=ta`,
+    'te-IN': `${SITE_URL}${suffix}?lang=te`,
+    'kn-IN': `${SITE_URL}${suffix}?lang=kn`,
+    'bn-IN': `${SITE_URL}${suffix}?lang=bn`,
+    'ur-IN': `${SITE_URL}${suffix}?lang=ur`,
+    'x-default': `${SITE_URL}${suffix}`,
+  };
+}
+
+export function articleLanguageAlternates(slug, language = 'en') {
+  const url = `${SITE_URL}/article/${slug}`;
+  const hreflang = HREFLANG_MAP[language] || 'en-IN';
+  return {
+    canonical: url,
+    languages: {
+      [hreflang]: url,
+      'x-default': url,
+    },
+  };
+}
+
 const LANG_REGION_MAP = {
   en: 'India, GCC, UAE, Global',
   hi: 'India, North India, Hindi Belt',
@@ -82,6 +120,7 @@ export function articleJsonLd(article) {
       '@type': 'Organization',
       name: article.source || 'The Bharath News',
       url: SITE_URL,
+      sameAs: article.sourceUrl || article.source_url || undefined,
     },
     publisher: {
       '@type': 'NewsMediaOrganization',

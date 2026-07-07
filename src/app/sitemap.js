@@ -4,7 +4,7 @@ import { SECTIONS, CATEGORY_ROUTES } from '@/config/category-taxonomy';
 
 const LEGACY_CATEGORIES = Object.keys(CATEGORY_ROUTES);
 
-const LANGUAGES = ['en', 'hi', 'ml', 'ta', 'te', 'kn', 'bn'];
+const LANGUAGES = ['en', 'hi', 'ml', 'ta', 'te', 'kn', 'bn', 'ur'];
 
 export default async function sitemap() {
   const sectionPages = Object.values(SECTIONS)
@@ -22,6 +22,7 @@ export default async function sitemap() {
     { url: `${SITE_URL}/explore`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.8 },
     { url: `${SITE_URL}/community`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.6 },
     { url: `${SITE_URL}/search`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.5 },
+    { url: `${SITE_URL}/about`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
     { url: `${SITE_URL}/privacy`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.3 },
     { url: `${SITE_URL}/terms`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.3 },
     { url: `${SITE_URL}/editorial`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.3 },
@@ -53,6 +54,12 @@ export default async function sitemap() {
     { url: `${SITE_URL}/feed.xml`, lastModified: new Date(), changeFrequency: 'always', priority: 0.6 },
     ...LANGUAGES.map(lang => ({
       url: `${SITE_URL}/feed.xml?lang=${lang}`,
+      lastModified: new Date(),
+      changeFrequency: 'always',
+      priority: 0.5,
+    })),
+    ...LANGUAGES.map(lang => ({
+      url: `${SITE_URL}/${lang}/feed.xml`,
       lastModified: new Date(),
       changeFrequency: 'always',
       priority: 0.5,

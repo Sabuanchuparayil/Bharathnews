@@ -56,8 +56,12 @@ United Arab Emirates (Dubai, Abu Dhabi, Sharjah), Saudi Arabia (Riyadh, Jeddah, 
 ## Access Points
 
 - **Website**: https://www.thebharathnews.com
+- **About**: https://www.thebharathnews.com/about
+- **Sitemap**: https://www.thebharathnews.com/sitemap.xml
+- **News Sitemap**: https://www.thebharathnews.com/news-sitemap.xml
 - **RSS Feed (All)**: https://www.thebharathnews.com/feed.xml
-- **RSS Feed (Malayalam)**: https://www.thebharathnews.com/feed.xml?lang=ml
+- **RSS Feed (English)**: https://www.thebharathnews.com/en/feed.xml
+- **RSS Feed (Malayalam)**: https://www.thebharathnews.com/ml/feed.xml
 - **RSS Feed (Hindi)**: https://www.thebharathnews.com/feed.xml?lang=hi
 - **RSS Feed (Tamil)**: https://www.thebharathnews.com/feed.xml?lang=ta
 - **RSS Feed (Telugu)**: https://www.thebharathnews.com/feed.xml?lang=te

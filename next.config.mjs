@@ -39,6 +39,14 @@ const nextConfig = {
       { source: '/technology/:path*', destination: '/tech', permanent: true },
     ];
   },
+  async rewrites() {
+    return [
+      {
+        source: '/:lang(en|hi|ml|ta|te|kn|bn|ur)/feed.xml',
+        destination: '/feed.xml?lang=:lang',
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '**' },

@@ -24,6 +24,7 @@ export default function robots() {
       { userAgent: 'Meta-ExternalFetcher', allow: '/' },
       { userAgent: 'FacebookBot', allow: '/' },
       { userAgent: 'Applebot', allow: '/' },
+      { userAgent: 'Applebot-Extended', allow: '/' },
       { userAgent: 'Bingbot', allow: '/' },
       { userAgent: 'DuckDuckBot', allow: '/' },
       { userAgent: 'YandexBot', allow: '/' },
@@ -32,7 +33,7 @@ export default function robots() {
       { userAgent: 'OAI-SearchBot', allow: '/' },
       { userAgent: 'GeminiBot', allow: '/' },
     ],
-    sitemap: `${SITE_URL}/sitemap.xml`,
+    sitemap: [`${SITE_URL}/sitemap.xml`, `${SITE_URL}/news-sitemap.xml`],
     host: SITE_URL,
   };
 }
