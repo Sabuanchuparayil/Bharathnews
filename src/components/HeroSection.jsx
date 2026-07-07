@@ -50,9 +50,9 @@ const HeroSection = ({ featured = [] }) => {
                       <span>Trending</span>
                     </span>
                   </div>
-                  <h1 className="font-display font-bold text-2xl sm:text-3xl lg:text-4xl text-white leading-tight text-balance mb-3">
+                  <h2 className="font-display font-bold text-2xl sm:text-3xl lg:text-4xl text-white leading-tight text-balance mb-3">
                     {decodeHtmlEntities(main.title)}
-                  </h1>
+                  </h2>
                   <p className="text-sm text-gray-200 line-clamp-2 max-w-xl mb-4">
                     {decodeHtmlEntities(main.summary)}
                   </p>

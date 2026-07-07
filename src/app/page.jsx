@@ -3,7 +3,7 @@ import { siteMetadata } from '@/lib/metadata';
 
 export const metadata = siteMetadata({
   title: 'The Bharath News — Breaking News from India & GCC | Live Updates Today',
-  description: 'Get the latest breaking news from India and Gulf countries (UAE, Saudi Arabia, Qatar). Comprehensive coverage of Indian politics, business, cricket, Bollywood, technology, Kerala, Tamil Nadu, Andhra Pradesh news in English, Hindi, Malayalam, Tamil, Telugu, Kannada & Bengali. Trusted source for NRI & Indian diaspora communities worldwide.',
+  description: 'Breaking news from India and GCC — politics, cricket, Bollywood, business and tech in English, Hindi, Malayalam, Tamil, Telugu, Kannada and Bengali.',
   path: '',
   keywords: [
     'India news today', 'breaking news India live', 'latest headlines India',

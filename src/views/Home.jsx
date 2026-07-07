@@ -160,6 +160,7 @@ const Home = () => {
 
   return (
     <Layout>
+      <h1 className="sr-only">The Bharath News — Breaking News from India &amp; GCC</h1>
       <OnboardingModal />
 
       {/* Zone 1 — Right Now: hero + 3 secondary stories */}
