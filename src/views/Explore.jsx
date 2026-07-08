@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight, Sparkles, Briefcase, ShoppingBag } from 'lucide-react';
 import Layout from '../components/Layout';
 import { SECTIONS, HEADER_NAV, getSubcategoriesForSection } from '../config/feeds.config';
 import { getSectionPreviewArticles, getMostReadArticles } from '../services/articles';
@@ -144,6 +144,34 @@ const Discover = () => {
           );
         })}
       </div>
+
+      {/* Marketplace Promo */}
+      <section className="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Link href="/jobs" className="glass-card-solid rounded-2xl p-6 hover:shadow-lg transition-shadow group">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/20 flex items-center justify-center">
+              <Briefcase className="w-5 h-5 text-brand-600" />
+            </div>
+            <h3 className="font-display font-bold text-lg text-gray-900 dark:text-white">GCC Jobs</h3>
+          </div>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Find job opportunities for Indian professionals across UAE, Saudi, Qatar, and more.</p>
+          <span className="text-sm font-semibold text-brand-600 group-hover:gap-2 flex items-center gap-1 transition-all">
+            Browse Jobs <ArrowRight className="w-4 h-4" />
+          </span>
+        </Link>
+        <Link href="/classifieds" className="glass-card-solid rounded-2xl p-6 hover:shadow-lg transition-shadow group">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-xl bg-green-50 dark:bg-green-900/20 flex items-center justify-center">
+              <ShoppingBag className="w-5 h-5 text-green-600" />
+            </div>
+            <h3 className="font-display font-bold text-lg text-gray-900 dark:text-white">Classifieds</h3>
+          </div>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Buy, sell, rent, and find services across the Gulf. Free ads for Indian expats.</p>
+          <span className="text-sm font-semibold text-green-600 group-hover:gap-2 flex items-center gap-1 transition-all">
+            Browse Classifieds <ArrowRight className="w-4 h-4" />
+          </span>
+        </Link>
+      </section>
     </Layout>
   );
 };

@@ -1,7 +1,7 @@
 import { getSupabaseAdmin } from './supabase-server';
 import { rowToApp } from '@/lib/db-mapper';
 
-export const ALLOWED_ROLES = ['reader', 'contributor', 'vlogger', 'content_writer', 'admin'];
+export const ALLOWED_ROLES = ['reader', 'contributor', 'vlogger', 'content_writer', 'admin', 'employer'];
 
 const TRANSLATION_LANGS = new Set(['ml', 'hi', 'ta', 'te', 'kn', 'bn', 'en', 'ar']);
 

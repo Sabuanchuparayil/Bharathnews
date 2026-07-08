@@ -188,7 +188,7 @@ export async function getUsersLegacy(limitCount = 50) {
   return users;
 }
 
-export const ALLOWED_ROLES = ['reader', 'contributor', 'vlogger', 'content_writer', 'admin'];
+export const ALLOWED_ROLES = ['reader', 'contributor', 'vlogger', 'content_writer', 'admin', 'employer'];
 
 async function getAdminAccessToken() {
   const supabase = getSupabaseBrowser();

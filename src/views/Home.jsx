@@ -10,6 +10,7 @@ import NriRatesWidget from '../components/NriRatesWidget';
 import HomeVideoStrip from '../components/HomeVideoStrip';
 import PersonalizedCarousel from '../components/PersonalizedCarousel';
 import SectionPreviews from '../components/SectionPreviews';
+import MarketplacePromo from '../components/MarketplacePromo';
 import CategoryFilter from '../components/CategoryFilter';
 import SubcategoryFilter from '../components/SubcategoryFilter';
 import OnboardingModal from '../components/OnboardingModal';
@@ -177,6 +178,7 @@ const Home = () => {
       {/* Zone 2 — Videos + For You carousel */}
       {showHomeSections && <HomeVideoStrip />}
       {showHomeSections && <PersonalizedCarousel />}
+      {showHomeSections && <MarketplacePromo />}
 
       <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-8">
         {/* Zone 3 — Browse by Section */}

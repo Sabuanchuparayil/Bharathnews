@@ -9,6 +9,8 @@ const FOOTER_NEWS_LINKS = [
   { path: '/explore', title: 'All Categories' },
   { path: '/videos', title: 'Videos' },
   { path: '/community', title: 'Community' },
+  { path: '/jobs', title: 'GCC Jobs' },
+  { path: '/classifieds', title: 'Classifieds' },
 ];
 
 const Footer = () => {

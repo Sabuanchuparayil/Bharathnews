@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { SITE_APEX_HOST, SITE_CANONICAL_HOST } from '@/lib/site-url';
 
-const AUTH_REQUIRED = ['/dashboard', '/settings', '/bookmarks', '/creator'];
+const AUTH_REQUIRED = ['/dashboard', '/settings', '/bookmarks', '/creator', '/employer', '/jobs/post', '/jobs/my', '/classifieds/post', '/classifieds/my'];
 const ADMIN_PREFIX = '/admin';
-const VALID_ROLES = new Set(['reader', 'admin', 'content_writer', 'contributor', 'vlogger']);
+const VALID_ROLES = new Set(['reader', 'admin', 'content_writer', 'contributor', 'vlogger', 'employer']);
 
 function requiresAuth(pathname) {
   return AUTH_REQUIRED.some(prefix => pathname === prefix || pathname.startsWith(`${prefix}/`));

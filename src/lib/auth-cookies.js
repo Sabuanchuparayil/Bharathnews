@@ -1,5 +1,5 @@
 const MAX_AGE = 86400; // 24 hours
-const VALID_ROLES = new Set(['reader', 'admin', 'content_writer', 'contributor', 'vlogger']);
+const VALID_ROLES = new Set(['reader', 'admin', 'content_writer', 'contributor', 'vlogger', 'employer']);
 
 function cookieFlags() {
   const secure = typeof window !== 'undefined' && window.location.protocol === 'https:' ? '; Secure' : '';
@@ -21,4 +21,4 @@ export function clearAuthCookies() {
 
 export const ADMIN_ROLES = new Set(['admin']);
 export const VALID_ROLE_SET = VALID_ROLES;
-export const AUTH_REQUIRED_PREFIXES = ['/dashboard', '/settings', '/bookmarks', '/creator'];
+export const AUTH_REQUIRED_PREFIXES = ['/dashboard', '/settings', '/bookmarks', '/creator', '/employer', '/jobs/post', '/jobs/my', '/classifieds/post', '/classifieds/my'];

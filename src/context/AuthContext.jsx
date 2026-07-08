@@ -222,6 +222,7 @@ export const AuthProvider = ({ children }) => {
     isContributor: role === 'contributor' || role === 'admin',
     isVlogger: role === 'vlogger' || role === 'admin',
     isCreator: ['contributor', 'vlogger', 'content_writer', 'admin'].includes(role),
+    isEmployer: role === 'employer' || role === 'admin',
     role,
   };
 

@@ -104,7 +104,7 @@ export const SECTIONS = {
   },
 };
 
-/** Primary header navigation — 6 top-level sections */
+/** Primary header navigation — 6 top-level sections + marketplace */
 export const HEADER_NAV = [
   { path: '/', label: 'Top Stories', sectionId: 'top-stories' },
   { path: '/money', label: 'Money', sectionId: 'money' },
@@ -112,6 +112,8 @@ export const HEADER_NAV = [
   { path: '/tech', label: 'Tech', sectionId: 'tech' },
   { path: '/life', label: 'Life', sectionId: 'life' },
   { path: '/world', label: 'World', sectionId: 'world' },
+  { path: '/jobs', label: 'Jobs', sectionId: null },
+  { path: '/classifieds', label: 'Classifieds', sectionId: null },
 ];
 
 /** Mobile bottom nav */
