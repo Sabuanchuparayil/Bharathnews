@@ -7,14 +7,13 @@ import { getSubcategoriesForSection } from '../config/feeds.config';
 import { buildNavSubcategoryHref } from '../utils/navLinks';
 import { useClickOutside } from '../hooks/useClickOutside';
 
-const NavDropdown = ({ link, isActive }) => {
+const NavDropdown = ({ link, isActive, compact = false, className = '' }) => {
   const [open, setOpen] = useState(false);
   const [canHover, setCanHover] = useState(false);
   const ref = useRef(null);
   useClickOutside(ref, open, () => setOpen(false));
 
   useEffect(() => {
-    // Prevent "double click" on touch devices where first tap triggers hover.
     try {
       setCanHover(Boolean(window.matchMedia?.('(hover: hover)').matches));
     } catch {
@@ -26,11 +25,13 @@ const NavDropdown = ({ link, isActive }) => {
     ? getSubcategoriesForSection(link.sectionId).filter(s => s.id !== 'all')
     : [];
 
+  const pad = compact ? 'px-2 py-1.5 text-xs xl:px-3 xl:py-2 xl:text-sm' : 'px-3.5 py-2 text-sm';
+
   if (!subcategories.length) {
     return (
       <Link
         href={link.path}
-        className={`px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+        className={`${pad} rounded-xl font-medium transition-all duration-200 whitespace-nowrap ${className} ${
           isActive
             ? 'bg-brand-50 dark:bg-brand-950/50 text-brand-700 dark:text-brand-300'
             : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-surface-2 dark:hover:bg-dark-surface-2'
@@ -44,7 +45,7 @@ const NavDropdown = ({ link, isActive }) => {
   return (
     <div
       ref={ref}
-      className="relative"
+      className={`relative ${className}`}
       onMouseEnter={canHover ? () => setOpen(true) : undefined}
       onMouseLeave={canHover ? () => setOpen(false) : undefined}
     >
@@ -52,7 +53,7 @@ const NavDropdown = ({ link, isActive }) => {
         <Link
           href={link.path}
           onClick={() => setOpen(false)}
-          className={`px-3.5 py-2 rounded-l-xl text-sm font-medium transition-all duration-200 ${
+          className={`${pad} rounded-l-xl font-medium transition-all duration-200 whitespace-nowrap ${
             isActive
               ? 'bg-brand-50 dark:bg-brand-950/50 text-brand-700 dark:text-brand-300'
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-surface-2 dark:hover:bg-dark-surface-2'

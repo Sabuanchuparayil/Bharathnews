@@ -112,8 +112,8 @@ export const HEADER_NAV = [
   { path: '/tech', label: 'Tech', sectionId: 'tech' },
   { path: '/life', label: 'Life', sectionId: 'life' },
   { path: '/world', label: 'World', sectionId: 'world' },
-  { path: '/jobs', label: 'Jobs', sectionId: null },
-  { path: '/classifieds', label: 'Classifieds', sectionId: null },
+  { path: '/jobs', label: 'Jobs', sectionId: null, navTier: 'secondary' },
+  { path: '/classifieds', label: 'Classifieds', sectionId: null, navTier: 'secondary' },
 ];
 
 /** Mobile bottom nav */

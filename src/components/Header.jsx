@@ -74,28 +74,34 @@ const Header = () => {
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center space-x-2 group">
+          <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 xl:gap-4 h-16">
+            <Link href="/" className="flex items-center gap-2 group flex-shrink-0 z-10 min-w-0">
               <img
                 src="/logo-mark.png"
                 alt="The Bharath News"
                 width={40}
                 height={40}
-                className="w-10 h-10 rounded-xl shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200 flex-shrink-0"
               />
-              <div>
-                <span className="font-display font-bold text-base sm:text-lg text-gray-900 dark:text-white">The Bharath </span>
-                <span className="font-display font-bold text-base sm:text-lg text-brand-600 dark:text-brand-400">News</span>
+              <div className="hidden sm:block min-w-0">
+                <span className="font-display font-bold text-sm lg:text-base text-gray-900 dark:text-white whitespace-nowrap">The Bharath </span>
+                <span className="font-display font-bold text-sm lg:text-base text-brand-600 dark:text-brand-400 whitespace-nowrap">News</span>
               </div>
             </Link>
 
-            <nav className="hidden lg:flex items-center space-x-1">
+            <nav className="hidden lg:flex items-center justify-center gap-0.5 xl:gap-1 min-w-0 overflow-x-auto scrollbar-hide px-1">
               {HEADER_NAV.map(link => (
-                <NavDropdown key={link.path} link={link} isActive={isActive(link.path)} />
+                <NavDropdown
+                  key={link.path}
+                  link={link}
+                  isActive={isActive(link.path)}
+                  compact={link.navTier === 'secondary'}
+                  className={link.navTier === 'secondary' ? 'hidden xl:inline-flex' : 'inline-flex'}
+                />
               ))}
             </nav>
 
-            <div className="flex items-center space-x-1 sm:space-x-2">
+            <div className="flex items-center justify-end gap-0.5 sm:gap-1 flex-shrink-0">
               <button
                 onClick={() => setSearchOpen(true)}
                 className="btn-ghost touch-target rounded-xl"
