@@ -49,15 +49,16 @@ const headers = {
 
 async function fetchAllArticles() {
   const all = [];
-  for (let offset = 0; offset < 600; offset += 100) {
+  const pageSize = 100;
+  for (let offset = 0; offset < 5000; offset += pageSize) {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/articles?select=slug,title,category,image_url,source_url&editorial_status=eq.published&order=published_at.desc&limit=100&offset=${offset}`,
+      `${SUPABASE_URL}/rest/v1/articles?select=slug,title,category,image_url,source_url&editorial_status=eq.published&order=published_at.desc&limit=${pageSize}&offset=${offset}`,
       { headers }
     );
     const batch = await res.json();
-    if (!batch.length) break;
+    if (!Array.isArray(batch) || !batch.length) break;
     all.push(...batch);
-    if (batch.length < 100) break;
+    if (batch.length < pageSize) break;
   }
   return all;
 }

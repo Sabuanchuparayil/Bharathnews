@@ -112,7 +112,7 @@ const NewsCard = ({ article, variant = 'default', index = 0, isMostRead = false 
     return (
       <div className={`border-l-4 ${getCategoryAccentBorder(category)} ${readDimClass}`}>
         <Link href={`/article/${slug}`} onClick={handleArticleClick} className="group flex space-x-4 p-3 rounded-2xl hover:bg-surface-2 dark:hover:bg-dark-surface-2 transition-colors">
-          <SafeImage src={imageUrl} alt={title} category={category} width={80} height={80} sizes="80px" className="w-20 h-20 object-cover rounded-xl flex-shrink-0" />
+          <SafeImage src={imageUrl} alt={title} category={category} width={80} height={80} sizes="80px" className="w-20 h-20 object-cover object-top rounded-xl flex-shrink-0" />
           <div className="flex-1 min-w-0">
             <h3 className="font-display font-bold text-sm text-gray-900 dark:text-white line-clamp-2 mt-0.5 group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors">{title}</h3>
             <div className="flex items-center justify-between mt-2 gap-2">
@@ -141,7 +141,7 @@ const NewsCard = ({ article, variant = 'default', index = 0, isMostRead = false 
               width={96}
               height={96}
               sizes="96px"
-              className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-xl flex-shrink-0"
+              className="w-20 h-20 sm:w-24 sm:h-24 object-cover object-top rounded-xl flex-shrink-0"
             />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
@@ -216,7 +216,7 @@ const NewsCard = ({ article, variant = 'default', index = 0, isMostRead = false 
               src={imageUrl}
               alt={title}
               category={category}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
             />
             <div className="absolute top-3 left-3 flex gap-2">
               <span className={`text-xs font-semibold uppercase px-2.5 py-1 rounded-full backdrop-blur-sm shadow-sm ${getCategoryColor(category)}`}>

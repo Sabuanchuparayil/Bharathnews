@@ -13,3 +13,4 @@ firebase-adminsdk-*.json
 .wrangler/
 .dev.vars
 workers/secrets.env
+supabase/.temp/

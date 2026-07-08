@@ -89,7 +89,7 @@ const Header = () => {
               </div>
             </Link>
 
-            <nav className="hidden lg:flex items-center justify-center gap-0.5 xl:gap-1 min-w-0 overflow-x-auto scrollbar-hide px-1">
+            <nav className="hidden xl:flex items-center justify-center gap-0.5 2xl:gap-1 min-w-0 overflow-x-auto scrollbar-hide px-1">
               {HEADER_NAV.map(link => (
                 <NavDropdown
                   key={link.path}
@@ -196,7 +196,7 @@ const Header = () => {
 
               <button
                 onClick={() => setMobileMenuOpen(true)}
-                className="lg:hidden btn-ghost touch-target rounded-xl"
+                className="xl:hidden btn-ghost touch-target rounded-xl"
                 aria-label="Open menu"
               >
                 <Menu className="w-5 h-5" />
@@ -269,7 +269,7 @@ const Header = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] lg:hidden"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] xl:hidden"
             onClick={() => setMobileMenuOpen(false)}
           >
             <motion.div
