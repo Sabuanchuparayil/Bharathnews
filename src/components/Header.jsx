@@ -32,7 +32,7 @@ const Header = () => {
   const menuTrapRef = useFocusTrap(mobileMenuOpen);
   const profileTrapRef = useFocusTrap(profileOpen);
   useClickOutside(profileRef, profileOpen, () => setProfileOpen(false));
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin, isContentWriter } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
@@ -178,6 +178,11 @@ const Header = () => {
                         <Link href="/settings" className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-surface-2 dark:hover:bg-dark-surface-2 text-sm text-gray-700 dark:text-gray-300">
                           <SettingsIcon className="w-4 h-4" /><span>Settings</span>
                         </Link>
+                        {isContentWriter && (
+                          <Link href="/desk" className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-950/30 text-sm text-brand-700 dark:text-brand-300">
+                            <SettingsIcon className="w-4 h-4" /><span>Newsroom</span>
+                          </Link>
+                        )}
                         {isAdmin && (
                           <Link href="/admin/dashboard" className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-950/30 text-sm text-brand-700 dark:text-brand-300">
                             <SettingsIcon className="w-4 h-4" /><span>Admin</span>

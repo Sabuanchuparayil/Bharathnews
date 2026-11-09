@@ -152,7 +152,12 @@ const AdminSettings = () => {
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, role } : u));
       if (user?.uid === userId) {
         const profile = await refreshUserProfile();
-        if (profile) setAuthCookies(profile.role || 'reader');
+        if (profile) {
+          setAuthCookies(profile.role || 'reader', {
+            emailVerified: profile.emailVerified,
+            profileComplete: profile.profileComplete,
+          });
+        }
       }
       toast.success('Role updated');
     } catch {

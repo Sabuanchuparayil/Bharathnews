@@ -101,11 +101,13 @@ const Settings = () => {
             {isCreator ? `You are a ${role}. Manage your content and profile.` : 'Apply to share articles, stories, poems, or videos.'}
           </p>
           <div className="flex flex-wrap gap-2">
+            {user && <Link href="/complete-profile" className="btn-secondary text-sm">Update your details</Link>}
             {isCreator ? (
               <>
                 <Link href="/creator/space" className="btn-primary text-sm flex items-center gap-1.5">
                   <PenLine className="w-3.5 h-3.5" /> Creator Space
                 </Link>
+                <Link href="/creator/profile/edit" className="btn-secondary text-sm">Edit Profile</Link>
                 <Link href="/creator/new" className="btn-secondary text-sm">New Content</Link>
               </>
             ) : (

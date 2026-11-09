@@ -7,10 +7,10 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-amaranth)', 'sans-serif'],
         display: ['var(--font-amaranth)', 'sans-serif'],
         malayalam: ['var(--font-manjari)', 'var(--font-amaranth)', 'sans-serif'],
-        body: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+        body: ['var(--font-amaranth)', 'sans-serif'],
         mono: ['var(--font-mono)', 'monospace'],
       },
       colors: {

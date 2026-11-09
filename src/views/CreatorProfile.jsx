@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { UserPlus, UserMinus, BadgeCheck, ExternalLink } from 'lucide-react';
+import { BadgeCheck, Briefcase, ExternalLink, Globe, MapPin, Pencil, UserMinus, UserPlus } from 'lucide-react';
 import { toast } from 'react-toastify';
 import ShareButton from '../components/ShareButton';
 import Layout from '../components/Layout';
@@ -118,7 +118,27 @@ const CreatorProfile = ({ username: usernameProp, initialProfile = null }) => {
                 {profile.verified && <BadgeCheck className="w-5 h-5 text-blue-500" />}
               </div>
               <p className="text-gray-500">{'@' + profile.slug} · {roleBadge}</p>
+              {profile.tagline && <p className="text-gray-700 dark:text-gray-300 mt-1">{profile.tagline}</p>}
               {profile.bio && <p className="text-gray-600 dark:text-gray-400 mt-2 max-w-xl">{profile.bio}</p>}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-gray-500">
+                {(profile.city || profile.country || profile.location) && (
+                  <span className="inline-flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5" />
+                    {profile.location || [profile.city, profile.country].filter(Boolean).join(', ')}
+                  </span>
+                )}
+                {profile.profession && (
+                  <span className="inline-flex items-center gap-1">
+                    <Briefcase className="w-3.5 h-3.5" />
+                    {profile.profession}
+                  </span>
+                )}
+                {profile.website?.startsWith('http') && (
+                  <a href={profile.website} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-brand-600">
+                    <Globe className="w-3.5 h-3.5" /> Website
+                  </a>
+                )}
+              </div>
               <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
                 <span><strong>{profile.followerCount || 0}</strong> followers</span>
                 <span><strong>{profile.postCount || 0}</strong> posts</span>
@@ -126,6 +146,11 @@ const CreatorProfile = ({ username: usernameProp, initialProfile = null }) => {
               </div>
             </div>
             <div className="flex gap-2 pb-2">
+              {(user?.id === profile.userId || user?.uid === profile.userId) && (
+                <Link href="/creator/profile/edit" className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium bg-surface-2 dark:bg-dark-surface-2">
+                  <Pencil className="w-4 h-4" /> Edit profile
+                </Link>
+              )}
               <button onClick={handleFollow} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium ${following ? 'bg-gray-200 dark:bg-gray-700' : 'bg-brand-600 text-white'}`}>
                 {following ? <><UserMinus className="w-4 h-4" /> Following</> : <><UserPlus className="w-4 h-4" /> Follow</>}
               </button>
@@ -140,7 +165,7 @@ const CreatorProfile = ({ username: usernameProp, initialProfile = null }) => {
 
           {profile.socialLinks && Object.keys(profile.socialLinks).length > 0 && (
             <div className="flex gap-3 mt-4">
-              {Object.entries(profile.socialLinks).map(([platform, url]) => url && (
+              {Object.entries(profile.socialLinks).filter(([, url]) => typeof url === 'string' && url.startsWith('http')).map(([platform, url]) => (
                 <a key={platform} href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-brand-600 flex items-center gap-1">
                   {platform} <ExternalLink className="w-3 h-3" />
                 </a>

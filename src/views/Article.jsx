@@ -14,6 +14,7 @@ import ChannelFollowCTA from '../components/ChannelFollowCTA';
 import ReadingProgress from '../components/ReadingProgress';
 import ArticleFloatingBar from '../components/ArticleFloatingBar';
 import ArticleRelated from '../components/ArticleRelated';
+import NewsletterSignup from '../components/NewsletterSignup';
 import { resolveArticleImage } from '../utils/articleImages';
 import { getCategoryColor, getCategoryLabel } from '../utils/categoryColors';
 import { getArticleBySlug } from '../services/articles';
@@ -181,7 +182,7 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
         likes={article.likes || 0}
       />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="pt-6">
           <Breadcrumbs items={[
             { name: 'Home', href: '/' },
@@ -196,7 +197,8 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
           <span>Back to news</span>
         </Link>
 
-        <article>
+        <div className="lg:grid lg:grid-cols-[minmax(0,720px)_280px] lg:gap-10 lg:justify-center items-start">
+        <article className="min-w-0">
           <header className="mb-6">
             <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium mb-4 ${getCategoryColor(article.category)}`}>
               {getCategoryLabel(article.category)}
@@ -210,7 +212,14 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
               </p>
             )}
             <div className="flex items-center flex-wrap gap-x-4 gap-y-2 text-sm text-gray-500 dark:text-gray-400">
-              <span className="font-medium text-gray-700 dark:text-gray-300">{article.author}</span>
+              {article.authorSlug ? (
+                <Link href={`/@${article.authorSlug}`} className="font-medium text-gray-700 dark:text-gray-300 hover:text-brand-700">{article.author}</Link>
+              ) : (
+                <span className="font-medium text-gray-700 dark:text-gray-300">{article.author}</span>
+              )}
+              {article.isAiAssisted && (
+                <Link href="/about/ai-policy" className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200">AI-assisted</Link>
+              )}
               <span className="flex items-center space-x-1">
                 <Clock className="w-4 h-4" />
                 <span><RelativeTime date={publishedDate} /></span>
@@ -238,6 +247,9 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
           </div>
+          {article.imageCredit && (
+            <p className="text-xs text-gray-500 -mt-6 mb-8">{article.imageCredit}</p>
+          )}
 
           <AdSlot className="mb-8" />
 
@@ -296,10 +308,31 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
             </div>
           </div>
 
+          <div className="lg:hidden mt-8 rounded-2xl border border-stone-200 dark:border-white/10 p-4">
+            <h2 className="font-display font-bold text-sm">Write for Pravasi Jaalakam</h2>
+            <p className="text-sm text-gray-500 mt-1">Stories and poems from Malayalis in the Gulf.</p>
+            <Link href="/creator/apply" className="inline-block mt-2 text-sm font-medium text-brand-700 dark:text-brand-300">Send a piece</Link>
+          </div>
           <ChannelFollowCTA />
           <ArticleRelated category={article.category} currentSlug={slug} />
           <AdSlot className="mt-8" />
         </article>
+        <aside className="hidden lg:block">
+          <div className="sticky top-28 space-y-4">
+            <NewsletterSignup />
+            <div className="rounded-2xl border border-stone-200 dark:border-white/10 p-4">
+              <h2 className="font-display font-bold text-sm text-stone-900 dark:text-white">For life in the Gulf</h2>
+              <ul className="mt-2 space-y-2 text-sm">
+                <li><Link href="/guides" className="text-brand-700 dark:text-brand-300 hover:underline">NRI guides</Link></li>
+                <li><Link href="/money/gold-rate-today" className="text-brand-700 dark:text-brand-300 hover:underline">Gold rate today</Link></li>
+                <li><Link href="/pravasi" className="text-brand-700 dark:text-brand-300 hover:underline">Pravasi Jaalakam</Link></li>
+                <li><Link href="/creator/apply" className="text-brand-700 dark:text-brand-300 hover:underline">Write for Pravasi Jaalakam</Link></li>
+                <li><Link href="/events" className="text-brand-700 dark:text-brand-300 hover:underline">Gulf events</Link></li>
+              </ul>
+            </div>
+          </div>
+        </aside>
+        </div>
       </div>
     </Layout>
   );

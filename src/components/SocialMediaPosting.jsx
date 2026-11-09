@@ -154,7 +154,7 @@ const PostSuggestionCard = ({ suggestion, onPost }) => {
           Post to {selectedPlatforms.length} platform{selectedPlatforms.length !== 1 ? 's' : ''}
         </button>
         <a
-          href={`/article/${article.slug}`}
+          href={article.publicPath || `/article/${article.slug}`}
           target="_blank"
           rel="noopener noreferrer"
           className="btn-ghost text-xs flex items-center gap-1"

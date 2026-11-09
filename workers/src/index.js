@@ -8,6 +8,7 @@ import { handleNewsletterDigest } from './handlers/newsletter-digest.js';
 import { handleSitemap } from './handlers/sitemap.js';
 import { handleSubdomainRedirect } from './handlers/subdomain.js';
 import { handleContactEmail } from './handlers/contact-email.js';
+import { handleOtpEmail } from './handlers/otp-email.js';
 import { translateArticleContent } from './handlers/article-translate.js';
 import { handleSeoUpdate } from './handlers/seo-updater.js';
 import { handleFixSlugs } from './handlers/fix-slugs.js';
@@ -385,6 +386,19 @@ export default {
       }
       const result = await getPipelineStatus(env);
       return new Response(JSON.stringify(result), { headers: cors });
+    }
+
+    if (url.pathname === '/api/otp-email' && request.method === 'POST') {
+      let body;
+      try { body = await request.json(); } catch {
+        return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400, headers: cors });
+      }
+      try {
+        const result = await handleOtpEmail(env, body);
+        return new Response(JSON.stringify(result), { headers: cors });
+      } catch (err) {
+        return new Response(JSON.stringify({ error: err.message || 'Failed to send' }), { status: 400, headers: cors });
+      }
     }
 
     if (url.pathname === '/api/contact' && request.method === 'POST') {

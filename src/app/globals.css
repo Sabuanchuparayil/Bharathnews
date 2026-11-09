@@ -296,12 +296,15 @@
   }
 }
 
-html[data-lang='ml'] .font-display {
+html[data-lang='ml'] body,
+html[data-lang='ml'] .font-body,
+html[data-lang='ml'] .prose {
   font-family: var(--font-manjari), var(--font-amaranth), sans-serif;
+  font-size: 1.0625rem;
 }
 
-html[data-lang='ml'] body {
-  font-size: 1.0625rem;
+html[data-lang='ml'] .font-display {
+  font-family: var(--font-manjari), var(--font-amaranth), sans-serif;
 }
 
 @layer utilities {

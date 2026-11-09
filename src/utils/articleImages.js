@@ -169,7 +169,7 @@ export function isStoredPlaceholderImage(url) {
   if (!url || typeof url !== 'string') return true;
   if (url === LOCAL_PLACEHOLDER || url.endsWith('/logo-mark.png')) return true;
   if (ALL_FALLBACK_URLS.has(url)) return true;
-  if (url.includes('images.unsplash.com/photo-')) return true;
+  if (url.includes('images.unsplash.com/photo-') && !url.includes('editorial=1')) return true;
   if (isInvalidImageUrl(url)) return true;
   return false;
 }

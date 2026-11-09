@@ -6,7 +6,7 @@ export default function robots() {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/admin/', '/dashboard/', '/settings/', '/bookmarks/', '/api/'],
+        disallow: ['/admin/', '/dashboard/', '/settings/', '/bookmarks/', '/verify-email', '/complete-profile', '/api/'],
       },
       // AI / LLM crawlers — explicitly allowed for maximum AI discoverability
       { userAgent: 'GPTBot', allow: '/' },

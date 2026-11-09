@@ -11,6 +11,8 @@ import { toFirestoreLanguageFilter } from '@/config/languages.config';
 import NewsCard from '../components/NewsCard';
 import SafeImage from '../components/SafeImage';
 import { decodeHtmlEntities } from '../utils/formatters';
+import { getPublishedPravasiPosts } from '../services/creator';
+import { pravasiPublicPath } from '@/lib/pravasi';
 
 const Discover = () => {
   const { language } = useLanguage();
@@ -18,11 +20,13 @@ const Discover = () => {
   const [sectionPreviews, setSectionPreviews] = useState({});
   const [mostRead, setMostRead] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [pravasiPosts, setPravasiPosts] = useState([]);
 
   const browseSections = HEADER_NAV.filter(n => n.sectionId && n.sectionId !== 'top-stories');
 
   useEffect(() => {
     setLoading(true);
+    getPublishedPravasiPosts(3).then(setPravasiPosts).catch(() => setPravasiPosts([]));
     Promise.all([
       Promise.all(
         browseSections.map(async ({ sectionId }) => {
@@ -146,7 +150,34 @@ const Discover = () => {
       </div>
 
       {/* Marketplace Promo */}
-      <section className="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <section className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {[
+          { href: '/guides', title: 'NRI guides', text: 'Passport, police clearance, accounts, and school papers.' },
+          { href: '/pravasi', title: 'Pravasi Jaalakam', text: 'Stories, poems, and essays from Malayalis in the Gulf.' },
+          { href: '/events', title: 'Events', text: 'Onam, Vishu, and other gatherings, dated by the organisers.' },
+        ].map(item => (
+          <Link key={item.href} href={item.href} className="glass-card-solid rounded-2xl p-6 hover:shadow-lg transition-shadow group">
+            <h3 className="font-display font-bold text-lg text-gray-900 dark:text-white">{item.title}</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 mb-3">{item.text}</p>
+            <span className="text-sm font-semibold text-brand-600 flex items-center gap-1">
+              Open <ArrowRight className="w-4 h-4" />
+            </span>
+          </Link>
+        ))}
+      </section>
+      {pravasiPosts.length > 0 && (
+        <ul className="mt-4 space-y-1">
+          {pravasiPosts.map(post => (
+            <li key={post.id}>
+              <Link href={pravasiPublicPath(post)} className="text-sm text-brand-700 dark:text-brand-300 hover:underline">
+                {post.title}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <section className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Link href="/jobs" className="glass-card-solid rounded-2xl p-6 hover:shadow-lg transition-shadow group">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/20 flex items-center justify-center">

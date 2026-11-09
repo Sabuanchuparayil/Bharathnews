@@ -12,7 +12,7 @@ function sb() {
   return client;
 }
 
-async function notifyTelegramForArticle(articleId) {
+async function notifyTelegram(body) {
   try {
     const supabase = getSupabaseBrowser();
     const { data: { session } } = await supabase.auth.getSession();
@@ -23,7 +23,7 @@ async function notifyTelegramForArticle(articleId) {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${session.access_token}`,
       },
-      body: JSON.stringify({ articleId }),
+      body: JSON.stringify(body),
     });
   } catch {
     /* best-effort */
@@ -143,10 +143,46 @@ export const getCreatorProfileByUserId = async (userId) => {
 
 export const updateCreatorProfile = async (slug, updates) => {
   const row = { updated_at: new Date().toISOString() };
-  if (updates.bio !== undefined) row.bio = updates.bio;
-  if (updates.coverImage !== undefined) row.cover_image = updates.coverImage;
-  if (updates.socialLinks !== undefined) row.social_links = updates.socialLinks;
-  await sb().from('creator_profiles').update(row).eq('slug', slug);
+  const fields = {
+    bio: 'bio',
+    coverImage: 'cover_image',
+    socialLinks: 'social_links',
+    tagline: 'tagline',
+    website: 'website',
+    location: 'location',
+    country: 'country',
+    city: 'city',
+    profession: 'profession',
+  };
+  Object.entries(fields).forEach(([key, column]) => {
+    if (updates[key] !== undefined) row[column] = updates[key];
+  });
+  const { error } = await sb().from('creator_profiles').update(row).eq('slug', slug);
+  if (error) {
+    if (/column .* does not exist|schema cache/i.test(error.message || '')) {
+      throw new Error('Run supabase/migrations/20261109160000_email_otp_profiles.sql in the Supabase SQL editor.');
+    }
+    throw error;
+  }
+};
+
+export const saveAccountProfile = async (userId, details) => {
+  const { error } = await sb().from('users').update({
+    country: details.country,
+    city: details.city,
+    nationality: details.nationality,
+    phone: details.phone || '',
+    whatsapp: details.whatsapp || '',
+    date_of_birth: details.dateOfBirth || null,
+    profession: details.profession,
+    profile_complete: true,
+  }).eq('id', userId);
+  if (error) {
+    if (/column .* does not exist|schema cache/i.test(error.message || '')) {
+      throw new Error('Run supabase/migrations/20261109160000_email_otp_profiles.sql in the Supabase SQL editor.');
+    }
+    throw error;
+  }
 };
 
 export const createCreatorPost = async (authorId, post) => {
@@ -264,9 +300,23 @@ export const moderateCreatorPost = async (postId, { approved, feedback }) => {
         comments: 0,
         score: 5,
       }).select('id').single();
-      if (article?.id) notifyTelegramForArticle(article.id);
+      if (article?.id) notifyTelegram({ articleId: article.id });
+    } else if (post.visibility === 'public') {
+      notifyTelegram({ creatorPostId: postId });
     }
   }
+};
+
+export const getPublishedPravasiPosts = async (limit = 4) => {
+  const { data, error } = await sb()
+    .from('creator_posts')
+    .select('*')
+    .eq('status', 'published')
+    .or('visibility.eq.public,visibility.is.null')
+    .order('published_at', { ascending: false })
+    .limit(limit);
+  if (error) return [];
+  return rowsToApp(data || []);
 };
 
 export const followCreator = async (followerId, creatorSlug) => {

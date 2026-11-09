@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Newspaper, RefreshCw } from 'lucide-react';
 import Layout from '../components/Layout';
 import HeroSection from '../components/HeroSection';
 import StoriesCarousel from '../components/StoriesCarousel';
 import NriRatesWidget from '../components/NriRatesWidget';
+import PravasiStrip from '../components/PravasiStrip';
 import HomeVideoStrip from '../components/HomeVideoStrip';
 import PersonalizedCarousel from '../components/PersonalizedCarousel';
 import SectionPreviews from '../components/SectionPreviews';
@@ -187,6 +189,29 @@ const Home = () => {
       )}
 
       {showHomeSections && <NriRatesWidget />}
+
+      {showHomeSections && (
+        <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 mt-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {[
+              { href: '/guides', title: 'NRI guides', text: 'Passport, PCC, accounts, and school papers.' },
+              { href: '/pravasi', title: 'Pravasi Jaalakam', text: 'Stories and poems from Gulf Malayalis.' },
+              { href: '/events', title: 'Gulf events', text: 'Onam, Vishu, and parish gatherings.' },
+            ].map(item => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="rounded-2xl border border-stone-200 dark:border-white/10 px-4 py-3 hover:border-brand-600 transition-colors"
+              >
+                <span className="font-display font-bold text-stone-900 dark:text-white">{item.title}</span>
+                <span className="block text-sm text-gray-500 dark:text-gray-400 mt-1">{item.text}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {showHomeSections && <PravasiStrip />}
 
       {/* Zone 2 — Videos + For You carousel */}
       {showHomeSections && <HomeVideoStrip />}

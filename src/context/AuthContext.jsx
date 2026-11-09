@@ -61,7 +61,10 @@ export const AuthProvider = ({ children }) => {
             profile = await loadProfile(supabase, session.user.id);
           }
           setUserProfile(profile);
-          setAuthCookies(profile?.role || 'reader');
+          setAuthCookies(profile?.role || 'reader', {
+            emailVerified: profile?.emailVerified,
+            profileComplete: profile?.profileComplete,
+          });
         } catch (err) {
           logger.error('Failed to load user profile:', err);
           setUserProfile(null);
@@ -92,7 +95,10 @@ export const AuthProvider = ({ children }) => {
     const profile = await loadProfile(supabase, user.id);
     if (profile) {
       setUserProfile(profile);
-      setAuthCookies(profile.role || 'reader');
+      setAuthCookies(profile.role || 'reader', {
+        emailVerified: profile.emailVerified,
+        profileComplete: profile.profileComplete,
+      });
     }
     return profile;
   }, [user, loadProfile]);
@@ -217,6 +223,8 @@ export const AuthProvider = ({ children }) => {
     isLiked,
     toggleBookmark: handleToggleBookmark,
     toggleLike: handleToggleLike,
+    isEmailVerified: userProfile?.emailVerified === true,
+    isProfileComplete: userProfile?.profileComplete === true,
     isAdmin: role === 'admin',
     isContentWriter: role === 'content_writer' || role === 'admin',
     isContributor: role === 'contributor' || role === 'admin',

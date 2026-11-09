@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { pravasiPublicPath } from '@/lib/pravasi';
 import { Heart } from 'lucide-react';
 import ShareButton from './ShareButton';
 import { getCategoryColor, getCategoryLabel } from '../utils/categoryColors';
@@ -14,9 +15,14 @@ const TYPE_LABELS = {
   video: 'Video',
 };
 
-const CreatorPostCard = ({ post }) => (
+const CreatorPostCard = ({ post }) => {
+  const path = post?.status === 'published' && post?.slug
+    ? pravasiPublicPath(post)
+    : `/creator/post/${post.id}`;
+
+  return (
   <div className="glass-card-solid rounded-2xl overflow-hidden card-lift group relative">
-    <Link href={`/creator/post/${post.id}`} className="block">
+    <Link href={path} className="block">
       {post.coverImage && (
         <img src={post.coverImage} alt="" className="w-full h-40 object-cover" loading="lazy" />
       )}
@@ -40,13 +46,14 @@ const CreatorPostCard = ({ post }) => (
       <ShareButton
         title={post.title}
         text={post.excerpt}
-        path={`/creator/post/${post.id}`}
+        path={path}
         contentType="creator_post"
         size="sm"
         className="bg-white/90 dark:bg-dark-surface-1/90 rounded-xl shadow-sm"
       />
     </div>
   </div>
-);
+  );
+};
 
 export default CreatorPostCard;

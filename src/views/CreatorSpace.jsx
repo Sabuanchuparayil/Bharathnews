@@ -8,6 +8,7 @@ import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import { getMyCreatorPosts, getCreatorProfileByUserId, checkRevenueShareEligibility } from '../services/creator';
 import { getCategoryLabel } from '../utils/categoryColors';
+import { pravasiPublicPath } from '@/lib/pravasi';
 
 const STATUS_STYLES = {
   draft: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
@@ -79,6 +80,8 @@ const CreatorSpace = () => {
           {profile && (
             <p className="text-gray-500 mt-1">
               <Link href={`/@${profile.slug}`} className="text-brand-600 hover:underline">{'@' + profile.slug}</Link>
+              <span className="mx-2">·</span>
+              <Link href="/creator/profile/edit" className="text-brand-600 hover:underline">Edit profile</Link>
             </p>
           )}
         </div>
@@ -134,7 +137,7 @@ const CreatorSpace = () => {
         {posts.map(post => (
           <Link
             key={post.id}
-            href={`/creator/post/${post.id}`}
+            href={post.status === 'published' ? pravasiPublicPath(post) : `/creator/post/${post.id}`}
             className="glass-card-solid rounded-xl p-4 flex items-center justify-between card-lift block"
           >
             <div>
@@ -143,6 +146,9 @@ const CreatorSpace = () => {
               </span>
               <h3 className="font-medium text-gray-900 dark:text-white mt-1">{post.title}</h3>
               <p className="text-xs text-gray-500">{post.type} · {getCategoryLabel(post.category)}</p>
+              {post.moderationFeedback && (
+                <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">{post.moderationFeedback}</p>
+              )}
             </div>
             <div className="text-right text-xs text-gray-400">
               {post.status === 'rejected' && <XCircle className="w-4 h-4 text-red-500 ml-auto" />}

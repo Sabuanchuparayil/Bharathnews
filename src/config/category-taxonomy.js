@@ -114,6 +114,8 @@ export const HEADER_NAV = [
   { path: '/world', label: 'World', sectionId: 'world' },
   { path: '/jobs', label: 'Jobs', sectionId: null, navTier: 'secondary' },
   { path: '/classifieds', label: 'Classifieds', sectionId: null, navTier: 'secondary' },
+  { path: '/guides', label: 'Guides', sectionId: null, navTier: 'secondary' },
+  { path: '/pravasi', label: 'Pravasi', sectionId: null, navTier: 'secondary' },
 ];
 
 /** Mobile bottom nav */

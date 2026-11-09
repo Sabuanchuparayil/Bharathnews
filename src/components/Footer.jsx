@@ -11,6 +11,9 @@ const FOOTER_NEWS_LINKS = [
   { path: '/community', title: 'Community' },
   { path: '/jobs', title: 'GCC Jobs' },
   { path: '/classifieds', title: 'Classifieds' },
+  { path: '/guides', title: 'NRI Guides' },
+  { path: '/pravasi', title: 'Pravasi Jaalakam' },
+  { path: '/events', title: 'Events' },
 ];
 
 const STALE_TAGLINES = new Set([

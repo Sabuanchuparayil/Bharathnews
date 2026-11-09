@@ -116,6 +116,11 @@ const SectionPage = ({
       <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 sm:py-8">
         <Breadcrumbs items={[{ name: 'Home', href: '/' }, { name: title }]} />
         <h1 className="font-display font-bold text-2xl sm:text-3xl text-gray-900 dark:text-white mb-1">{title}</h1>
+        {!loading && articles.length > 0 && (
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+            {articles.length}{hasMore ? '+' : ''} stories
+          </p>
+        )}
         {section?.description && (
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{section.description}</p>
         )}

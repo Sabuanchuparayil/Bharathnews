@@ -3,6 +3,17 @@
 import { getSupabaseBrowser } from '@/lib/supabase-client';
 import { rowsToApp } from '@/lib/db-mapper';
 import { SITE_URL } from '@/lib/site-url';
+import { pravasiPublicPath } from '@/lib/pravasi';
+
+function storyUrl(article, source) {
+  const path = article.publicPath || `/article/${article.slug}`;
+  return `${SITE_URL}${path}?utm_source=${source}&utm_medium=social`;
+}
+
+function storyTag(article) {
+  if (article.publicPath?.startsWith('/pravasi')) return '#PravasiJaalakam';
+  return `#${(article.category || 'news').replace(/\s+/g, '')}`;
+}
 
 const ENGAGEMENT_WEIGHTS = {
   views: 1,
@@ -32,23 +43,23 @@ const PLATFORM_TEMPLATES = {
   telegram: {
     maxLength: 4096,
     format: (article) =>
-      `📰 *${article.title}*\n\n${article.summary || ''}\n\n🔗 Read more: ${SITE_URL}/article/${article.slug}\n\n#${(article.category || 'news').replace(/\s+/g, '')} #BharathNews`,
+      `📰 *${article.title}*\n\n${article.summary || ''}\n\n🔗 Read more: ${storyUrl(article, 'telegram')}\n\n${storyTag(article)} #BharathNews`,
   },
   whatsapp: {
     maxLength: 65536,
     format: (article) =>
-      `*${article.title}*\n\n${article.summary || ''}\n\n📖 Read: ${SITE_URL}/article/${article.slug}?utm_source=whatsapp&utm_medium=social`,
+      `*${article.title}*\n\n${article.summary || ''}\n\n📖 Read: ${storyUrl(article, 'whatsapp')}`,
   },
   facebook: {
     maxLength: 63206,
     format: (article) =>
-      `${article.title}\n\n${article.summary || ''}\n\n${SITE_URL}/article/${article.slug}?utm_source=facebook&utm_medium=social`,
+      `${article.title}\n\n${article.summary || ''}\n\n${storyUrl(article, 'facebook')}`,
   },
   twitter: {
     maxLength: 280,
     format: (article) => {
-      const url = `${SITE_URL}/article/${article.slug}?utm_source=twitter&utm_medium=social`;
-      const hashtag = `#${(article.category || 'news').replace(/\s+/g, '')}`;
+      const url = storyUrl(article, 'twitter');
+      const hashtag = storyTag(article);
       const maxTitleLen = 280 - url.length - hashtag.length - 5;
       const title = article.title.length > maxTitleLen
         ? article.title.slice(0, maxTitleLen - 3) + '...'
@@ -59,7 +70,7 @@ const PLATFORM_TEMPLATES = {
   instagram: {
     maxLength: 2200,
     format: (article) =>
-      `${article.title}\n\n${article.summary || ''}\n\n📰 Link in bio\n\n#BharathNews #${(article.category || 'news').replace(/\s+/g, '')} #IndiaNews #GCCNews #BreakingNews`,
+      `${article.title}\n\n${article.summary || ''}\n\n📰 Link in bio\n\n#BharathNews ${storyTag(article)} #IndiaNews #GCCNews`,
   },
 };
 
@@ -96,7 +107,23 @@ export const getSmartPostSuggestions = async (count = 5) => {
     .order('published_at', { ascending: false })
     .limit(50);
 
-  const articles = rowsToApp(data || []);
+  const { data: creatorRows } = await supabase
+    .from('creator_posts')
+    .select('*')
+    .eq('status', 'published')
+    .or('visibility.eq.public,visibility.is.null')
+    .order('published_at', { ascending: false })
+    .limit(20);
+
+  const articles = [
+    ...rowsToApp(data || []),
+    ...rowsToApp(creatorRows || []).map(post => ({
+      ...post,
+      summary: post.excerpt || post.summary || '',
+      publicPath: pravasiPublicPath(post),
+      imageUrl: post.coverImage || '',
+    })),
+  ];
   const scored = articles.map(article => ({
     ...article,
     trendScore: calculateTrendScore(article),

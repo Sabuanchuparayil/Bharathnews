@@ -13,6 +13,7 @@ const extractYouTubeId = (url) => {
 import { useAuth } from '../context/AuthContext';
 import { getCreatorPost } from '../services/creator';
 import { getCategoryColor, getCategoryLabel } from '../utils/categoryColors';
+import { pravasiPublicPath } from '@/lib/pravasi';
 
 const CreatorPost = ({ postId: postIdProp, initialPost = null }) => {
   const postId = postIdProp;
@@ -82,7 +83,7 @@ const CreatorPost = ({ postId: postIdProp, initialPost = null }) => {
         <ShareButton
           title={post.title}
           text={post.excerpt}
-          path={`/creator/post/${postId}`}
+          path={post.status === 'published' ? pravasiPublicPath(post) : `/creator/post/${postId}`}
           contentType="creator_post"
           showLabel
           size="lg"

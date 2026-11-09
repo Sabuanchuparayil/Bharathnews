@@ -40,6 +40,29 @@ const LEGACY_REDIRECTS = {
   '/news/real-estate': '/real-estate',
 };
 
+function isAssetPath(pathname) {
+  return /\.(?:png|jpe?g|gif|webp|svg|ico|css|js|txt|xml|json|woff2?|map)$/i.test(pathname);
+}
+
+function isAccountGateOpen(pathname) {
+  if (isAssetPath(pathname)) return true;
+  if (pathname === '/login' || pathname === '/terms' || pathname === '/privacy' || pathname === '/contact') return true;
+  if (pathname === '/about' || pathname.startsWith('/about/')) return true;
+  if (pathname.startsWith('/auth/') || pathname.startsWith('/api/')) return true;
+  return false;
+}
+
+function redirectAccount(request, pathname) {
+  const url = request.nextUrl.clone();
+  const next = sanitizeNext(`${request.nextUrl.pathname}${request.nextUrl.search}`);
+  url.pathname = pathname;
+  url.search = '';
+  if (next !== pathname && next !== '/verify-email' && next !== '/complete-profile' && next !== '/login') {
+    url.searchParams.set('next', next);
+  }
+  return NextResponse.redirect(url);
+}
+
 function legacyRedirectPath(pathname) {
   if (LEGACY_REDIRECTS[pathname]) return LEGACY_REDIRECTS[pathname];
   if (pathname === '/news' || pathname.startsWith('/news/')) return '/';
@@ -88,9 +111,27 @@ export function middleware(request) {
   const auth = request.cookies.get('bn_auth')?.value;
   const rawRole = request.cookies.get('bn_role')?.value || '';
   const role = VALID_ROLES.has(rawRole) ? rawRole : 'reader';
+  const verified = request.cookies.get('bn_verified')?.value === '1';
+  const profileReady = request.cookies.get('bn_profile')?.value === '1';
 
   const response = NextResponse.next();
   response.headers.set('X-Content-Type-Options', 'nosniff');
+
+  if (pathname === '/desk' || pathname.startsWith('/desk/')) {
+    if (!auth || auth !== '1') {
+      const url = request.nextUrl.clone();
+      url.pathname = '/login';
+      url.searchParams.set('next', sanitizeNext(pathname));
+      return NextResponse.redirect(url);
+    }
+    if (role !== 'admin' && role !== 'content_writer') {
+      const url = request.nextUrl.clone();
+      url.pathname = '/login';
+      url.searchParams.set('next', sanitizeNext(pathname));
+      url.searchParams.set('reason', 'forbidden');
+      return NextResponse.redirect(url);
+    }
+  }
 
   if (pathname.startsWith(ADMIN_PREFIX)) {
     if (!auth || auth !== '1') {
@@ -114,6 +155,15 @@ export function middleware(request) {
     url.pathname = '/login';
     url.searchParams.set('next', sanitizeNext(pathname));
     return NextResponse.redirect(url);
+  }
+
+  if (auth === '1' && requiresAuth(pathname) && !isAccountGateOpen(pathname)) {
+    if (!verified && pathname !== '/verify-email') {
+      return redirectAccount(request, '/verify-email');
+    }
+    if (verified && !profileReady && pathname !== '/complete-profile' && pathname !== '/verify-email') {
+      return redirectAccount(request, '/complete-profile');
+    }
   }
 
   if (pathname === '/' && request.nextUrl.searchParams.get('login') === 'admin') {

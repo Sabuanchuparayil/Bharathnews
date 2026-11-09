@@ -2,14 +2,9 @@ import './globals.css';
 import Providers from './providers';
 import Script from 'next/script';
 import YandexMetrika from '@/components/YandexMetrika';
-import { Inter, Amaranth, Manjari, JetBrains_Mono } from 'next/font/google';
+import { Amaranth, Manjari, JetBrains_Mono } from 'next/font/google';
 import { safeJsonLd } from '@/lib/metadata';
 import { SITE_URL } from '@/lib/site-url';
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-  display: 'swap',
-});
 
 const amaranth = Amaranth({
   weight: ['400', '700'],
@@ -213,7 +208,7 @@ const organizationJsonLd = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${amaranth.variable} ${manjari.variable} ${jetbrainsMono.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${amaranth.variable} ${manjari.variable} ${jetbrainsMono.variable}`}>
       <head>
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" sizes="180x180" />
         <meta name="mobile-web-app-capable" content="yes" />

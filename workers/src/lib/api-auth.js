@@ -17,6 +17,7 @@ const PROTECTED_PREFIXES = [
   '/api/bulk-fill',
   '/api/seo-update',
   '/api/fix-slugs',
+  '/api/otp-email',
 ];
 
 export function isProtectedApiPath(pathname) {
