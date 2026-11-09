@@ -2,7 +2,7 @@ import { ImageResponse } from 'next/og';
 
 export const runtime = 'edge';
 
-const PLAYFAIR_URL = 'https://cdn.jsdelivr.net/npm/@fontsource/playfair-display/files/playfair-display-latin-700-normal.woff';
+const AMARANTH_URL = 'https://cdn.jsdelivr.net/npm/@fontsource/amaranth/files/amaranth-latin-700-normal.woff';
 const MANJARI_URL = 'https://cdn.jsdelivr.net/npm/@fontsource/manjari/files/manjari-malayalam-400-normal.woff';
 
 function clean(value, max) {
@@ -28,8 +28,8 @@ export async function GET(request) {
   const title = clean(searchParams.get('title'), 140) || 'The Bharath News';
   const category = clean(searchParams.get('cat'), 40) || 'News';
   const lang = searchParams.get('lang') === 'ml' ? 'ml' : 'en';
-  const fontData = await loadFont(lang === 'ml' ? MANJARI_URL : PLAYFAIR_URL);
-  const fontName = lang === 'ml' ? 'Manjari' : 'Playfair';
+  const fontData = await loadFont(lang === 'ml' ? MANJARI_URL : AMARANTH_URL);
+  const fontName = lang === 'ml' ? 'Manjari' : 'Amaranth';
 
   return new ImageResponse(
     (

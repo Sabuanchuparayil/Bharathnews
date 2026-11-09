@@ -241,7 +241,7 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
 
           <AdSlot className="mb-8" />
 
-          <div className="article-drop-cap prose prose-lg dark:prose-invert max-w-none text-gray-700 dark:text-gray-300 leading-relaxed mb-8">
+          <div className="article-drop-cap prose prose-lg dark:prose-invert max-w-[720px] mx-auto text-stone-800 dark:text-gray-300 leading-[1.75] mb-8">
             {contentLoading && isExcerptOnly(displayContent, displaySummary) && (
               <div className="space-y-3 mb-4">
                 <div className="h-4 skeleton rounded" />

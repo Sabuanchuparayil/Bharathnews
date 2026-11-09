@@ -47,7 +47,7 @@
   }
 
   .dark .glass-card {
-    background-color: rgb(30 41 59 / 0.8);
+    background-color: rgb(26 26 46 / 0.8);
   }
 
   .glass-card-solid {
@@ -74,7 +74,7 @@
 
   .btn-primary {
     @apply bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white font-medium px-5 py-2.5 rounded-xl transition-all duration-200 hover:shadow-lg active:scale-[0.98];
-    --tw-shadow-color: rgb(99 102 241 / 0.25);
+    --tw-shadow-color: rgb(13 115 119 / 0.28);
   }
 
   .btn-primary:hover {
@@ -243,15 +243,65 @@
     position: sticky;
     top: 4rem;
     z-index: 30;
-    background-color: rgb(248 250 252 / 0.9);
+    background-color: rgb(250 250 247 / 0.92);
     backdrop-filter: blur(12px);
     border-bottom: 1px solid rgb(241 245 249);
   }
 
   .dark .sticky-section-header {
-    background-color: rgb(15 23 42 / 0.9);
-    border-bottom-color: rgb(30 41 59);
+    background-color: rgb(26 26 46 / 0.92);
+    border-bottom-color: rgb(46 46 72);
   }
+
+  .section-rule {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .section-rule::before {
+    content: '';
+    width: 0.45rem;
+    height: 0.45rem;
+    flex-shrink: 0;
+    background: #0D7377;
+    transform: rotate(45deg);
+  }
+
+  .section-rule::after {
+    content: '';
+    height: 1px;
+    flex: 1;
+    background: #E7E5E4;
+  }
+
+  .dark .section-rule::after {
+    background: #3d3d58;
+  }
+
+  .masthead-watermark {
+    position: relative;
+  }
+
+  .masthead-watermark::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 1rem;
+    top: 100%;
+    height: 1.1rem;
+    pointer-events: none;
+    opacity: 0.12;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 24' fill='none'%3E%3Cpath d='M2 16C28 16 36 4 58 4s28 16 52 16 30-16 54-16 28 16 54 16 22-8 20-8' stroke='%230D7377' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E") center / 240px 24px no-repeat;
+  }
+}
+
+html[data-lang='ml'] .font-display {
+  font-family: var(--font-manjari), var(--font-amaranth), sans-serif;
+}
+
+html[data-lang='ml'] body {
+  font-size: 1.0625rem;
 }
 
 @layer utilities {

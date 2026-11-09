@@ -68,10 +68,10 @@ const Header = () => {
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-50 safe-top transition-all duration-300 ${
+        className={`fixed top-0 left-0 right-0 z-50 safe-top transition-all duration-300 border-b-2 border-brand-600 ${
           isScrolled
-            ? 'bg-white/90 dark:bg-dark-surface-0/90 backdrop-blur-glass shadow-glass border-b border-gray-200/50 dark:border-gray-800/50'
-            : 'bg-white/80 dark:bg-dark-surface-0/80 backdrop-blur-sm md:bg-transparent md:dark:bg-transparent'
+            ? 'bg-white/95 dark:bg-dark-surface-0/95 backdrop-blur-glass shadow-glass'
+            : 'bg-surface-0/95 dark:bg-dark-surface-0/95 backdrop-blur-sm'
         }`}
       >
         <UtilityBar />

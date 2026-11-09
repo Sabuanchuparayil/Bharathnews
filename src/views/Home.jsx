@@ -162,16 +162,20 @@ const Home = () => {
   return (
     <Layout>
       <OnboardingModal />
-      {showHomeSections && (
-        <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 pt-5">
-          <h1 className="font-display font-bold text-2xl sm:text-3xl text-gray-900 dark:text-white">
-            The Bharath News
-          </h1>
+      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 pt-5">
+        <h1 className={`font-display font-bold text-stone-900 dark:text-white ${
+          showHomeSections
+            ? 'masthead-watermark text-3xl sm:text-4xl'
+            : 'text-2xl sm:text-3xl'
+        }`}>
+          {showHomeSections ? 'The Bharath News' : sectionTitle}
+        </h1>
+        {showHomeSections && (
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Your window to India from the Gulf
           </p>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Zone 1 — Right Now: hero + 3 secondary stories */}
       {featuredArticles.length > 0 && showHomeSections && (
@@ -193,7 +197,7 @@ const Home = () => {
         {/* Zone 3 — Browse by Section */}
         {showHomeSections && (
           <div className="mb-12">
-            <h2 className="font-display font-bold text-2xl text-gray-900 dark:text-white mb-6">
+            <h2 className="section-rule font-display font-semibold text-2xl text-stone-900 dark:text-white mb-6">
               Browse by Section
             </h2>
             <SectionPreviews language={langFilter} />
@@ -201,13 +205,8 @@ const Home = () => {
         )}
 
         <div className="sticky-section-header -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 mb-4 min-w-0">
-          {!showHomeSections && (
-            <h1 className="font-display font-bold text-2xl sm:text-3xl text-gray-900 dark:text-white mb-3">
-              {sectionTitle}
-            </h1>
-          )}
           {showHomeSections && (
-            <h2 className="font-display font-bold text-lg text-gray-900 dark:text-white mb-3">
+            <h2 className="section-rule font-display font-semibold text-lg text-stone-900 dark:text-white mb-3">
               {sectionTitle}
             </h2>
           )}

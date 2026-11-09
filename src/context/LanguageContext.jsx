@@ -60,6 +60,10 @@ export function LanguageProvider({ children }) {
   }, [pathname]);
 
   useEffect(() => {
+    document.documentElement.dataset.lang = language === 'ml' ? 'ml' : 'en';
+  }, [language]);
+
+  useEffect(() => {
     const normalized = normalizeLanguageCode(language);
     if (normalized !== language) {
       setLanguageState(normalized);

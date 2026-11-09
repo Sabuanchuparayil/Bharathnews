@@ -22,7 +22,7 @@ export function siteMetadata({ title, description, path = '', image, type = 'web
     description: description || 'Breaking news from India and the Gulf for Malayali NRIs, in English and Malayalam.',
     alternates: {
       canonical: url,
-      languages: siteLanguageAlternates(path),
+      languages: metadataLanguageAlternates(path),
     },
     openGraph: {
       title: title || SITE_NAME,
@@ -68,12 +68,25 @@ function languageUrl(pathname, lang) {
 export function siteLanguageAlternates(path = '') {
   const suffix = path.startsWith('/') ? path : path ? `/${path}` : '/';
   const url = languageUrl(suffix);
-  const languages = {
+  return {
     'en-IN': url,
+    'ml-IN': languageUrl(suffix, 'ml'),
     'x-default': url,
   };
-  // Next drops ?query on the site root when resolving metadata alternates.
-  if (suffix !== '/') languages['ml-IN'] = languageUrl(suffix, 'ml');
+}
+
+/**
+ * Next.js 15 replaces an alternate whose pathname is "/" with the bare origin,
+ * which drops `?lang=ml`. Callers render that homepage link from
+ * siteLanguageAlternates() instead of passing the broken value through metadata.
+ */
+function metadataLanguageAlternates(path = '') {
+  const languages = siteLanguageAlternates(path);
+  const malayalam = languages['ml-IN'];
+  if (malayalam instanceof URL && malayalam.pathname === '/' && malayalam.search) {
+    const { 'ml-IN': _homepageMalayalam, ...rest } = languages;
+    return rest;
+  }
   return languages;
 }
 

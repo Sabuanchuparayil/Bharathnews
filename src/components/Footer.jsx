@@ -27,9 +27,9 @@ const Footer = () => {
 
   return (
     <footer className="bg-surface-1 dark:bg-dark-surface-0 border-t border-gray-100 dark:border-gray-800 pb-20 md:pb-0">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
-          <div className="col-span-2 md:col-span-1">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          <div className="sm:col-span-2 lg:col-span-1">
             <Link href="/" className="flex items-center space-x-3 mb-4">
               <img
                 src="/logo-mark.png"
@@ -47,7 +47,7 @@ const Footer = () => {
 
           <div>
             <h4 className="font-display font-bold text-sm text-gray-900 dark:text-white mb-4">News</h4>
-            <ul className="space-y-2.5">
+            <ul className="flex flex-wrap gap-x-4 gap-y-1.5 sm:flex-col sm:gap-y-2.5">
               {FOOTER_NEWS_LINKS.map(link => (
                 <li key={link.path}>
                   <Link href={link.path} className="text-sm text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
@@ -61,7 +61,7 @@ const Footer = () => {
           {channelList.length > 0 && (
           <div>
             <h4 className="font-display font-bold text-sm text-gray-900 dark:text-white mb-4">Follow Us</h4>
-            <ul className="space-y-2.5">
+            <ul className="flex flex-wrap gap-x-4 gap-y-1.5 sm:flex-col sm:gap-y-2.5">
               {channelList.map(channel => (
                 <li key={channel.name}>
                   <a
@@ -78,9 +78,9 @@ const Footer = () => {
           </div>
           )}
 
-          <div>
+          <div className="sm:col-span-2 lg:col-span-1">
             <h4 className="font-display font-bold text-sm text-gray-900 dark:text-white mb-4">Legal</h4>
-            <ul className="space-y-2.5">
+            <ul className="flex flex-wrap gap-x-4 gap-y-1.5 sm:flex-col sm:gap-y-2.5">
               {[
                 ['About', '/about'],
                 ['Privacy', '/privacy'],
@@ -98,32 +98,29 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* Branding */}
-        <div className="border-t border-gray-200 dark:border-gray-800 pt-8">
-          <div className="flex flex-col items-center mb-6">
-            <div className="flex items-center space-x-3 mb-2">
-              <img
-                src="/logo-mark.png"
-                alt="The Bharath News"
-                className="w-9 h-9 rounded-lg"
-              />
-              <h2 className="font-display font-bold text-2xl sm:text-3xl bg-gradient-to-r from-brand-700 via-brand-500 to-accent-emerald bg-clip-text text-transparent">
+        <div className="border-t border-gray-200 dark:border-gray-800 pt-4 flex flex-row flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <img
+              src="/logo-mark.png"
+              alt=""
+              className="w-8 h-8 rounded-lg flex-shrink-0"
+            />
+            <div className="min-w-0">
+              <p className="font-display font-bold text-base leading-none bg-gradient-to-r from-brand-700 via-brand-500 to-accent-emerald bg-clip-text text-transparent">
                 The Bharath News
-              </h2>
+              </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 truncate">
+                Your window to India from the Gulf
+              </p>
             </div>
-            <p className="text-xs text-gray-400 dark:text-gray-500 tracking-wide font-medium">
-              Your window to India from the Gulf
-            </p>
           </div>
-
-          <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
-            <p className="text-sm text-gray-400 flex items-center space-x-1">
-              <span>&copy; {year} {siteName || 'The Bharath News'}.</span>
-              <span className="hidden sm:inline">Made with</span>
-              <Heart className="w-3.5 h-3.5 text-accent-rose hidden sm:inline" />
-              <span className="hidden sm:inline">in India</span>
-            </p>
-            <div className="flex items-center space-x-3">
+          <p className="text-xs text-gray-400 flex items-center gap-1">
+            <span>&copy; {year} {siteName || 'The Bharath News'}.</span>
+            <span className="hidden sm:inline">Made with</span>
+            <Heart className="w-3.5 h-3.5 text-accent-rose hidden sm:inline" />
+            <span className="hidden sm:inline">in India</span>
+          </p>
+          <div className="flex items-center gap-2">
               <span className="text-xs text-gray-400 bg-surface-2 dark:bg-dark-surface-2 px-3 py-1 rounded-full flex items-center space-x-1">
                 <Globe className="w-3 h-3" />
                 <span>EN | ML</span>
@@ -133,7 +130,6 @@ const Footer = () => {
                 <span>PWA</span>
               </span>
             </div>
-          </div>
         </div>
       </div>
     </footer>

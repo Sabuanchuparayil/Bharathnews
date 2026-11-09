@@ -28,7 +28,7 @@ const HeroSection = ({ featured = [] }) => {
           >
             <div className="relative">
               <Link href={`/article/${main.slug}`} className="block">
-              <div className="relative h-72 sm:h-80 lg:h-[420px] rounded-3xl overflow-hidden">
+              <div className="relative h-[40vh] min-h-[16rem] lg:h-[60vh] lg:max-h-[36rem] rounded-3xl overflow-hidden">
                 <SafeImage
                   src={main.imageUrl}
                   alt={main.title}
@@ -94,7 +94,7 @@ const HeroSection = ({ featured = [] }) => {
                 transition={{ delay: 0.1 * (index + 1) }}
               >
                 <Link href={`/article/${article.slug}`}
-                  className="group flex space-x-4 glass-card-solid rounded-2xl p-4 h-full"
+                  className="group flex space-x-4 glass-card-solid rounded-2xl border-l-[3px] border-brand-600 p-4 h-full"
                 >
                   <SafeImage
                     src={article.imageUrl}

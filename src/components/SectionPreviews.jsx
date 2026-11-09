@@ -12,16 +12,24 @@ const SectionPreviews = ({ language = null }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     setLoading(true);
-    Promise.all(
-      HOME_SECTION_IDS.map(async (sectionId) => {
+    (async () => {
+      const results = [];
+      for (const sectionId of HOME_SECTION_IDS) {
+        if (cancelled) return results;
         const articles = await getSectionPreviewArticles(sectionId, 3, language);
-        return { sectionId, articles };
-      })
-    ).then(results => {
-      setSections(results.filter(r => r.articles.length > 0));
+        if (articles.length) results.push({ sectionId, articles });
+      }
+      return results;
+    })().then(results => {
+      if (cancelled) return;
+      setSections(results);
       setLoading(false);
-    }).catch(() => setLoading(false));
+    }).catch(() => {
+      if (!cancelled) setLoading(false);
+    });
+    return () => { cancelled = true; };
   }, [language]);
 
   if (loading) {

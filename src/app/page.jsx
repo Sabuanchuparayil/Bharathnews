@@ -1,5 +1,7 @@
 import HomeClient from '@/components/HomeClient';
-import { siteMetadata } from '@/lib/metadata';
+import { siteMetadata, siteLanguageAlternates } from '@/lib/metadata';
+
+const homepageMalayalam = siteLanguageAlternates('/')['ml-IN'].toString();
 
 export const metadata = siteMetadata({
   title: 'The Bharath News — Breaking News from India & GCC | Live Updates Today',
@@ -17,5 +19,10 @@ export const metadata = siteMetadata({
 });
 
 export default function Page() {
-  return <HomeClient />;
+  return (
+    <>
+      <link rel="alternate" hrefLang="ml-IN" href={homepageMalayalam} />
+      <HomeClient />
+    </>
+  );
 }

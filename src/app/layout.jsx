@@ -2,11 +2,9 @@ import './globals.css';
 import Providers from './providers';
 import Script from 'next/script';
 import YandexMetrika from '@/components/YandexMetrika';
-import { Inter, Amaranth, JetBrains_Mono } from 'next/font/google';
+import { Inter, Amaranth, Manjari, JetBrains_Mono } from 'next/font/google';
 import { safeJsonLd } from '@/lib/metadata';
 import { SITE_URL } from '@/lib/site-url';
-import HomepageHreflang from '@/components/HomepageHreflang';
-
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
@@ -20,6 +18,13 @@ const amaranth = Amaranth({
   display: 'swap',
 });
 
+const manjari = Manjari({
+  weight: ['400', '700'],
+  subsets: ['latin', 'malayalam'],
+  variable: '--font-manjari',
+  display: 'swap',
+});
+
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-mono',
@@ -27,7 +32,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const viewport = {
-  themeColor: '#101223',
+  themeColor: '#0D7377',
   viewportFit: 'cover',
   width: 'device-width',
   initialScale: 1,
@@ -208,9 +213,8 @@ const organizationJsonLd = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${amaranth.variable} ${jetbrainsMono.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${amaranth.variable} ${manjari.variable} ${jetbrainsMono.variable}`}>
       <head>
-        <HomepageHreflang />
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" sizes="180x180" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />

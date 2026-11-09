@@ -8,6 +8,21 @@ import { articleFreshnessMs } from '@/utils/articleDates';
 
 const emptyPage = { articles: [], lastDoc: null, hasMore: false };
 
+/** Card and list views. Omits full_content and translations, which make these sorts time out. */
+const LIST_COLUMNS = 'id,slug,title,summary,image_url,category,subcategory,source,source_url,author,language,views,likes,published_at,created_at,score';
+
+function listQuery(supabase) {
+  return supabase
+    .from('articles')
+    .select(LIST_COLUMNS)
+    .order('published_at', { ascending: false });
+}
+
+function paginate(query, offset, pageSize) {
+  if (offset) return query.range(offset, offset + pageSize - 1);
+  return query.limit(pageSize);
+}
+
 function getClient() {
   return getSupabaseBrowser();
 }
@@ -46,22 +61,14 @@ export const getArticlesPage = async (category = null, lastDoc = null, pageSize 
     return getBreakingArticlesPage(lastDoc, pageSize, language);
   }
 
-  let query = supabase
-    .from('articles')
-    .select('*')
-    .or('editorial_status.eq.published,editorial_status.is.null')
-    .order('created_at', { ascending: false })
-    .limit(pageSize);
-
+  let query = listQuery(supabase);
   query = applyLanguageFilter(query, language);
 
   if (category && category !== 'all') {
     query = query.eq('category', category);
   }
 
-  if (lastDoc?._offset) {
-    query = query.range(lastDoc._offset, lastDoc._offset + pageSize - 1);
-  }
+  query = paginate(query, lastDoc?._offset, pageSize);
 
   const { data, error } = await query;
   if (error) {
@@ -92,19 +99,9 @@ async function getBreakingArticlesPage(lastDoc = null, pageSize = 20, language =
   if (!supabase) return emptyPage;
 
   const cutoff = new Date(Date.now() - BREAKING_WINDOW_HOURS * 60 * 60 * 1000).toISOString();
-  let query = supabase
-    .from('articles')
-    .select('*')
-    .gte('created_at', cutoff)
-    .or('editorial_status.eq.published,editorial_status.is.null')
-    .order('created_at', { ascending: false })
-    .limit(pageSize);
-
+  let query = listQuery(supabase).gte('published_at', cutoff);
   query = applyLanguageFilter(query, language);
-
-  if (lastDoc?._offset != null) {
-    query = query.range(lastDoc._offset, lastDoc._offset + pageSize - 1);
-  }
+  query = paginate(query, lastDoc?._offset, pageSize);
 
   const { data, error } = await query;
   if (error) {
@@ -142,10 +139,10 @@ export const fetchUniqueArticles = async (category = null, minCount = 12, startA
   let lastDoc = startAfterDoc;
   let hasMore = true;
   let pagesScanned = 0;
-  const maxPages = 4;
+  const maxPages = 2;
 
   while (matched.length < minCount && hasMore && pagesScanned < maxPages) {
-    const page = await getArticlesPage(category, lastDoc, Math.max(minCount, 24), language);
+    const page = await getArticlesPage(category, lastDoc, minCount, language);
     pagesScanned++;
     for (const article of page.articles) {
       if (!article?.slug || seenSlugs.has(article.slug)) continue;
@@ -181,18 +178,8 @@ export const getArticlesPageForSection = async (
     }
 
     const fetchSize = subcategoryId && subcategoryId !== 'all' ? pageSize * 4 : pageSize;
-    let query = supabase
-      .from('articles')
-      .select('*')
-      .or('editorial_status.eq.published,editorial_status.is.null')
-      .order('created_at', { ascending: false })
-      .limit(fetchSize);
-
-    query = applyLanguageFilter(query, language);
-
-    if (lastDoc?._offset) {
-      query = query.range(lastDoc._offset, lastDoc._offset + fetchSize - 1);
-    }
+    let query = applyLanguageFilter(listQuery(supabase), language);
+    query = paginate(query, lastDoc?._offset, fetchSize);
 
     const { data, error } = await query;
     if (error) {
@@ -224,19 +211,9 @@ export const getArticlesPageForSection = async (
 
   const fetchSize = subcategoryId && subcategoryId !== 'all' ? pageSize * 3 : pageSize;
 
-  let query = supabase
-    .from('articles')
-    .select('*')
-    .in('category', legacyCategories)
-    .or('editorial_status.eq.published,editorial_status.is.null')
-    .order('created_at', { ascending: false })
-    .limit(fetchSize);
-
+  let query = listQuery(supabase).in('category', legacyCategories);
   query = applyLanguageFilter(query, language);
-
-  if (lastDoc?._offset) {
-    query = query.range(lastDoc._offset, lastDoc._offset + fetchSize - 1);
-  }
+  query = paginate(query, lastDoc?._offset, fetchSize);
 
   const { data, error } = await query;
   if (error) {
@@ -274,10 +251,10 @@ export const fetchUniqueArticlesForSection = async (
   let lastDoc = startAfterDoc;
   let hasMore = true;
   let pagesScanned = 0;
-  const maxPages = 4;
+  const maxPages = 2;
 
   while (matched.length < minCount && hasMore && pagesScanned < maxPages) {
-    const page = await getArticlesPageForSection(sectionId, subcategoryId, lastDoc, Math.max(minCount, 24), language);
+    const page = await getArticlesPageForSection(sectionId, subcategoryId, lastDoc, minCount, language);
     pagesScanned++;
     for (const article of page.articles) {
       if (!article?.slug || seenSlugs.has(article.slug)) continue;
@@ -300,9 +277,8 @@ export const getMostReadArticles = async (count = 5, language = null, hours = 24
   const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
   let query = supabase
     .from('articles')
-    .select('*')
-    .gte('created_at', cutoff)
-    .or('editorial_status.eq.published,editorial_status.is.null')
+    .select(LIST_COLUMNS)
+    .gte('published_at', cutoff)
     .order('views', { ascending: false })
     .limit(count + 10);
 
@@ -319,8 +295,8 @@ export const getMostReadArticles = async (count = 5, language = null, hours = 24
 };
 
 export const getSectionPreviewArticles = async (sectionId, count = 3, language = null) => {
-  const { articles } = await fetchUniqueArticlesForSection(sectionId, 'all', count, null, language);
-  return articles;
+  const page = await getArticlesPageForSection(sectionId, 'all', null, count, language);
+  return page.articles;
 };
 
 export const getArticleBySlug = async (slug) => {
@@ -344,12 +320,8 @@ export const getTrendingArticles = async (count = 5, language = null) => {
   const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
   const fetchLimit = count + 20;
 
-  let recentQuery = supabase
-    .from('articles')
-    .select('*')
-    .gte('created_at', cutoff)
-    .or('editorial_status.eq.published,editorial_status.is.null')
-    .order('created_at', { ascending: false })
+  let recentQuery = listQuery(supabase)
+    .gte('published_at', cutoff)
     .limit(fetchLimit);
 
   recentQuery = applyLanguageFilter(recentQuery, language);
@@ -368,12 +340,8 @@ export const getTrendingArticles = async (count = 5, language = null) => {
   if (candidates.length >= count) return candidates.slice(0, count);
 
   const widerCutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-  let widerQuery = supabase
-    .from('articles')
-    .select('*')
-    .gte('created_at', widerCutoff)
-    .or('editorial_status.eq.published,editorial_status.is.null')
-    .order('created_at', { ascending: false })
+  let widerQuery = listQuery(supabase)
+    .gte('published_at', widerCutoff)
     .limit(fetchLimit);
 
   widerQuery = applyLanguageFilter(widerQuery, language);
@@ -405,13 +373,9 @@ export const getArticlesByInterests = async (interests, count = 10, language = n
   const supabase = getClient();
   if (!supabase) return [];
 
-  let query = supabase
-    .from('articles')
-    .select('*')
+  let query = listQuery(supabase)
     .in('category', topCategories)
-    .or('editorial_status.eq.published,editorial_status.is.null')
-    .order('created_at', { ascending: false })
-    .limit(count + 20);
+    .limit(count + 5);
 
   if (language && language !== 'all') {
     query = query.eq('language', language);
@@ -505,25 +469,20 @@ export const searchArticles = async (searchTerm, pageSize = 30, language = null)
   if (!supabase) return [];
   const term = searchTerm.toLowerCase().trim();
   if (!term) return [];
+  const pattern = `%${term.replace(/[%_,.()]/g, ' ').trim()}%`;
 
   const { data } = await supabase
     .from('articles')
-    .select('*')
-    .or('editorial_status.eq.published,editorial_status.is.null')
+    .select(LIST_COLUMNS)
+    .or(`title.ilike.${pattern},summary.ilike.${pattern},category.ilike.${pattern},author.ilike.${pattern}`)
     .order('published_at', { ascending: false })
-    .limit(200);
+    .limit(pageSize);
 
   const seenSlugs = new Set();
   const articles = rowsToApp(data || []).filter(a => {
-    if (a.slug && seenSlugs.has(a.slug)) return false;
-    const matchesTerm =
-      a.title?.toLowerCase().includes(term) ||
-      a.summary?.toLowerCase().includes(term) ||
-      a.category?.toLowerCase().includes(term) ||
-      a.author?.toLowerCase().includes(term) ||
-      a.category?.toLowerCase() === term;
-    if (matchesTerm && a.slug) seenSlugs.add(a.slug);
-    return matchesTerm;
+    if (!a.slug || seenSlugs.has(a.slug)) return false;
+    seenSlugs.add(a.slug);
+    return true;
   });
 
   const filtered = filterByLanguage(articles, language);

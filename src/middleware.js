@@ -89,11 +89,7 @@ export function middleware(request) {
   const rawRole = request.cookies.get('bn_role')?.value || '';
   const role = VALID_ROLES.has(rawRole) ? rawRole : 'reader';
 
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set('x-bn-path', pathname);
-  const response = NextResponse.next({
-    request: { headers: requestHeaders },
-  });
+  const response = NextResponse.next();
   response.headers.set('X-Content-Type-Options', 'nosniff');
 
   if (pathname.startsWith(ADMIN_PREFIX)) {
