@@ -2,11 +2,11 @@
 
 import React, { Suspense } from 'react';
 import SectionPage from './SectionPage';
+import Layout from '../components/Layout';
 
 function SectionFallback() {
   return (
-    <div className="min-h-screen bg-surface-1 dark:bg-dark-surface-0">
-      <div className="h-16" />
+    <Layout showChatbot={false}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-4">
         <div className="h-10 skeleton w-48 rounded-xl" />
         <div className="flex gap-2">
@@ -20,7 +20,7 @@ function SectionFallback() {
           ))}
         </div>
       </div>
-    </div>
+    </Layout>
   );
 }
 

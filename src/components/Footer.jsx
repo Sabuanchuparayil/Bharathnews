@@ -13,10 +13,17 @@ const FOOTER_NEWS_LINKS = [
   { path: '/classifieds', title: 'Classifieds' },
 ];
 
+const STALE_TAGLINES = new Set([
+  'AI-Powered News for India & GCC',
+  'Breaking news from India and GCC regions',
+]);
+const PUBLIC_TAGLINE = 'Your window to India from the Gulf. News in English and Malayalam.';
+
 const Footer = () => {
   const year = new Date().getFullYear();
   const { siteName, tagline, socialChannels } = useSiteSettings();
   const channelList = Object.values(socialChannels || {});
+  const publicTagline = tagline && !STALE_TAGLINES.has(tagline.trim()) ? tagline : PUBLIC_TAGLINE;
 
   return (
     <footer className="bg-surface-1 dark:bg-dark-surface-0 border-t border-gray-100 dark:border-gray-800 pb-20 md:pb-0">
@@ -34,7 +41,7 @@ const Footer = () => {
               </span>
             </Link>
             <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-              {tagline || 'Your trusted source for India-GCC news. Breaking news, business, technology — in English and regional languages.'}
+              {publicTagline}
             </p>
           </div>
 
@@ -104,8 +111,8 @@ const Footer = () => {
                 The Bharath News
               </h2>
             </div>
-            <p className="text-xs text-gray-400 dark:text-gray-500 tracking-wide uppercase font-medium">
-              AI-Powered News for India &amp; GCC
+            <p className="text-xs text-gray-400 dark:text-gray-500 tracking-wide font-medium">
+              Your window to India from the Gulf
             </p>
           </div>
 
@@ -119,7 +126,7 @@ const Footer = () => {
             <div className="flex items-center space-x-3">
               <span className="text-xs text-gray-400 bg-surface-2 dark:bg-dark-surface-2 px-3 py-1 rounded-full flex items-center space-x-1">
                 <Globe className="w-3 h-3" />
-                <span>EN | ML | AR</span>
+                <span>EN | ML</span>
               </span>
               <span className="text-xs text-gray-400 bg-surface-2 dark:bg-dark-surface-2 px-3 py-1 rounded-full flex items-center space-x-1">
                 <Smartphone className="w-3 h-3" />

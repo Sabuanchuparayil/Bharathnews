@@ -1,7 +1,8 @@
+import Layout from '@/components/Layout';
+
 export default function Loading() {
   return (
-    <div className="min-h-screen bg-surface-1 dark:bg-dark-surface-0">
-      <div className="h-16" />
+    <Layout showChatbot={false}>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
         <div className="h-6 w-24 bg-gray-200 dark:bg-gray-700 rounded-full mb-4 animate-pulse" />
         <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded-lg mb-2 animate-pulse" />
@@ -20,6 +21,6 @@ export default function Loading() {
           ))}
         </div>
       </div>
-    </div>
+    </Layout>
   );
 }

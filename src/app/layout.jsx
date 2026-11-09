@@ -5,6 +5,7 @@ import YandexMetrika from '@/components/YandexMetrika';
 import { Inter, Amaranth, JetBrains_Mono } from 'next/font/google';
 import { safeJsonLd } from '@/lib/metadata';
 import { SITE_URL } from '@/lib/site-url';
+import HomepageHreflang from '@/components/HomepageHreflang';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -34,10 +35,10 @@ export const viewport = {
 
 export const metadata = {
   title: {
-    default: 'The Bharath News — Breaking News from India & GCC | Latest Headlines Today',
+    default: 'The Bharath News — India and Gulf news for Malayali NRIs',
     template: '%s | The Bharath News',
   },
-  description: 'India\'s leading multilingual news platform covering breaking news, politics, business, cricket, Bollywood, technology, and Gulf/GCC news for NRI communities. Real-time coverage in English, Hindi, Malayalam, Tamil, Telugu, Kannada, Bengali & Urdu.',
+  description: 'Breaking news from India and the Gulf for Malayali NRIs — Kerala, Gulf, money, sports, tech, and community stories in English and Malayalam.',
   metadataBase: new URL(SITE_URL),
   manifest: '/manifest.json',
   keywords: [
@@ -49,14 +50,8 @@ export const metadata = {
     'Saudi Arabia news', 'Qatar news', 'Bahrain news', 'Kuwait news', 'Oman news',
     'Indian expat news Gulf', 'NRI news UAE', 'NRI news Saudi', 'Indians in Gulf',
     'Middle East news today', 'Gulf Indian community',
-    // Regional languages (English terms)
-    'Malayalam news today', 'Hindi news live', 'Tamil news today', 'Telugu news live',
-    'Kannada news today', 'Bengali news today', 'Urdu news India',
-    'Kerala news', 'Tamil Nadu news', 'Andhra Pradesh news', 'Telangana news',
-    'Karnataka news', 'West Bengal news', 'UP news', 'Maharashtra news',
-    // Regional languages (native script — AI/search discovery)
-    'മലയാളം വാർത്ത', 'हिंदी समाचार', 'தமிழ் செய்திகள்', 'తెలుగు వార్తలు',
-    'ಕನ್ನಡ ಸುದ್ದಿ', 'বাংলা সংবাদ', 'اردو خبریں',
+    'Malayalam news today', 'Kerala news', 'മലയാളം വാർത്ത',
+    'Gulf Malayali news', 'NRI news Malayalam', 'swarnam vila',
     // Categories
     'India politics news', 'Indian economy news', 'India business news',
     'Indian stock market', 'Sensex Nifty today', 'IPO news India',
@@ -71,8 +66,7 @@ export const metadata = {
     'India current affairs', 'India daily news summary',
     'news for Indians in UAE', 'news for Indians in Saudi Arabia',
     'Indian diaspora news', 'India news English',
-    'India news multilingual', 'India regional news aggregator',
-    'AI news India', 'India news feed', 'India RSS news',
+    'Malayali news Gulf', 'India news English', 'India news Malayalam',
   ],
   authors: [{ name: 'The Bharath News', url: SITE_URL }],
   creator: 'The Bharath News',
@@ -80,28 +74,11 @@ export const metadata = {
   formatDetection: { telephone: false },
   alternates: {
     canonical: SITE_URL,
-    languages: {
-      'en-IN': SITE_URL,
-      'hi-IN': `${SITE_URL}?lang=hi`,
-      'ml-IN': `${SITE_URL}?lang=ml`,
-      'ta-IN': `${SITE_URL}?lang=ta`,
-      'te-IN': `${SITE_URL}?lang=te`,
-      'kn-IN': `${SITE_URL}?lang=kn`,
-      'bn-IN': `${SITE_URL}?lang=bn`,
-      'ur-IN': `${SITE_URL}?lang=ur`,
-      'x-default': SITE_URL,
-    },
     types: {
       'application/rss+xml': [
         { url: `${SITE_URL}/feed.xml`, title: 'The Bharath News — All Articles' },
         { url: `${SITE_URL}/feed.xml?lang=en`, title: 'The Bharath News — English' },
         { url: `${SITE_URL}/feed.xml?lang=ml`, title: 'The Bharath News — Malayalam' },
-        { url: `${SITE_URL}/feed.xml?lang=hi`, title: 'The Bharath News — Hindi' },
-        { url: `${SITE_URL}/feed.xml?lang=ta`, title: 'The Bharath News — Tamil' },
-        { url: `${SITE_URL}/feed.xml?lang=te`, title: 'The Bharath News — Telugu' },
-        { url: `${SITE_URL}/feed.xml?lang=kn`, title: 'The Bharath News — Kannada' },
-        { url: `${SITE_URL}/feed.xml?lang=bn`, title: 'The Bharath News — Bengali' },
-        { url: `${SITE_URL}/feed.xml?lang=ur`, title: 'The Bharath News — Urdu' },
       ],
     },
   },
@@ -121,7 +98,7 @@ export const metadata = {
   },
   openGraph: {
     title: 'The Bharath News — Breaking News from India & GCC',
-    description: 'India\'s multilingual news platform. Breaking stories in English, Hindi, Malayalam, Tamil, Telugu, Kannada, Bengali. Business, cricket, Bollywood, politics & Gulf NRI community news.',
+    description: 'Breaking news from India and the Gulf for Malayali NRIs, in English and Malayalam.',
     type: 'website',
     url: SITE_URL,
     siteName: 'The Bharath News',
@@ -131,7 +108,7 @@ export const metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'The Bharath News — Breaking News India & GCC',
-    description: 'Real-time news from India & Gulf in 8 languages. Politics, business, cricket, Bollywood & more.',
+    description: 'Breaking news from India and the Gulf for Malayali NRIs, in English and Malayalam.',
     images: [`${SITE_URL}/og-default.png`],
   },
   appleWebApp: {
@@ -154,7 +131,7 @@ export const metadata = {
   },
   category: 'news',
   other: {
-    'news_keywords': 'India, GCC, UAE, breaking news, NRI, cricket, Bollywood, politics, business, technology, Kerala, Tamil Nadu, Andhra Pradesh, Karnataka, West Bengal',
+    'news_keywords': 'India, GCC, UAE, Kerala, Malayalam, NRI, gold rate, cricket, Gulf jobs',
     'geo.region': 'IN',
     'geo.placename': 'India',
     'ICBM': '20.5937, 78.9629',
@@ -165,10 +142,10 @@ const websiteJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
   name: 'The Bharath News',
-  alternateName: ['Bharath News', 'TheBharathNews', 'भारत न्यूज़', 'ഭാരത് ന്യൂസ്'],
+  alternateName: ['Bharath News', 'TheBharathNews', 'ഭാരത് ന്യൂസ്'],
   url: SITE_URL,
-  description: 'India\'s multilingual news platform delivering real-time breaking news from India and GCC/Gulf countries in English, Hindi, Malayalam, Tamil, Telugu, Kannada, Bengali, and Urdu.',
-  inLanguage: ['en', 'hi', 'ml', 'ta', 'te', 'kn', 'bn', 'ur'],
+  description: 'Breaking news from India and the Gulf for Malayali NRIs, in English and Malayalam.',
+  inLanguage: ['en', 'ml'],
   publisher: {
     '@type': 'NewsMediaOrganization',
     name: 'The Bharath News',
@@ -215,13 +192,13 @@ const organizationJsonLd = {
     { '@type': 'Country', name: 'Kuwait' },
     { '@type': 'Country', name: 'Oman' },
   ],
-  knowsLanguage: ['en', 'hi', 'ml', 'ta', 'te', 'kn', 'bn', 'ur'],
+  knowsLanguage: ['en', 'ml'],
   publishingPrinciples: `${SITE_URL}/editorial`,
   contactPoint: {
     '@type': 'ContactPoint',
     contactType: 'customer support',
     email: 'bharathnewsweb@gmail.com',
-    availableLanguage: ['English', 'Malayalam', 'Hindi', 'Tamil'],
+    availableLanguage: ['English', 'Malayalam'],
   },
   sameAs: [
     'https://t.me/TheBharathNews',
@@ -233,6 +210,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning className={`${inter.variable} ${amaranth.variable} ${jetbrainsMono.variable}`}>
       <head>
+        <HomepageHreflang />
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" sizes="180x180" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />

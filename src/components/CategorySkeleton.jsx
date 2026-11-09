@@ -1,7 +1,8 @@
+import Layout from './Layout';
+
 export default function CategorySkeleton() {
   return (
-    <div className="min-h-screen bg-surface-1 dark:bg-dark-surface-0">
-      <div className="h-16" />
+    <Layout showChatbot={false}>
       <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 sm:py-8">
         <div className="h-8 w-40 bg-gray-200 dark:bg-gray-700 rounded-lg mb-4 animate-pulse" />
         <div className="flex gap-2 mb-6 overflow-hidden">
@@ -22,6 +23,6 @@ export default function CategorySkeleton() {
           ))}
         </div>
       </div>
-    </div>
+    </Layout>
   );
 }

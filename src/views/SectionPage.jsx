@@ -16,6 +16,8 @@ import { fetchUniqueArticlesForSection, fetchUniqueArticles, getTrendingArticles
 import { useLanguage } from '../context/LanguageContext';
 import { toFirestoreLanguageFilter } from '@/config/languages.config';
 import { getSection, resolveLegacyCategory, CATEGORY_ROUTES } from '../config/feeds.config';
+import Breadcrumbs from '../components/Breadcrumbs';
+import Link from 'next/link';
 
 const PAGE_SIZE = 12;
 
@@ -112,6 +114,7 @@ const SectionPage = ({
   return (
     <Layout>
       <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 sm:py-8">
+        <Breadcrumbs items={[{ name: 'Home', href: '/' }, { name: title }]} />
         <h1 className="font-display font-bold text-2xl sm:text-3xl text-gray-900 dark:text-white mb-1">{title}</h1>
         {section?.description && (
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{section.description}</p>
@@ -127,7 +130,10 @@ const SectionPage = ({
           <div className="mb-6 p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/50">
             <p className="text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400 mb-1">Markets</p>
             <p className="text-sm text-gray-600 dark:text-gray-300">
-              Business, markets, jobs, and personal finance for the India-GCC diaspora.
+              Business, markets, jobs, and personal finance for the India-GCC diaspora.{' '}
+              <Link href="/money/gold-rate-today" className="text-brand-700 dark:text-brand-300 font-medium hover:underline">
+                Gold rate today
+              </Link>
             </p>
           </div>
         )}

@@ -1,8 +1,8 @@
-import { SUPPORTED_LANGUAGES } from '@/config/languages.config';
+import { READABLE_LANGUAGE_CATALOG, SELECTABLE_LANGUAGES } from '@/config/languages.config';
 import { decodeHtmlEntities } from '@/utils/formatters';
 
-/** Languages readers can switch to on an article page (excludes "all"). */
-export const READABLE_LANGS = SUPPORTED_LANGUAGES.filter(l => l.code !== 'all');
+/** Labels for a story's source language and any stored translation. */
+export const READABLE_LANGS = READABLE_LANGUAGE_CATALOG;
 
 export function getArticleSourceLang(article) {
   return article?.language || 'en';
@@ -63,5 +63,5 @@ export function listAvailableReadLangs(article) {
 export function listOnDemandLangs(article) {
   const available = new Set(listAvailableReadLangs(article).map(l => l.code));
   const sourceLang = getArticleSourceLang(article);
-  return READABLE_LANGS.filter(l => l.code !== sourceLang && !available.has(l.code));
+  return SELECTABLE_LANGUAGES.filter(l => l.code !== sourceLang && !available.has(l.code));
 }

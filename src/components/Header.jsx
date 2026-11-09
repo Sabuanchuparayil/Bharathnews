@@ -14,6 +14,7 @@ import { buildNavSubcategoryHref } from '../utils/navLinks';
 import NavDropdown from './NavDropdown';
 import LanguageSwitcher from './LanguageSwitcher';
 import NotificationsPanel from './NotificationsPanel';
+import UtilityBar from './UtilityBar';
 
 let _trendingCache = { value: null, ts: 0 };
 const TRENDING_CACHE_MS = 5 * 60 * 1000;
@@ -73,6 +74,7 @@ const Header = () => {
             : 'bg-white/80 dark:bg-dark-surface-0/80 backdrop-blur-sm md:bg-transparent md:dark:bg-transparent'
         }`}
       >
+        <UtilityBar />
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 xl:gap-4 h-16">
             <Link href="/" className="flex items-center gap-2 group flex-shrink-0 z-10 min-w-0">
@@ -383,7 +385,7 @@ const Header = () => {
         )}
       </AnimatePresence>
 
-      <div className="h-16" />
+      <div className="header-offset" />
     </>
   );
 };

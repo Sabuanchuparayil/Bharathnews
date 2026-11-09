@@ -4,7 +4,9 @@ import { SECTIONS, CATEGORY_ROUTES } from '@/config/category-taxonomy';
 
 const LEGACY_CATEGORIES = Object.keys(CATEGORY_ROUTES);
 
-const LANGUAGES = ['en', 'hi', 'ml', 'ta', 'te', 'kn', 'bn', 'ur'];
+export const revalidate = 3600;
+
+const LANGUAGES = ['en', 'ml'];
 
 export default async function sitemap() {
   const sectionPages = Object.values(SECTIONS)
@@ -27,8 +29,10 @@ export default async function sitemap() {
     { url: `${SITE_URL}/terms`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.3 },
     { url: `${SITE_URL}/editorial`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.3 },
     { url: `${SITE_URL}/contact`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.4 },
+    { url: `${SITE_URL}/money/gold-rate-today`, lastModified: new Date(), changeFrequency: 'hourly', priority: 0.9 },
   ];
 
+  const sectionUrls = new Set(sectionPages.map(page => page.url));
   const legacyCategoryPages = LEGACY_CATEGORIES.map(cat => {
     const route = CATEGORY_ROUTES[cat];
     return {
@@ -37,7 +41,7 @@ export default async function sitemap() {
       changeFrequency: 'hourly',
       priority: 0.85,
     };
-  });
+  }).filter(page => !sectionUrls.has(page.url));
 
   const subcategoryPages = Object.values(SECTIONS).flatMap(section =>
     section.subcategories
@@ -69,12 +73,16 @@ export default async function sitemap() {
   let articlePages = [];
   try {
     const supabase = getSupabaseAdmin();
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('articles')
       .select('slug, published_at, updated_at, language')
       .or('editorial_status.eq.published,editorial_status.is.null')
       .order('created_at', { ascending: false })
       .limit(2000);
+
+    if (error) {
+      console.error('[sitemap] article query failed:', error.message);
+    }
 
     articlePages = (data || [])
       .filter(row => row.slug)

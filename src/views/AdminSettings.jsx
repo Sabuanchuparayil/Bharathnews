@@ -18,7 +18,7 @@ import { setAuthCookies } from '../lib/auth-cookies';
 import { mergeSiteSettings } from '../lib/site-settings';
 
 const ROLES = ['reader', 'contributor', 'vlogger', 'content_writer', 'admin'];
-const LANG_OPTIONS = ['en', 'hi', 'ml', 'ta', 'kn', 'te', 'bn'];
+const LANG_OPTIONS = ['en', 'ml'];
 const TABS = [
   { id: 'general', label: 'General', icon: Settings2 },
   { id: 'integrations', label: 'Integrations', icon: MessageCircle },
@@ -270,7 +270,7 @@ const AdminSettings = () => {
                     targetLanguages: e.target.value.split(',').map(s => s.trim()).filter(Boolean),
                   })}
                   className={inputClass}
-                  placeholder="ml, hi, ta, te, kn, bn"
+                  placeholder="ml"
                 />
               </Field>
               <div className="flex flex-wrap gap-2 mt-2">

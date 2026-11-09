@@ -74,10 +74,10 @@ const NriRatesWidget = () => {
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
             <Link
-              href="/money"
+              href="/money/gold-rate-today"
               className="inline-flex items-center gap-1 text-brand-600 dark:text-brand-400 font-medium hover:underline flex-shrink-0"
             >
-              Money news
+              Gold rate
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>

@@ -51,6 +51,7 @@ const NotFound = () => (
               </Link>
             ))}
             <Link href="/explore" className="category-pill category-pill-inactive text-xs">Discover</Link>
+            <Link href="/money/gold-rate-today" className="category-pill category-pill-inactive text-xs">Gold rate</Link>
           </div>
         </div>
       </motion.div>

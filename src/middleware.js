@@ -16,6 +16,36 @@ function sanitizeNext(nextPath) {
   return '/dashboard';
 }
 
+/** Old URLs still requested by crawlers and shared links. */
+const LEGACY_REDIRECTS = {
+  '/gcc-jobs': '/jobs',
+  '/discover': '/explore',
+  '/news/money': '/money',
+  '/news/sports': '/sports',
+  '/news/tech': '/tech',
+  '/news/technology': '/tech',
+  '/news/life': '/life',
+  '/news/lifestyle': '/life',
+  '/news/world': '/world',
+  '/news/kerala': '/india',
+  '/news/india': '/india',
+  '/news/gulf': '/gcc',
+  '/news/gcc': '/gcc',
+  '/news/business': '/business',
+  '/news/health': '/health',
+  '/news/education': '/education',
+  '/news/entertainment': '/entertainment',
+  '/news/opinion': '/opinion',
+  '/news/jobs': '/jobs',
+  '/news/real-estate': '/real-estate',
+};
+
+function legacyRedirectPath(pathname) {
+  if (LEGACY_REDIRECTS[pathname]) return LEGACY_REDIRECTS[pathname];
+  if (pathname === '/news' || pathname.startsWith('/news/')) return '/';
+  return null;
+}
+
 export function middleware(request) {
   const host = request.headers.get('host')?.split(':')[0]?.toLowerCase();
 
@@ -36,6 +66,16 @@ export function middleware(request) {
 
   const { pathname } = request.nextUrl;
 
+  const redirected = legacyRedirectPath(pathname);
+  if (redirected) {
+    const url = request.nextUrl.clone();
+    const lang = url.searchParams.get('lang');
+    url.pathname = redirected;
+    url.search = '';
+    if (lang) url.searchParams.set('lang', lang);
+    return NextResponse.redirect(url, 301);
+  }
+
   if (pathname.startsWith('/@') && pathname.length > 2) {
     const username = pathname.slice(2).split('/')[0];
     if (username && !username.includes('.') && username.length <= 64) {
@@ -49,7 +89,11 @@ export function middleware(request) {
   const rawRole = request.cookies.get('bn_role')?.value || '';
   const role = VALID_ROLES.has(rawRole) ? rawRole : 'reader';
 
-  const response = NextResponse.next();
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-bn-path', pathname);
+  const response = NextResponse.next({
+    request: { headers: requestHeaders },
+  });
   response.headers.set('X-Content-Type-Options', 'nosniff');
 
   if (pathname.startsWith(ADMIN_PREFIX)) {

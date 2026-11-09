@@ -4,6 +4,10 @@ export const SUPPORTED_LANGUAGES = [
   { code: 'all', name: 'All Languages', nativeName: 'All Languages', dir: 'ltr' },
   { code: 'en', name: 'English', nativeName: 'English', dir: 'ltr' },
   { code: 'ml', name: 'Malayalam', nativeName: 'മലയാളം', dir: 'ltr' },
+];
+
+/** Stored articles may still carry these codes. They stay out of the public switcher. */
+export const ARCHIVE_LANGUAGES = [
   { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी', dir: 'ltr' },
   { code: 'ta', name: 'Tamil', nativeName: 'தமிழ்', dir: 'ltr' },
   { code: 'kn', name: 'Kannada', nativeName: 'ಕನ್ನಡ', dir: 'ltr' },
@@ -15,7 +19,10 @@ export const SUPPORTED_LANGUAGES = [
 /** Languages shown in the header switcher (excludes "All Languages"). */
 export const SELECTABLE_LANGUAGES = SUPPORTED_LANGUAGES.filter(l => l.code !== 'all');
 
-export const TARGET_TRANSLATION_LANGS = ['ml', 'hi'];
+/** Labels for articles and stored translations, including languages we no longer publish. */
+export const READABLE_LANGUAGE_CATALOG = [...SELECTABLE_LANGUAGES, ...ARCHIVE_LANGUAGES];
+
+export const TARGET_TRANSLATION_LANGS = ['ml'];
 
 export const REGIONS = {
   india: 'India',
@@ -32,7 +39,7 @@ export const REGIONS = {
 
 export function getLanguageByCode(code) {
   const normalized = code && code !== 'all' ? code : DEFAULT_LANGUAGE;
-  return SUPPORTED_LANGUAGES.find(l => l.code === normalized)
+  return READABLE_LANGUAGE_CATALOG.find(l => l.code === normalized)
     || SUPPORTED_LANGUAGES.find(l => l.code === DEFAULT_LANGUAGE);
 }
 

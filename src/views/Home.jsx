@@ -161,8 +161,17 @@ const Home = () => {
 
   return (
     <Layout>
-      <h1 className="sr-only">The Bharath News — Breaking News from India &amp; GCC</h1>
       <OnboardingModal />
+      {showHomeSections && (
+        <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 pt-5">
+          <h1 className="font-display font-bold text-2xl sm:text-3xl text-gray-900 dark:text-white">
+            The Bharath News
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Your window to India from the Gulf
+          </p>
+        </div>
+      )}
 
       {/* Zone 1 — Right Now: hero + 3 secondary stories */}
       {featuredArticles.length > 0 && showHomeSections && (

@@ -2,11 +2,11 @@
 
 export const DEFAULT_SITE_SETTINGS = {
   qualityThreshold: 6,
-  targetLanguages: ['ml', 'hi', 'ta', 'te', 'kn', 'bn'],
+  targetLanguages: ['ml'],
   siteName: 'The Bharath News',
-  tagline: 'Breaking news from India and GCC regions',
+  tagline: 'Your window to India from the Gulf',
   headerText: 'The Bharath News',
-  footerText: 'India-GCC News for the Global Indian',
+  footerText: 'Your window to India from the Gulf',
   integrations: {
     telegram: {
       enabled: true,

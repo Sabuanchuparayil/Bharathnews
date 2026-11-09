@@ -15,15 +15,18 @@ function getAccessibleImageUrl(imageUrl) {
 }
 
 export function siteMetadata({ title, description, path = '', image, type = 'website', keywords, publishedTime, modifiedTime }) {
-  const url = `${SITE_URL}${path}`;
+  const url = languageUrl(path || '/').toString();
   const ogImage = image ? getAccessibleImageUrl(image) : DEFAULT_OG_IMAGE;
   const meta = {
     title: title || SITE_NAME,
-    description: description || 'Breaking news from India and GCC. Business, technology, cricket, Bollywood & community stories for Indians worldwide.',
-    alternates: { canonical: url },
+    description: description || 'Breaking news from India and the Gulf for Malayali NRIs, in English and Malayalam.',
+    alternates: {
+      canonical: url,
+      languages: siteLanguageAlternates(path),
+    },
     openGraph: {
       title: title || SITE_NAME,
-      description: description || 'Breaking news from India and GCC regions — multilingual coverage in 8 Indian languages',
+      description: description || 'Breaking news from India and the Gulf for Malayali NRIs, in English and Malayalam.',
       url,
       siteName: SITE_NAME,
       type,
@@ -33,7 +36,7 @@ export function siteMetadata({ title, description, path = '', image, type = 'web
     twitter: {
       card: 'summary_large_image',
       title: title || SITE_NAME,
-      description: description || 'Breaking news from India & GCC — politics, cricket, business, Bollywood in 8 languages',
+      description: description || 'Breaking news from India and the Gulf for Malayali NRIs, in English and Malayalam.',
       images: [ogImage],
     },
   };
@@ -51,42 +54,62 @@ export function siteMetadata({ title, description, path = '', image, type = 'web
 
 const LANG_MAP = { en: 'en', hi: 'hi', ml: 'ml', ta: 'ta', kn: 'kn', te: 'te', bn: 'bn', ur: 'ur' };
 
-const HREFLANG_MAP = {
-  en: 'en-IN',
-  hi: 'hi-IN',
-  ml: 'ml-IN',
-  ta: 'ta-IN',
-  te: 'te-IN',
-  kn: 'kn-IN',
-  bn: 'bn-IN',
-  ur: 'ur-IN',
-};
+function hasStoredTranslation(translations, code) {
+  const tr = translations?.[code];
+  return Boolean(tr && typeof tr === 'object' && (tr.title || tr.summary || tr.fullContent));
+}
+
+function languageUrl(pathname, lang) {
+  const url = new URL(pathname || '/', SITE_URL);
+  if (lang) url.searchParams.set('lang', lang);
+  return url;
+}
 
 export function siteLanguageAlternates(path = '') {
-  const suffix = path.startsWith('/') ? path : path ? `/${path}` : '';
+  const suffix = path.startsWith('/') ? path : path ? `/${path}` : '/';
+  const url = languageUrl(suffix);
+  const languages = {
+    'en-IN': url,
+    'x-default': url,
+  };
+  // Next drops ?query on the site root when resolving metadata alternates.
+  if (suffix !== '/') languages['ml-IN'] = languageUrl(suffix, 'ml');
+  return languages;
+}
+
+export function articleLanguageAlternates(slug, language = 'en', translations = null) {
+  const pathname = `/article/${slug}`;
+  const url = languageUrl(pathname);
+  const source = LANG_MAP[language] ? language : 'en';
+  const englishUrl = source === 'en' || hasStoredTranslation(translations, 'en')
+    ? (source === 'en' ? url : languageUrl(pathname, 'en'))
+    : url;
+  const malayalamUrl = source === 'ml'
+    ? url
+    : hasStoredTranslation(translations, 'ml')
+      ? languageUrl(pathname, 'ml')
+      : null;
+
+  const languages = {
+    'en-IN': englishUrl,
+    'x-default': englishUrl,
+  };
+  if (malayalamUrl) languages['ml-IN'] = malayalamUrl;
+
   return {
-    'en-IN': `${SITE_URL}${suffix}`,
-    'hi-IN': `${SITE_URL}${suffix}?lang=hi`,
-    'ml-IN': `${SITE_URL}${suffix}?lang=ml`,
-    'ta-IN': `${SITE_URL}${suffix}?lang=ta`,
-    'te-IN': `${SITE_URL}${suffix}?lang=te`,
-    'kn-IN': `${SITE_URL}${suffix}?lang=kn`,
-    'bn-IN': `${SITE_URL}${suffix}?lang=bn`,
-    'ur-IN': `${SITE_URL}${suffix}?lang=ur`,
-    'x-default': `${SITE_URL}${suffix}`,
+    canonical: url,
+    languages,
   };
 }
 
-export function articleLanguageAlternates(slug, language = 'en') {
-  const url = `${SITE_URL}/article/${slug}`;
-  const hreflang = HREFLANG_MAP[language] || 'en-IN';
-  return {
-    canonical: url,
-    languages: {
-      [hreflang]: url,
-      'x-default': url,
-    },
-  };
+export function articleOgImageUrl({ title, category, language, imageUrl }) {
+  if (imageUrl && !isStoredPlaceholderImage(imageUrl)) return getAccessibleImageUrl(imageUrl);
+  const params = new URLSearchParams({
+    title: String(title || 'The Bharath News').slice(0, 140),
+    cat: String(category || 'News').slice(0, 40),
+    lang: language === 'ml' ? 'ml' : 'en',
+  });
+  return `${SITE_URL}/api/og?${params.toString()}`;
 }
 
 const LANG_REGION_MAP = {
@@ -108,20 +131,26 @@ export function articleJsonLd(article) {
     ? new Date(article.updatedAt.seconds * 1000).toISOString()
     : publishDate;
   const lang = LANG_MAP[article.language] || 'en';
+  const authorName = (article.author || '').trim();
+  const isDeskAuthor = !authorName || /bharath news|news ai|\bai\b/i.test(authorName);
   return {
     '@context': 'https://schema.org',
     '@type': 'NewsArticle',
     headline: article.title,
     description: article.summary,
-    image: article.imageUrl ? [article.imageUrl] : [],
+    image: article.imageUrl ? [getAccessibleImageUrl(article.imageUrl)] : [`${SITE_URL}/og-default.png`],
     datePublished: publishDate,
     dateModified: modifiedDate,
-    author: {
-      '@type': 'Organization',
-      name: article.source || 'The Bharath News',
-      url: SITE_URL,
-      sameAs: article.sourceUrl || article.source_url || undefined,
-    },
+    author: isDeskAuthor
+      ? {
+        '@type': 'Organization',
+        name: article.source || 'The Bharath News',
+        url: SITE_URL,
+      }
+      : {
+        '@type': 'Person',
+        name: authorName,
+      },
     publisher: {
       '@type': 'NewsMediaOrganization',
       name: 'The Bharath News',

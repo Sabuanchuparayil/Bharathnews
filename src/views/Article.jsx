@@ -22,6 +22,7 @@ import { useInterests } from '../context/InterestContext';
 import { getArticleSourceLang, resolveArticleDisplay } from '../lib/article-translations';
 import { useLanguage } from '../context/LanguageContext';
 import { isExcerptOnly, normalizeArticleBody } from '@/lib/article-content';
+import Breadcrumbs, { categoryCrumb } from '../components/Breadcrumbs';
 
 const Article = ({ slug: slugProp, initialArticle = null }) => {
   const slug = slugProp;
@@ -181,8 +182,15 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
       />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="pt-6">
+          <Breadcrumbs items={[
+            { name: 'Home', href: '/' },
+            categoryCrumb(article.category, getCategoryLabel(article.category)),
+            { name: displayTitle },
+          ]} />
+        </div>
         <Link href="/"
-          className="inline-flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-brand-700 dark:hover:text-brand-400 py-6 transition-colors"
+          className="inline-flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-brand-700 dark:hover:text-brand-400 pb-6 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to news</span>

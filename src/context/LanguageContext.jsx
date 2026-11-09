@@ -1,26 +1,63 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { DEFAULT_LANGUAGE, SELECTABLE_LANGUAGES, normalizeLanguageCode } from '@/config/languages.config';
+import { usePathname } from 'next/navigation';
 import { useAuth } from './AuthContext';
 import { getSupabaseBrowser } from '@/lib/supabase-client';
 
 const LanguageContext = createContext(null);
 const STORAGE_KEY = 'bharathnews_lang';
 
-function getInitialLanguage() {
-  if (typeof window === 'undefined') return DEFAULT_LANGUAGE;
+function isSelectable(code) {
+  return SELECTABLE_LANGUAGES.some(l => l.code === code);
+}
+
+/** `?lang=` from hreflang alternates wins over the saved preference. */
+function getUrlLanguage() {
+  if (typeof window === 'undefined') return null;
+  const raw = new URLSearchParams(window.location.search).get('lang');
+  if (!raw) return null;
+  const code = normalizeLanguageCode(raw);
+  return isSelectable(code) ? code : null;
+}
+
+function clearUrlLanguage() {
+  if (typeof window === 'undefined') return;
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has('lang')) return;
+  url.searchParams.delete('lang');
+  window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
+}
+
+function getSavedLanguage() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) return normalizeLanguageCode(saved);
   } catch {}
-  return DEFAULT_LANGUAGE;
+  return null;
 }
+
+const useClientLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
 export function LanguageProvider({ children }) {
   const { user, userProfile } = useAuth();
-  const [language, setLanguageState] = useState(getInitialLanguage);
+  // Server and first client render must agree; the saved/URL language is applied after hydration.
+  const [language, setLanguageState] = useState(DEFAULT_LANGUAGE);
   const profileSyncedRef = useRef(false);
+  const pathname = usePathname();
+
+  useClientLayoutEffect(() => {
+    const fromUrl = getUrlLanguage();
+    if (fromUrl) {
+      setLanguageState(fromUrl);
+      try { localStorage.setItem(STORAGE_KEY, fromUrl); } catch {}
+      profileSyncedRef.current = true;
+      return;
+    }
+    const saved = getSavedLanguage();
+    if (saved) setLanguageState(saved);
+  }, [pathname]);
 
   useEffect(() => {
     const normalized = normalizeLanguageCode(language);
@@ -35,7 +72,7 @@ export function LanguageProvider({ children }) {
       profileSyncedRef.current = false;
       return;
     }
-    if (profileSyncedRef.current) return;
+    if (profileSyncedRef.current || getUrlLanguage()) return;
     const profileLang = normalizeLanguageCode(userProfile.language);
     if (SELECTABLE_LANGUAGES.some(l => l.code === profileLang)) {
       setLanguageState(profileLang);
@@ -46,10 +83,11 @@ export function LanguageProvider({ children }) {
 
   const setLanguage = useCallback(async (code) => {
     const next = normalizeLanguageCode(code);
-    if (!SELECTABLE_LANGUAGES.some(l => l.code === next)) return;
+    if (!isSelectable(next)) return;
     setLanguageState(next);
     localStorage.setItem(STORAGE_KEY, next);
     profileSyncedRef.current = true;
+    clearUrlLanguage();
 
     if (user) {
       try {
