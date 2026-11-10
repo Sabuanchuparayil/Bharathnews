@@ -143,6 +143,11 @@ export default function Login() {
               <Mail className="w-5 h-5" />
               {signingIn ? 'Signing in…' : 'Sign in with Email'}
             </button>
+            <div className="text-right mt-2">
+              <Link href="/forgot-password" className="text-sm text-brand-600 hover:underline">
+                Forgot password?
+              </Link>
+            </div>
           </form>
 
           <div className="relative my-6">

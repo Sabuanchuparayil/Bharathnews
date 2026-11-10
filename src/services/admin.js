@@ -3,6 +3,7 @@
 import { getSupabaseBrowser } from '@/lib/supabase-client';
 import { rowToApp, rowsToApp } from '@/lib/db-mapper';
 import { mergeSiteSettings } from '@/lib/site-settings';
+import { getPasswordResetRedirectUrl } from '@/lib/password-reset';
 
 function filterPublished(articles) {
   return articles.filter(a =>
@@ -219,6 +220,32 @@ export async function setUserRole(userId, role) {
   const supabase = getSupabaseBrowser();
   if (!supabase) throw new Error('Database unavailable');
   await supabase.from('users').update({ role }).eq('id', userId);
+}
+
+export async function resetUserPassword(userId, newPassword) {
+  if (!userId || typeof userId !== 'string') throw new Error('Invalid userId');
+  if (!newPassword || newPassword.length < 8) throw new Error('Password must be at least 8 characters.');
+  const token = await getAdminAccessToken();
+  const res = await fetch('/api/admin/users/reset-password', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ userId, newPassword }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Failed to reset password.');
+  return data;
+}
+
+export async function sendPasswordResetEmail(email) {
+  const supabase = getSupabaseBrowser();
+  if (!supabase) throw new Error('Authentication unavailable');
+  const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+    redirectTo: getPasswordResetRedirectUrl(),
+  });
+  if (error) throw new Error(error.message || 'Failed to send reset email.');
 }
 
 export { filterPublished };

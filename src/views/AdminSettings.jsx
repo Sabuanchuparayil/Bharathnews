@@ -13,6 +13,7 @@ import LoginPrompt from '../components/LoginPrompt';
 import { useAuth } from '../context/AuthContext';
 import {
   getSiteSettings, updateSiteSettings, getUsers, setUserRole, getSources,
+  resetUserPassword, sendPasswordResetEmail,
 } from '../services/admin';
 import { setAuthCookies } from '../lib/auth-cookies';
 import { mergeSiteSettings } from '../lib/site-settings';
@@ -95,6 +96,9 @@ const AdminSettings = () => {
     displayName: '',
     role: 'reader',
   });
+  const [resetModal, setResetModal] = useState(null);
+  const [resetPassword, setResetPassword] = useState('');
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   const patchIntegration = (platform, patch) => {
     setSettings(prev => ({
@@ -178,6 +182,31 @@ const AdminSettings = () => {
       toast.error(err.message || 'Failed to create user');
     } finally {
       setCreatingUser(false);
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    if (!resetModal) return;
+    setResettingPassword(true);
+    try {
+      await resetUserPassword(resetModal.id, resetPassword);
+      toast.success(`Password reset for ${resetModal.email || resetModal.displayName}`);
+      setResetModal(null);
+      setResetPassword('');
+    } catch (err) {
+      toast.error(err.message || 'Failed to reset password');
+    } finally {
+      setResettingPassword(false);
+    }
+  };
+
+  const handleSendResetEmail = async (userEmail) => {
+    try {
+      await sendPasswordResetEmail(userEmail);
+      toast.success(`Password reset email sent to ${userEmail}`);
+    } catch (err) {
+      toast.error(err.message || 'Failed to send reset email');
     }
   };
 
@@ -598,13 +627,23 @@ const AdminSettings = () => {
                     <p className="text-sm font-medium truncate">{u.displayName || u.email}</p>
                     <p className="text-xs text-gray-500 truncate">{u.email}</p>
                   </div>
-                  <select
-                    value={u.role || 'reader'}
-                    onChange={e => changeRole(u.id, e.target.value)}
-                    className="text-sm px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-transparent flex-shrink-0"
-                  >
-                    {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r] || r}</option>)}
-                  </select>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => { setResetModal(u); setResetPassword(''); }}
+                      className="p-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-950/30 text-amber-600"
+                      title="Reset password"
+                    >
+                      <KeyRound className="w-4 h-4" />
+                    </button>
+                    <select
+                      value={u.role || 'reader'}
+                      onChange={e => changeRole(u.id, e.target.value)}
+                      className="text-sm px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-transparent"
+                    >
+                      {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r] || r}</option>)}
+                    </select>
+                  </div>
                 </div>
               ))}
             </div>
@@ -620,6 +659,69 @@ const AdminSettings = () => {
           </div>
         )}
       </div>
+
+      {resetModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="glass-card-solid rounded-2xl p-6 max-w-md w-full">
+            <h3 className="font-display font-bold text-lg mb-2">Reset Password</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Reset password for <strong>{resetModal.email || resetModal.displayName}</strong>
+            </p>
+
+            <form onSubmit={handleResetPassword} className="space-y-3 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  New password
+                </label>
+                <input
+                  type="password"
+                  required
+                  minLength={8}
+                  value={resetPassword}
+                  onChange={e => setResetPassword(e.target.value)}
+                  className={inputClass}
+                  placeholder="Minimum 8 characters"
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={resettingPassword}
+                  className="btn-primary px-4 py-2 rounded-xl text-sm disabled:opacity-60"
+                >
+                  {resettingPassword ? 'Resetting…' : 'Set New Password'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setResetModal(null); setResetPassword(''); }}
+                  className="btn-secondary px-4 py-2 rounded-xl text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <p className="text-xs text-gray-500 mb-2">Or send the user a reset link via email:</p>
+              <button
+                type="button"
+                onClick={() => {
+                  if (resetModal.email) {
+                    handleSendResetEmail(resetModal.email);
+                    setResetModal(null);
+                  } else {
+                    toast.error('No email on file for this user.');
+                  }
+                }}
+                className="btn-secondary text-xs px-3 py-1.5 rounded-lg flex items-center gap-2"
+              >
+                <Mail className="w-3 h-3" /> Send reset email
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 };
