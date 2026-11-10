@@ -1,19 +1,23 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { ArrowLeft, Trash2, ExternalLink } from 'lucide-react';
+import { Trash2, ExternalLink } from 'lucide-react';
 import { toast } from 'react-toastify';
-import Layout from '../components/Layout';
-import LoginPrompt from '../components/LoginPrompt';
+import AdminLayout from '../components/AdminLayout';
 import { useAuth } from '../context/AuthContext';
 import { getVideos, deleteVideo } from '../services/admin';
 
 const AdminVideos = () => {
-  const { isAdmin, loading, user } = useAuth();
+  const { isAdmin } = useAuth();
   const [videos, setVideos] = useState([]);
+  const [total, setTotal] = useState(0);
 
-  const reload = () => getVideos(100).then(setVideos);
+  const reload = () => getVideos(100)
+    .then(result => {
+      setVideos(result.videos || []);
+      setTotal(result.total || 0);
+    })
+    .catch(err => toast.error(err.message || 'Could not load videos'));
 
   useEffect(() => {
     if (isAdmin) reload();
@@ -30,41 +34,14 @@ const AdminVideos = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <Layout showBottomNav={false}>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="w-8 h-8 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
-        </div>
-      </Layout>
-    );
-  }
-
-  if (!user || !isAdmin) {
-    return (
-      <Layout showBottomNav={false}>
-        <div className="flex items-center justify-center min-h-[60vh] px-4">
-          <LoginPrompt nextPath="/admin/videos" showAdminHint />
-        </div>
-      </Layout>
-    );
-  }
-
   return (
-    <Layout showBottomNav={false} showChatbot={false}>
-      <div className="max-w-5xl mx-auto px-4 py-8">
-        <Link href="/admin/dashboard" className="inline-flex items-center gap-2 text-gray-500 mb-6 hover:text-brand-600">
-          <ArrowLeft className="w-4 h-4" /> Back to Dashboard
-        </Link>
-        <h1 className="font-display font-bold text-3xl mb-2">Video Catalog</h1>
-        <p className="text-gray-500 mb-8">{videos.length} videos in catalog</p>
-
-        <div className="space-y-2">
-          {videos.map(v => {
-            const thumb = v.thumbnail || (v.videoId ? `https://img.youtube.com/vi/${v.videoId}/mqdefault.jpg` : '');
-            const watchUrl = v.videoId ? `https://www.youtube.com/watch?v=${v.videoId}` : '';
-            const channelLabel = v.channelName || v.channel || v.channelId || 'Unknown channel';
-            return (
+    <AdminLayout title="Video Catalog" description={`${total} videos in catalog`}>
+      <div className="space-y-2">
+        {videos.map(v => {
+          const thumb = v.thumbnail || (v.videoId ? `https://img.youtube.com/vi/${v.videoId}/mqdefault.jpg` : '');
+          const watchUrl = v.videoId ? `https://www.youtube.com/watch?v=${v.videoId}` : '';
+          const channelLabel = v.channelName || v.channel || v.channelId || 'Unknown channel';
+          return (
             <div key={v.id} className="glass-card-solid rounded-xl p-4 flex items-center gap-4">
               {thumb && (
                 <img src={thumb} alt="" className="w-24 h-14 object-cover rounded-lg flex-shrink-0" />
@@ -84,11 +61,10 @@ const AdminVideos = () => {
                 </button>
               </div>
             </div>
-            );
-          })}
-        </div>
+          );
+        })}
       </div>
-    </Layout>
+    </AdminLayout>
   );
 };
 

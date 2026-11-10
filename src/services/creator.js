@@ -12,24 +12,6 @@ function sb() {
   return client;
 }
 
-async function notifyTelegram(body) {
-  try {
-    const supabase = getSupabaseBrowser();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) return;
-    await fetch('/api/articles/telegram-notify', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify(body),
-    });
-  } catch {
-    /* best-effort */
-  }
-}
-
 export const isCreatorRole = (role) => CREATOR_ROLES.includes(role);
 
 export const submitRoleApplication = async (userId, { requestedRole, bio, portfolioUrl, sampleWork }) => {
@@ -52,15 +34,10 @@ export const submitRoleApplication = async (userId, { requestedRole, bio, portfo
   if (error) throw error;
 };
 
-export const getPendingApplications = async (count = 50) => {
-  const { data } = await sb()
-    .from('role_applications')
-    .select('*')
-    .eq('status', 'pending')
-    .limit(count);
-  return rowsToApp(data || []).sort((a, b) =>
-    (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)
-  );
+export const getPendingApplications = async () => {
+  const { getModerationQueue } = await import('./admin');
+  const data = await getModerationQueue();
+  return data.applications || [];
 };
 
 export const getUserApplication = async (userId) => {
@@ -73,25 +50,9 @@ export const getUserApplication = async (userId) => {
   return data?.[0] ? rowToApp(data[0]) : null;
 };
 
-export const reviewRoleApplication = async (applicationId, { approved, feedback, userId, requestedRole, displayName, photoURL }) => {
-  const supabase = sb();
-  await supabase.from('role_applications').update({
-    status: approved ? 'approved' : 'rejected',
-    feedback: feedback || '',
-    reviewed_at: new Date().toISOString(),
-  }).eq('id', applicationId);
-
-  if (approved) {
-    await supabase.from('users').update({ role: requestedRole }).eq('id', userId);
-    const username = await generateUsername(displayName, '');
-    await upsertCreatorProfile(userId, {
-      slug: username,
-      displayName,
-      photoURL,
-      role: requestedRole,
-      bio: '',
-    });
-  }
+export const reviewRoleApplication = async (applicationId, { approved, feedback } = {}) => {
+  const { reviewRoleApplication: review } = await import('./admin');
+  return review(applicationId, { approved, feedback });
 };
 
 export const generateUsername = async (displayName, email) => {
@@ -248,63 +209,15 @@ export const getMyCreatorPosts = async (authorId) => {
   );
 };
 
-export const getPendingCreatorPosts = async (count = 50) => {
-  const { data } = await sb()
-    .from('creator_posts')
-    .select('*')
-    .eq('status', 'pending')
-    .limit(count);
-  return rowsToApp(data || []).sort((a, b) =>
-    (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)
-  );
+export const getPendingCreatorPosts = async () => {
+  const { getModerationQueue } = await import('./admin');
+  const data = await getModerationQueue();
+  return data.posts || [];
 };
 
-export const moderateCreatorPost = async (postId, { approved, feedback }) => {
-  const supabase = sb();
-  const { data: postRow } = await supabase.from('creator_posts').select('*').eq('id', postId).single();
-  if (!postRow) throw new Error('POST_NOT_FOUND');
-  const post = rowToApp(postRow);
-
-  await supabase.from('creator_posts').update({
-    status: approved ? 'published' : 'rejected',
-    moderation_feedback: feedback || '',
-    published_at: approved ? new Date().toISOString() : null,
-    updated_at: new Date().toISOString(),
-  }).eq('id', postId);
-
-  if (approved) {
-    const { data: profile } = await supabase.from('creator_profiles').select('post_count').eq('slug', post.authorSlug).single();
-    await supabase.from('creator_profiles').update({
-      post_count: (profile?.post_count || 0) + 1,
-    }).eq('slug', post.authorSlug);
-
-    if (post.type === 'article' && post.visibility === 'public') {
-      const { data: article } = await supabase.from('articles').insert({
-        title: post.title,
-        slug: `${post.authorSlug}-${post.slug}`,
-        summary: post.excerpt,
-        full_content: post.body,
-        image_url: post.coverImage || '',
-        category: post.category,
-        topics: post.tags,
-        source: 'Bharath News Community',
-        author: post.authorName,
-        author_slug: post.authorSlug,
-        creator_post_id: postId,
-        is_citizen_content: true,
-        editorial_status: 'published',
-        published_at: new Date().toISOString(),
-        views: 0,
-        likes: 0,
-        shares: 0,
-        comments: 0,
-        score: 5,
-      }).select('id').single();
-      if (article?.id) notifyTelegram({ articleId: article.id });
-    } else if (post.visibility === 'public') {
-      notifyTelegram({ creatorPostId: postId });
-    }
-  }
+export const moderateCreatorPost = async (postId, { approved, feedback } = {}) => {
+  const { moderateCreatorPost: moderate } = await import('./admin');
+  return moderate(postId, { approved, feedback });
 };
 
 export const getPublishedPravasiPosts = async (limit = 4) => {

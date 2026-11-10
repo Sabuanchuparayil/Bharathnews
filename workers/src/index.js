@@ -12,7 +12,7 @@ import { handleOtpEmail } from './handlers/otp-email.js';
 import { translateArticleContent } from './handlers/article-translate.js';
 import { handleSeoUpdate } from './handlers/seo-updater.js';
 import { handleFixSlugs } from './handlers/fix-slugs.js';
-import { isProtectedApiPath, requireApiSecret } from './lib/api-auth.js';
+import { authorizeManualTrigger, isProtectedApiPath, requireApiSecret } from './lib/api-auth.js';
 import { countRows, supabaseHeaders } from './lib/supabase-rest.js';
 import { getLimits, getCronPublishOpts } from './lib/cf-limits.js';
 import { runScheduledPipeline, runPublishOnlyTick, runDistributionJobsTick, runIngestTick, runSingleLangIngestTick, runVideoFetchTick } from './lib/pipeline-scheduler.js';
@@ -124,11 +124,11 @@ export default {
     }
 
     if ((url.pathname === '/api/distribute-catchup' && request.method === 'POST') ||
-        (url.pathname === '/api/distribute-now' && url.searchParams.get('k') === 'run7x9k')) {
-      if (url.pathname === '/api/distribute-catchup') {
-        const authDenied = requireApiSecret(request, env);
-        if (authDenied) return authDenied;
-      }
+        url.pathname === '/api/distribute-now') {
+      const authDenied = url.pathname === '/api/distribute-now'
+        ? authorizeManualTrigger(request, url, env)
+        : requireApiSecret(request, env);
+      if (authDenied) return authDenied;
 
       const { processDistributionJobs, backfillDistributionJobs, retryDistributionJob } = await import('./lib/distribution-jobs.js');
       let body = {};
@@ -152,7 +152,9 @@ export default {
       return new Response(JSON.stringify({ status: 'ok', ...social }, null, 2), { headers: cors });
     }
 
-    if (url.pathname === '/api/backfill-distribution-jobs' && url.searchParams.get('k') === 'run7x9k') {
+    if (url.pathname === '/api/backfill-distribution-jobs') {
+      const authDenied = authorizeManualTrigger(request, url, env);
+      if (authDenied) return authDenied;
       const { backfillDistributionJobs, checkDistributionSetup } = await import('./lib/distribution-jobs.js');
       const limit = Math.min(parseInt(url.searchParams.get('limit') || '40', 10), 60);
       const skipSetup = url.searchParams.get('skipSetup') === '1';
@@ -202,7 +204,9 @@ export default {
       return new Response(JSON.stringify({ status: 'ok', ...result }, null, 2), { headers: cors });
     }
 
-    if (url.pathname === '/api/retry-distribution-job' && url.searchParams.get('k') === 'run7x9k') {
+    if (url.pathname === '/api/retry-distribution-job') {
+      const authDenied = authorizeManualTrigger(request, url, env);
+      if (authDenied) return authDenied;
       const jobId = url.searchParams.get('id');
       if (!jobId) {
         return new Response(JSON.stringify({ error: 'Missing id' }), { status: 400, headers: cors });

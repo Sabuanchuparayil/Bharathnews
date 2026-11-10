@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyAdminRequest } from '@/lib/supabase-admin';
 import { getSupabaseAdmin } from '@/lib/supabase-server';
+import { callWorker } from '@/lib/worker-client';
 
 export async function GET(request) {
   const auth = await verifyAdminRequest(request);
@@ -28,9 +29,18 @@ export async function GET(request) {
   }
 
   const counts = { pending: 0, failed: 0, sent: 0, skipped: 0 };
-  const { data: allStatuses } = await supabase.from('distribution_jobs').select('status');
-  for (const row of allStatuses || []) {
-    if (counts[row.status] !== undefined) counts[row.status]++;
+  try {
+    const countResults = await Promise.all(Object.keys(counts).map(async (jobStatus) => {
+      const { count, error: countError } = await supabase
+        .from('distribution_jobs')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', jobStatus);
+      if (countError) throw new Error(countError.message);
+      return [jobStatus, count || 0];
+    }));
+    for (const [jobStatus, count] of countResults) counts[jobStatus] = count;
+  } catch (err) {
+    return NextResponse.json({ error: err.message || 'Could not count distribution jobs.' }, { status: 500 });
   }
 
   return NextResponse.json({ jobs: data || [], counts });
@@ -48,16 +58,10 @@ export async function POST(request) {
     return NextResponse.json({ error: 'jobId required' }, { status: 400 });
   }
 
-  const workerUrl = process.env.NEXT_PUBLIC_WORKER_URL;
-  if (!workerUrl) {
-    return NextResponse.json({ error: 'Worker URL not configured' }, { status: 500 });
+  try {
+    const data = await callWorker('/api/retry-distribution-job', { id: jobId });
+    return NextResponse.json({ ok: true, ...data });
+  } catch (err) {
+    return NextResponse.json({ error: err.message || 'Retry failed' }, { status: err.status || 502 });
   }
-
-  const res = await fetch(`${workerUrl.replace(/\/$/, '')}/api/retry-distribution-job?k=run7x9k&id=${encodeURIComponent(jobId)}`);
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    return NextResponse.json({ error: data.error || 'Retry failed' }, { status: res.status });
-  }
-
-  return NextResponse.json({ ok: true, ...data });
 }

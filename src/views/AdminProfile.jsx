@@ -4,11 +4,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'react-toastify';
 import {
-  ArrowLeft, ShieldCheck, BadgeCheck, Mail, CalendarDays, Clock, KeyRound, LogOut,
-  Camera, UserRound, MapPin, Lock, Eye, EyeOff, Users, Settings,
+  ShieldCheck, BadgeCheck, Mail, CalendarDays, Clock, KeyRound, LogOut,
+  Camera, UserRound, MapPin, Lock, Eye, EyeOff, Users, Settings, ArrowLeft,
 } from 'lucide-react';
-import Layout from '../components/Layout';
-import LoginPrompt from '../components/LoginPrompt';
+import AdminLayout from '../components/AdminLayout';
 import ProfileDetailsForm from '../components/ProfileDetailsForm';
 import { useAuth } from '../context/AuthContext';
 import { EMPTY_PROFILE_DETAILS, profileToDetails, validateProfileDetails } from '@/lib/profile-fields';
@@ -90,30 +89,10 @@ const AdminProfile = () => {
     seeded.current = true;
   }, [userProfile]);
 
-  if (loading) {
-    return (
-      <Layout showBottomNav={false} showChatbot={false}>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="w-8 h-8 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
-        </div>
-      </Layout>
-    );
-  }
-
-  if (!user || !isAdmin) {
-    return (
-      <Layout showBottomNav={false} showChatbot={false}>
-        <div className="flex items-center justify-center min-h-[60vh] px-4">
-          <LoginPrompt nextPath="/admin/profile" showAdminHint />
-        </div>
-      </Layout>
-    );
-  }
-
   if (!userProfile) {
     return (
-      <Layout showBottomNav={false} showChatbot={false}>
-        <div className="flex items-center justify-center min-h-[60vh] px-4 text-center text-sm text-gray-500">
+      <AdminLayout title="My Profile">
+        <div className="flex items-center justify-center min-h-[40vh] px-4 text-center text-sm text-gray-500">
           <div>
             <p className="mb-3">Could not load your profile.</p>
             <button type="button" onClick={() => refreshUserProfile()} className="btn-secondary px-4 py-2 rounded-xl text-sm">
@@ -121,7 +100,7 @@ const AdminProfile = () => {
             </button>
           </div>
         </div>
-      </Layout>
+      </AdminLayout>
     );
   }
 
@@ -222,12 +201,7 @@ const AdminProfile = () => {
   const passwordType = showPasswords ? 'text' : 'password';
 
   return (
-    <Layout showBottomNav={false} showChatbot={false}>
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <Link href="/admin/dashboard" className="inline-flex items-center gap-2 text-gray-500 mb-6 hover:text-brand-600">
-          <ArrowLeft className="w-4 h-4" /> Back to Dashboard
-        </Link>
-
+    <AdminLayout title="My Profile">
         <div className="glass-card-solid rounded-2xl p-6 mb-6 flex flex-col sm:flex-row sm:items-center gap-5">
           <img src={avatar} alt="" className="w-24 h-24 rounded-2xl object-cover shadow-md flex-shrink-0" />
           <div className="min-w-0 flex-1">
@@ -425,8 +399,7 @@ const AdminProfile = () => {
             </Section>
           </div>
         </div>
-      </div>
-    </Layout>
+    </AdminLayout>
   );
 };
 

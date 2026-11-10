@@ -3,19 +3,16 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { Check, X, Users, FileText } from 'lucide-react';
-import Layout from '../components/Layout';
-import LoginPrompt from '../components/LoginPrompt';
+import AdminLayout from '../components/AdminLayout';
 import { useAuth } from '../context/AuthContext';
 import {
   getPendingApplications, reviewRoleApplication,
   getPendingCreatorPosts, moderateCreatorPost,
 } from '../services/creator';
-import { getSupabaseBrowser } from '@/lib/supabase-client';
-import { rowToApp } from '@/lib/db-mapper';
 import { getCategoryLabel } from '../utils/categoryColors';
 
 const AdminModeration = () => {
-  const { user, loading, isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
   const [tab, setTab] = useState('posts');
   const [applications, setApplications] = useState([]);
   const [posts, setPosts] = useState([]);
@@ -31,22 +28,14 @@ const AdminModeration = () => {
   };
 
   useEffect(() => {
-    if (isAdmin) load().catch(() => {});
+    if (isAdmin) load().catch(err => toast.error(err.message || 'Could not load the queue'));
   }, [isAdmin]);
 
   const handleAppReview = async (app, approved) => {
     try {
-      const supabase = getSupabaseBrowser();
-      if (!supabase) throw new Error('Database unavailable');
-      const { data: userData } = await supabase.from('users').select('*').eq('id', app.userId).maybeSingle();
-      const user = userData ? rowToApp(userData) : {};
       await reviewRoleApplication(app.id, {
         approved,
         feedback: feedback[`app-${app.id}`] || '',
-        userId: app.userId,
-        requestedRole: app.requestedRole,
-        displayName: user.displayName || 'Creator',
-        photoURL: user.photoURL || '',
       });
       toast.success(approved ? 'Application approved' : 'Application rejected');
       load();
@@ -68,40 +57,18 @@ const AdminModeration = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <Layout showBottomNav={false}>
-        <div className="min-h-[60vh] flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
-        </div>
-      </Layout>
-    );
-  }
-
-  if (!user || !isAdmin) {
-    return (
-      <Layout showBottomNav={false}>
-        <div className="flex items-center justify-center min-h-[60vh] px-4">
-          <LoginPrompt nextPath="/admin/moderation" showAdminHint />
-        </div>
-      </Layout>
-    );
-  }
-
   return (
-    <Layout showBottomNav={false} mainClassName="max-w-5xl mx-auto px-4 py-12">
-      <h1 className="font-display font-bold text-3xl mb-6">Moderation Queue</h1>
-
-      <div className="flex gap-2 mb-8">
+    <AdminLayout title="Moderation Queue" description={`${posts.length} posts · ${applications.length} applications pending`}>
+      <div className="flex gap-2 mb-6">
         <button
           onClick={() => setTab('posts')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium ${tab === 'posts' ? 'bg-brand-600 text-white' : 'bg-surface-2 dark:bg-dark-surface-2'}`}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === 'posts' ? 'bg-brand-600 text-white' : 'bg-surface-2 dark:bg-dark-surface-2 hover:bg-surface-3'}`}
         >
           <FileText className="w-4 h-4" /> Posts ({posts.length})
         </button>
         <button
           onClick={() => setTab('applications')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium ${tab === 'applications' ? 'bg-brand-600 text-white' : 'bg-surface-2 dark:bg-dark-surface-2'}`}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === 'applications' ? 'bg-brand-600 text-white' : 'bg-surface-2 dark:bg-dark-surface-2 hover:bg-surface-3'}`}
         >
           <Users className="w-4 h-4" /> Applications ({applications.length})
         </button>
@@ -109,7 +76,7 @@ const AdminModeration = () => {
 
       {tab === 'posts' && (
         <div className="space-y-4">
-          {posts.length === 0 && <p className="text-gray-500">No pending posts.</p>}
+          {posts.length === 0 && <p className="text-gray-500 py-8 text-center">No pending posts.</p>}
           {posts.map(post => (
             <div key={post.id} className="glass-card-solid rounded-2xl p-6">
               <div className="flex items-start justify-between gap-4">
@@ -128,10 +95,10 @@ const AdminModeration = () => {
                 className="w-full mt-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-3 py-2 text-sm"
               />
               <div className="flex gap-2 mt-3">
-                <button onClick={() => handlePostReview(post, true)} className="flex items-center gap-1 px-4 py-2 bg-green-600 text-white rounded-xl text-sm">
+                <button onClick={() => handlePostReview(post, true)} className="flex items-center gap-1 px-4 py-2 bg-green-600 text-white rounded-xl text-sm hover:bg-green-700 transition-colors">
                   <Check className="w-4 h-4" /> Approve
                 </button>
-                <button onClick={() => handlePostReview(post, false)} className="flex items-center gap-1 px-4 py-2 bg-red-600 text-white rounded-xl text-sm">
+                <button onClick={() => handlePostReview(post, false)} className="flex items-center gap-1 px-4 py-2 bg-red-600 text-white rounded-xl text-sm hover:bg-red-700 transition-colors">
                   <X className="w-4 h-4" /> Reject
                 </button>
               </div>
@@ -142,7 +109,7 @@ const AdminModeration = () => {
 
       {tab === 'applications' && (
         <div className="space-y-4">
-          {applications.length === 0 && <p className="text-gray-500">No pending applications.</p>}
+          {applications.length === 0 && <p className="text-gray-500 py-8 text-center">No pending applications.</p>}
           {applications.map(app => (
             <div key={app.id} className="glass-card-solid rounded-2xl p-6">
               <h3 className="font-display font-bold text-lg">Role: {app.requestedRole}</h3>
@@ -157,10 +124,10 @@ const AdminModeration = () => {
                 className="w-full mt-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-3 py-2 text-sm"
               />
               <div className="flex gap-2 mt-3">
-                <button onClick={() => handleAppReview(app, true)} className="flex items-center gap-1 px-4 py-2 bg-green-600 text-white rounded-xl text-sm">
+                <button onClick={() => handleAppReview(app, true)} className="flex items-center gap-1 px-4 py-2 bg-green-600 text-white rounded-xl text-sm hover:bg-green-700 transition-colors">
                   <Check className="w-4 h-4" /> Approve
                 </button>
-                <button onClick={() => handleAppReview(app, false)} className="flex items-center gap-1 px-4 py-2 bg-red-600 text-white rounded-xl text-sm">
+                <button onClick={() => handleAppReview(app, false)} className="flex items-center gap-1 px-4 py-2 bg-red-600 text-white rounded-xl text-sm hover:bg-red-700 transition-colors">
                   <X className="w-4 h-4" /> Reject
                 </button>
               </div>
@@ -168,7 +135,7 @@ const AdminModeration = () => {
           ))}
         </div>
       )}
-    </Layout>
+    </AdminLayout>
   );
 };
 

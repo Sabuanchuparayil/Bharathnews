@@ -5,12 +5,11 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { toast } from 'react-toastify';
 import {
-  ArrowLeft, ChevronLeft, ChevronRight, Search, Rss, Settings2,
+  ChevronLeft, ChevronRight, Search, Rss, Settings2,
   MessageCircle, Send, Mail, Facebook, Youtube, Instagram, KeyRound, Users, UserPlus,
   UserX, UserCheck, PauseCircle,
 } from 'lucide-react';
-import Layout from '../components/Layout';
-import LoginPrompt from '../components/LoginPrompt';
+import AdminLayout from '../components/AdminLayout';
 import { useAuth } from '../context/AuthContext';
 import {
   getSiteSettings, updateSiteSettings, getUsers, setUserRole, getSources,
@@ -89,6 +88,7 @@ const AdminSettings = () => {
     return TABS.some(t => t.id === initial) ? initial : 'general';
   });
   const [settings, setSettings] = useState(() => mergeSiteSettings());
+  const [settingsReady, setSettingsReady] = useState(false);
   const [users, setUsers] = useState([]);
   const [sourceStats, setSourceStats] = useState({ total: 0, enabled: 0 });
   const [saved, setSaved] = useState(false);
@@ -154,13 +154,20 @@ const AdminSettings = () => {
   // Settings/sources load once; they must not re-run (and clobber unsaved edits) when filters change.
   useEffect(() => {
     if (!isAdmin) return;
-    getSiteSettings().then(setSettings);
-    getSources().then(sources => {
-      setSourceStats({
-        total: sources.length,
-        enabled: sources.filter(s => s.enabled).length,
-      });
-    });
+    getSiteSettings()
+      .then(value => {
+        setSettings(value);
+        setSettingsReady(true);
+      })
+      .catch(err => toast.error(err.message || 'Could not load settings'));
+    getSources()
+      .then(sources => {
+        setSourceStats({
+          total: sources.length,
+          enabled: sources.filter(s => s.enabled).length,
+        });
+      })
+      .catch(err => toast.error(err.message || 'Could not load sources'));
   }, [isAdmin]);
 
   useEffect(() => {
@@ -169,9 +176,18 @@ const AdminSettings = () => {
   }, [isAdmin, tab, loadUsers]);
 
   const saveSettings = async () => {
-    await updateSiteSettings(settings);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    if (!settingsReady) {
+      toast.error('Settings are still loading.');
+      return;
+    }
+    try {
+      const savedSettings = await updateSiteSettings(settings);
+      setSettings(savedSettings);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      toast.error(err.message || 'Could not save settings');
+    }
   };
 
   const changeRole = async (userId, role) => {
@@ -293,40 +309,17 @@ const AdminSettings = () => {
     await loadUsers(prevCursor);
   };
 
-  if (loading) {
-    return (
-      <Layout showBottomNav={false}>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="w-8 h-8 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
-        </div>
-      </Layout>
-    );
-  }
-
-  if (!user || !isAdmin) {
-    return (
-      <Layout showBottomNav={false}>
-        <div className="flex items-center justify-center min-h-[60vh] px-4">
-          <LoginPrompt nextPath="/admin/settings" showAdminHint />
-        </div>
-      </Layout>
-    );
-  }
-
   const i = settings.integrations || {};
 
   return (
-    <Layout showBottomNav={false} showChatbot={false}>
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <Link href="/admin/dashboard" className="inline-flex items-center gap-2 text-gray-500 mb-6 hover:text-brand-600">
-          <ArrowLeft className="w-4 h-4" /> Back to Dashboard
-        </Link>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <h1 className="font-display font-bold text-3xl">Site Settings</h1>
-          <button type="button" onClick={saveSettings} className="btn-primary px-5 py-2 rounded-xl text-sm">
-            {saved ? 'Saved!' : 'Save all changes'}
-          </button>
-        </div>
+    <AdminLayout
+      title="Site Settings"
+      actions={
+        <button type="button" onClick={saveSettings} disabled={!settingsReady} className="btn-primary px-5 py-2 rounded-xl text-sm disabled:opacity-60">
+          {saved ? 'Saved!' : 'Save all changes'}
+        </button>
+      }
+    >
 
         <div className="flex flex-wrap gap-2 mb-8">
           {TABS.map(t => {
@@ -416,7 +409,7 @@ const AdminSettings = () => {
               <h2 className="font-display font-bold text-lg mb-4">Content Pipeline</h2>
               <Toggle label="RSS / article ingest enabled" checked={settings.pipeline?.rssIngestEnabled !== false} onChange={v => patchPipeline({ rssIngestEnabled: v })} />
               <Toggle label="YouTube video fetch enabled" checked={settings.pipeline?.videoFetchEnabled !== false} onChange={v => patchPipeline({ videoFetchEnabled: v })} />
-              <p className="text-xs text-gray-500 mt-3">Pipeline toggles are stored in Firestore. Workers read these on each run.</p>
+              <p className="text-xs text-gray-500 mt-3">Pipeline toggles are saved to site settings. Workers read them on each run.</p>
             </div>
           </div>
         )}
@@ -429,7 +422,7 @@ const AdminSettings = () => {
                 <div>
                   <h3 className="font-display font-bold text-sm mb-2">Worker secrets (Cloudflare)</h3>
                   <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
-                    API tokens and bot keys are stored securely in Cloudflare Worker secrets, not in Firestore.
+                    API tokens and bot keys are stored securely in Cloudflare Worker secrets.
                     Set via: <code className="text-brand-600">cd workers && npx wrangler secret put KEY</code>
                   </p>
                   <ul className="space-y-1.5">
@@ -585,7 +578,7 @@ const AdminSettings = () => {
             <div className="glass-card-solid rounded-2xl p-6">
               <h2 className="font-display font-bold text-lg mb-2">RSS & Article Sources</h2>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                {sourceStats.enabled} of {sourceStats.total} sources enabled. The ingest worker reads enabled sources from Firestore every 15 minutes.
+                {sourceStats.enabled} of {sourceStats.total} sources enabled. The ingest worker reads enabled sources from the database every 15 minutes.
               </p>
               <div className="flex flex-wrap gap-3">
                 <Link href="/admin/sources" className="btn-primary px-4 py-2 rounded-xl text-sm inline-flex items-center gap-2">
@@ -785,7 +778,6 @@ const AdminSettings = () => {
           </div>
           </div>
         )}
-      </div>
 
       {resetModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
@@ -902,7 +894,7 @@ const AdminSettings = () => {
           </div>
         </div>
       )}
-    </Layout>
+    </AdminLayout>
   );
 };
 

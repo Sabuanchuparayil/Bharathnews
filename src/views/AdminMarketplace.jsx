@@ -3,8 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { Check, X, Building2, Briefcase, ShoppingBag, ExternalLink } from 'lucide-react';
-import Layout from '../components/Layout';
-import LoginPrompt from '../components/LoginPrompt';
+import AdminLayout from '../components/AdminLayout';
 import { useAuth } from '../context/AuthContext';
 import {
   getAdminEmployerApplications, reviewEmployerApplication,
@@ -58,14 +57,6 @@ const AdminMarketplace = () => {
     } catch { toast.error('Failed to moderate listing.'); }
   };
 
-  if (loading) {
-    return <Layout showBottomNav={false}><div className="min-h-[60vh] flex items-center justify-center"><div className="w-8 h-8 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" /></div></Layout>;
-  }
-
-  if (!user || !isAdmin) {
-    return <Layout showBottomNav={false}><div className="flex items-center justify-center min-h-[60vh] px-4"><LoginPrompt title={!user ? 'Sign In Required' : 'Access Denied'} description="Admin role required." nextPath="/admin/marketplace" showAdminHint /></div></Layout>;
-  }
-
   const tabs = [
     { id: 'kyc', label: 'Employer KYC', icon: Building2, count: applications.length },
     { id: 'jobs', label: 'Job Postings', icon: Briefcase, count: jobs.length },
@@ -73,10 +64,7 @@ const AdminMarketplace = () => {
   ];
 
   return (
-    <Layout showBottomNav={false} showChatbot={false}>
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <h1 className="font-display font-bold text-3xl text-gray-900 dark:text-white mb-6">Marketplace Moderation</h1>
-
+    <AdminLayout title="Marketplace Moderation">
         <div className="flex gap-2 mb-6 overflow-x-auto">
           {tabs.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${tab === t.id ? 'bg-brand-600 text-white' : 'bg-gray-100 dark:bg-dark-surface-1 text-gray-700 dark:text-gray-300'}`}>
@@ -158,8 +146,7 @@ const AdminMarketplace = () => {
             ))}
           </div>
         )}
-      </div>
-    </Layout>
+    </AdminLayout>
   );
 };
 

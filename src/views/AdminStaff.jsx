@@ -1,11 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { toast } from 'react-toastify';
 import { Users } from 'lucide-react';
-import Layout from '../components/Layout';
-import LoginPrompt from '../components/LoginPrompt';
+import AdminLayout from '../components/AdminLayout';
 import { useAuth } from '../context/AuthContext';
 import { deskFetch, deskAuthHeaders } from '@/lib/desk-client';
 import { ROLE_TITLES } from '@/lib/staff-profiles-client';
@@ -108,37 +106,12 @@ const AdminStaff = () => {
     setSaving(false);
   };
 
-  if (loading) {
-    return (
-      <Layout showBottomNav={false} showChatbot={false}>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="w-8 h-8 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
-        </div>
-      </Layout>
-    );
-  }
-
-  if (!user || !isAdmin) {
-    return (
-      <Layout showBottomNav={false} showChatbot={false}>
-        <div className="flex items-center justify-center min-h-[60vh] px-4">
-          <LoginPrompt nextPath="/admin/staff" showAdminHint />
-        </div>
-      </Layout>
-    );
-  }
-
   return (
-    <Layout showBottomNav={false} showChatbot={false}>
-      <div className="max-w-5xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between gap-3 mb-6">
-          <div>
-            <p className="text-sm font-semibold text-brand-700 dark:text-brand-300">Newsroom</p>
-            <h1 className="font-display font-bold text-3xl text-gray-900 dark:text-white">Editorial staff</h1>
-            <p className="text-sm text-gray-500 mt-1">Reporters and editors shown on article bylines and the team page.</p>
-          </div>
-          <Link href="/team" className="btn-secondary px-4 py-2 rounded-xl text-sm">View /team</Link>
-        </div>
+    <AdminLayout
+      title="Editorial Staff"
+      description="Reporters and editors shown on article bylines and the team page"
+      actions={<a href="/team" target="_blank" rel="noopener noreferrer" className="btn-secondary px-4 py-2 rounded-xl text-sm">View /team</a>}
+    >
 
         <div className="grid lg:grid-cols-2 gap-6">
           <form onSubmit={save} className="rounded-2xl border border-stone-200 dark:border-white/10 p-5 space-y-3">
@@ -216,8 +189,7 @@ const AdminStaff = () => {
             {!staff.length && <p className="text-sm text-gray-500">No staff profiles yet.</p>}
           </div>
         </div>
-      </div>
-    </Layout>
+    </AdminLayout>
   );
 };
 

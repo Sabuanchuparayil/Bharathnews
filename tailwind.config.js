@@ -71,6 +71,7 @@ module.exports = {
         shimmer: 'shimmer 2s infinite linear',
         'pulse-soft': 'pulseSoft 2s infinite ease-in-out',
         float: 'float 6s infinite ease-in-out',
+        'slide-in-left': 'slideInLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
       },
       keyframes: {
         fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
@@ -81,6 +82,7 @@ module.exports = {
         shimmer: { '0%': { backgroundPosition: '-200% 0' }, '100%': { backgroundPosition: '200% 0' } },
         pulseSoft: { '0%, 100%': { opacity: '1' }, '50%': { opacity: '0.7' } },
         float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-10px)' } },
+        slideInLeft: { '0%': { transform: 'translateX(-100%)' }, '100%': { transform: 'translateX(0)' } },
       },
       typography: {
         DEFAULT: {

@@ -1,11 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { ArrowLeft, ToggleLeft, ToggleRight, AlertCircle, Plus, Trash2, Pencil } from 'lucide-react';
+import { ToggleLeft, ToggleRight, AlertCircle, Plus, Trash2, Pencil } from 'lucide-react';
 import { toast } from 'react-toastify';
-import Layout from '../components/Layout';
-import LoginPrompt from '../components/LoginPrompt';
+import AdminLayout from '../components/AdminLayout';
 import { useAuth } from '../context/AuthContext';
 import { getSources, updateSource, createSource, deleteSource } from '../services/admin';
 import { getCategoryLabel } from '../utils/categoryColors';
@@ -23,15 +21,19 @@ const AdminSources = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
 
-  const reload = () => getSources().then(setSources);
+  const reload = () => getSources().then(setSources).catch(err => toast.error(err.message || 'Could not load sources'));
 
   useEffect(() => {
     if (isAdmin) reload();
   }, [isAdmin]);
 
   const toggleSource = async (id, enabled) => {
-    await updateSource(id, { enabled: !enabled });
-    setSources(prev => prev.map(s => s.id === id ? { ...s, enabled: !enabled } : s));
+    try {
+      await updateSource(id, { enabled: !enabled });
+      setSources(prev => prev.map(s => s.id === id ? { ...s, enabled: !enabled } : s));
+    } catch (err) {
+      toast.error(err.message || 'Could not update source');
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -81,26 +83,6 @@ const AdminSources = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <Layout showBottomNav={false}>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="w-8 h-8 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
-        </div>
-      </Layout>
-    );
-  }
-
-  if (!user || !isAdmin) {
-    return (
-      <Layout showBottomNav={false}>
-        <div className="flex items-center justify-center min-h-[60vh] px-4">
-          <LoginPrompt nextPath="/admin/sources" showAdminHint />
-        </div>
-      </Layout>
-    );
-  }
-
   const grouped = sources.reduce((acc, s) => {
     const key = s.language || 'en';
     if (!acc[key]) acc[key] = [];
@@ -109,24 +91,19 @@ const AdminSources = () => {
   }, {});
 
   return (
-    <Layout showBottomNav={false} showChatbot={false}>
-      <div className="max-w-5xl mx-auto px-4 py-8">
-        <Link href="/admin/dashboard" className="inline-flex items-center gap-2 text-gray-500 mb-6 hover:text-brand-600">
-          <ArrowLeft className="w-4 h-4" /> Back to Dashboard
-        </Link>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-          <div>
-            <h1 className="font-display font-bold text-3xl text-gray-900 dark:text-white mb-1">Source Manager</h1>
-            <p className="text-gray-500 dark:text-gray-400">{sources.length} sources configured</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => { setShowForm(!showForm); setEditingId(null); setForm(emptyForm); }}
-            className="btn-primary text-sm px-4 py-2 rounded-xl flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" /> Add Source
-          </button>
-        </div>
+    <AdminLayout
+      title="Source Manager"
+      description={`${sources.length} sources configured`}
+      actions={
+        <button
+          type="button"
+          onClick={() => { setShowForm(!showForm); setEditingId(null); setForm(emptyForm); }}
+          className="btn-primary text-sm px-4 py-2 rounded-xl flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" /> Add Source
+        </button>
+      }
+    >
 
         {showForm && (
           <form onSubmit={handleSubmit} className="glass-card-solid rounded-2xl p-6 mb-8 space-y-4">
@@ -206,8 +183,7 @@ const AdminSources = () => {
             </div>
           </div>
         ))}
-      </div>
-    </Layout>
+    </AdminLayout>
   );
 };
 
