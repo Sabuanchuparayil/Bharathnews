@@ -224,7 +224,7 @@ export async function setUserRole(userId, role) {
 
 export async function resetUserPassword(userId, newPassword) {
   if (!userId || typeof userId !== 'string') throw new Error('Invalid userId');
-  if (!newPassword || newPassword.length < 8) throw new Error('Password must be at least 8 characters.');
+  if (typeof newPassword !== 'string' || newPassword.length < 8) throw new Error('Password must be at least 8 characters.');
   const token = await getAdminAccessToken();
   const res = await fetch('/api/admin/users/reset-password', {
     method: 'POST',
@@ -240,6 +240,7 @@ export async function resetUserPassword(userId, newPassword) {
 }
 
 export async function sendPasswordResetEmail(email) {
+  if (typeof email !== 'string' || !email.includes('@')) throw new Error('A valid email is required.');
   const supabase = getSupabaseBrowser();
   if (!supabase) throw new Error('Authentication unavailable');
   const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {

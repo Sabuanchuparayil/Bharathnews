@@ -185,6 +185,11 @@ const AdminSettings = () => {
     }
   };
 
+  const closeResetModal = () => {
+    setResetModal(null);
+    setResetPassword('');
+  };
+
   const handleResetPassword = async (e) => {
     e.preventDefault();
     if (!resetModal) return;
@@ -192,8 +197,7 @@ const AdminSettings = () => {
     try {
       await resetUserPassword(resetModal.id, resetPassword);
       toast.success(`Password reset for ${resetModal.email || resetModal.displayName}`);
-      setResetModal(null);
-      setResetPassword('');
+      closeResetModal();
     } catch (err) {
       toast.error(err.message || 'Failed to reset password');
     } finally {
@@ -694,7 +698,7 @@ const AdminSettings = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setResetModal(null); setResetPassword(''); }}
+                  onClick={closeResetModal}
                   className="btn-secondary px-4 py-2 rounded-xl text-sm"
                 >
                   Cancel
@@ -709,7 +713,7 @@ const AdminSettings = () => {
                 onClick={() => {
                   if (resetModal.email) {
                     handleSendResetEmail(resetModal.email);
-                    setResetModal(null);
+                    closeResetModal();
                   } else {
                     toast.error('No email on file for this user.');
                   }
