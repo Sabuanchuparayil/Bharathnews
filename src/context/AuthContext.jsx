@@ -125,6 +125,16 @@ export const AuthProvider = ({ children }) => {
     const supabase = getSupabaseBrowser();
     if (!supabase) return null;
     const profile = await loadProfile(supabase, user.id);
+    if (profile?.status && profile.status !== 'active') {
+      const blockedStatus = profile.status;
+      setUser(null);
+      setUserProfile(null);
+      clearAuthCookies();
+      supabase.auth.signOut().finally(() => {
+        window.location.replace(`/login?reason=${encodeURIComponent(blockedStatus)}`);
+      });
+      return null;
+    }
     if (profile) {
       setUserProfile(profile);
       setAuthCookies(profile.role || 'reader', {
