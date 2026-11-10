@@ -39,42 +39,72 @@ export const AuthProvider = ({ children }) => {
 
     let cancelled = false;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (cancelled) return;
+    // Newest session sync wins; older in-flight syncs are ignored.
+    let syncId = 0;
 
-      if (session?.user) {
-        setUser(session.user);
-        try {
-          let profile = await loadProfile(supabase, session.user.id);
-          if (!profile) {
-            await supabase.from('users').upsert({
-              id: session.user.id,
-              email: session.user.email,
-              display_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
-              photo_url: session.user.user_metadata?.avatar_url || null,
-              role: 'reader',
-              language: 'all',
-              interests: { categories: {}, topics: [], sources: {}, readingTimes: {} },
-              bookmarks: [],
-              likes: [],
-            });
-            profile = await loadProfile(supabase, session.user.id);
-          }
-          setUserProfile(profile);
-          setAuthCookies(profile?.role || 'reader', {
-            emailVerified: profile?.emailVerified,
-            profileComplete: profile?.profileComplete,
-          });
-        } catch (err) {
-          logger.error('Failed to load user profile:', err);
-          setUserProfile(null);
-        }
-      } else {
+    const syncSession = async (session) => {
+      const myId = ++syncId;
+      const isStale = () => cancelled || myId !== syncId;
+
+      if (!session?.user) {
         setUser(null);
         setUserProfile(null);
         clearAuthCookies();
+        setLoading(false);
+        return;
+      }
+
+      setUser(session.user);
+      try {
+        let profile = await loadProfile(supabase, session.user.id);
+        if (isStale()) return;
+        if (!profile) {
+          await supabase.from('users').upsert({
+            id: session.user.id,
+            email: session.user.email,
+            display_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
+            photo_url: session.user.user_metadata?.avatar_url || null,
+            role: 'reader',
+            language: 'all',
+            interests: { categories: {}, topics: [], sources: {}, readingTimes: {} },
+            bookmarks: [],
+            likes: [],
+          });
+          profile = await loadProfile(supabase, session.user.id);
+          if (isStale()) return;
+        }
+        if (profile?.status && profile.status !== 'active') {
+          // Suspended/deactivated: end the session and send the user to /login with the reason.
+          const blockedStatus = profile.status;
+          setUser(null);
+          setUserProfile(null);
+          clearAuthCookies();
+          setLoading(false);
+          supabase.auth.signOut().finally(() => {
+            window.location.replace(`/login?reason=${encodeURIComponent(blockedStatus)}`);
+          });
+          return;
+        }
+        setUserProfile(profile);
+        setAuthCookies(profile?.role || 'reader', {
+          emailVerified: profile?.emailVerified,
+          profileComplete: profile?.profileComplete,
+        });
+      } catch (err) {
+        if (isStale()) return;
+        logger.error('Failed to load user profile:', err);
+        setUserProfile(null);
       }
       setLoading(false);
+    };
+
+    // The callback must stay synchronous: awaiting Supabase queries (or auth calls) inside
+    // onAuthStateChange deadlocks on the auth lock, leaving `loading` stuck on true.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (cancelled) return;
+      setTimeout(() => {
+        void syncSession(session);
+      }, 0);
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -131,6 +161,9 @@ export const AuthProvider = ({ children }) => {
       logger.error('Email login error:', error);
       if (error.message?.includes('Invalid login')) {
         throw new Error('Invalid email or password.');
+      }
+      if (/banned/i.test(error.message || '')) {
+        throw new Error('This account has been suspended or deactivated. Contact the site owner.');
       }
       throw new Error(error.message || 'Sign in failed.');
     }
