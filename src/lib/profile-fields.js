@@ -63,6 +63,24 @@ export function splitChoice(value, options) {
   return { choice: 'Other', other: current };
 }
 
+/** Map a stored users row to the shape ProfileDetailsForm edits. */
+export function profileToDetails(profile) {
+  const country = splitChoice(profile?.country, COUNTRY_OPTIONS);
+  const nationality = splitChoice(profile?.nationality, NATIONALITY_OPTIONS);
+  return {
+    ...EMPTY_PROFILE_DETAILS,
+    country: country.choice,
+    countryOther: country.other,
+    city: profile?.city || '',
+    nationality: nationality.choice,
+    nationalityOther: nationality.other,
+    phone: profile?.phone || '',
+    whatsapp: profile?.whatsapp || '',
+    dateOfBirth: typeof profile?.dateOfBirth === 'string' ? profile.dateOfBirth.slice(0, 10) : '',
+    profession: profile?.profession || '',
+  };
+}
+
 export function validateProfileDetails(input) {
   const country = choiceValue(input?.country, input?.countryOther, COUNTRY_OPTIONS, 'country of residence');
   if (country.error) return country;

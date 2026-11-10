@@ -4,6 +4,7 @@ import { getSupabaseBrowser } from '@/lib/supabase-client';
 import { rowToApp, rowsToApp } from '@/lib/db-mapper';
 import { mergeSiteSettings } from '@/lib/site-settings';
 import { getPasswordResetRedirectUrl } from '@/lib/password-reset';
+import { isAccountStatus } from '@/lib/account-status';
 
 function filterPublished(articles) {
   return articles.filter(a =>
@@ -154,33 +155,27 @@ export async function updateSiteSettings(data) {
   });
 }
 
-export async function getUsers({ pageSize = 25, startAfterDoc = null, search = '' } = {}) {
-  const supabase = getSupabaseBrowser();
-  if (!supabase) return { users: [], hasMore: false, lastDoc: null };
-
+/**
+ * Admin user directory. Goes through a server route because row-level security only lets a
+ * browser session read its own `users` row; search and status filters run server-side.
+ */
+export async function getUsers({ pageSize = 25, startAfterDoc = null, search = '', status = 'all' } = {}) {
   const offset = startAfterDoc?._offset || 0;
-  const { data } = await supabase
-    .from('users')
-    .select('*')
-    .order('email')
-    .range(offset, offset + pageSize);
+  const token = await getAdminAccessToken();
+  const params = new URLSearchParams({ pageSize: String(pageSize), offset: String(offset), status });
+  if (search.trim()) params.set('search', search.trim());
 
-  let users = rowsToApp(data || []);
-  if (search.trim()) {
-    const term = search.trim().toLowerCase();
-    users = users.filter(u =>
-      (u.email || '').toLowerCase().includes(term)
-      || (u.displayName || '').toLowerCase().includes(term)
-    );
-  }
-
-  const hasMore = (data?.length || 0) > pageSize;
-  if (hasMore) users = users.slice(0, pageSize);
+  const res = await fetch(`/api/admin/users?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Could not load users.');
 
   return {
-    users,
-    hasMore,
-    lastDoc: hasMore ? { _offset: offset + pageSize } : null,
+    users: data.users || [],
+    total: data.total ?? 0,
+    hasMore: data.hasMore === true,
+    lastDoc: data.hasMore ? { _offset: offset + pageSize } : null,
   };
 }
 
@@ -217,9 +212,18 @@ export async function createAdminUser({ email, password, displayName, role }) {
 export async function setUserRole(userId, role) {
   if (!userId || typeof userId !== 'string') throw new Error('Invalid userId');
   if (!ALLOWED_ROLES.includes(role)) throw new Error(`Invalid role: ${role}`);
-  const supabase = getSupabaseBrowser();
-  if (!supabase) throw new Error('Database unavailable');
-  await supabase.from('users').update({ role }).eq('id', userId);
+  const token = await getAdminAccessToken();
+  const res = await fetch('/api/admin/users/role', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ userId, role }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Failed to update role.');
+  return data;
 }
 
 export async function resetUserPassword(userId, newPassword) {
@@ -236,6 +240,24 @@ export async function resetUserPassword(userId, newPassword) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || 'Failed to reset password.');
+  return data;
+}
+
+export async function setUserStatus(userId, status, reason = '') {
+  if (!userId || typeof userId !== 'string') throw new Error('Invalid userId');
+  if (!isAccountStatus(status)) throw new Error(`Invalid status: ${status}`);
+  if (typeof reason !== 'string') throw new Error('Reason must be text.');
+  const token = await getAdminAccessToken();
+  const res = await fetch('/api/admin/users/status', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ userId, status, reason }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Failed to update account status.');
   return data;
 }
 

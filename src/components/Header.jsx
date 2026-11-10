@@ -32,7 +32,10 @@ const Header = () => {
   const menuTrapRef = useFocusTrap(mobileMenuOpen);
   const profileTrapRef = useFocusTrap(profileOpen);
   useClickOutside(profileRef, profileOpen, () => setProfileOpen(false));
-  const { user, logout, isAdmin, isContentWriter } = useAuth();
+  const { user, userProfile, logout, isAdmin, isContentWriter } = useAuth();
+  const menuName = userProfile?.displayName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
+  const menuPhoto = userProfile?.photoURL || user?.user_metadata?.avatar_url
+    || `https://ui-avatars.com/api/?name=${encodeURIComponent(menuName)}&background=4338ca&color=fff`;
   const { isDark, toggleTheme } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
@@ -152,7 +155,7 @@ const Header = () => {
                     aria-expanded={profileOpen}
                     className="touch-target w-11 h-11 rounded-xl overflow-hidden ring-2 ring-transparent hover:ring-brand-500/50 transition-all p-0.5"
                   >
-                    <img src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName}&background=4338ca&color=fff`} alt="" className="w-full h-full object-cover" />
+                    <img src={menuPhoto} alt="" className="w-full h-full object-cover" />
                   </button>
                   <AnimatePresence>
                     {profileOpen && (
@@ -166,7 +169,7 @@ const Header = () => {
                         className="absolute right-0 mt-2 w-56 glass-card-solid rounded-2xl p-2 z-50"
                       >
                         <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800 mb-1">
-                          <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{user.displayName}</p>
+                          <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{menuName}</p>
                           <p className="text-xs text-gray-500 truncate">{user.email}</p>
                         </div>
                         <Link href="/dashboard" className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-surface-2 dark:hover:bg-dark-surface-2 text-sm text-gray-700 dark:text-gray-300">
@@ -184,9 +187,14 @@ const Header = () => {
                           </Link>
                         )}
                         {isAdmin && (
-                          <Link href="/admin/dashboard" className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-950/30 text-sm text-brand-700 dark:text-brand-300">
-                            <SettingsIcon className="w-4 h-4" /><span>Admin</span>
-                          </Link>
+                          <>
+                            <Link href="/admin/dashboard" className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-950/30 text-sm text-brand-700 dark:text-brand-300">
+                              <SettingsIcon className="w-4 h-4" /><span>Admin</span>
+                            </Link>
+                            <Link href="/admin/profile" className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-950/30 text-sm text-brand-700 dark:text-brand-300">
+                              <SettingsIcon className="w-4 h-4" /><span>Admin Profile</span>
+                            </Link>
+                          </>
                         )}
                         <button onClick={logout} className="w-full flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/30 text-sm text-red-600">
                           <LogIn className="w-4 h-4" /><span>Sign Out</span>

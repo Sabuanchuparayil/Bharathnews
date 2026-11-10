@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from './supabase-server';
 import { rowToApp } from '@/lib/db-mapper';
+import { blockedAccountError } from '@/lib/account-status';
 
 export const ALLOWED_ROLES = ['reader', 'contributor', 'vlogger', 'content_writer', 'admin', 'employer'];
 
@@ -21,13 +22,16 @@ export async function verifyAdminRequest(request) {
 
     const { data: profile } = await supabase
       .from('users')
-      .select('role')
+      .select('role, status')
       .eq('id', user.id)
       .single();
 
     if (!profile || profile.role !== 'admin') {
       return { error: 'Admin access required.', status: 403 };
     }
+
+    const blocked = blockedAccountError(profile.status);
+    if (blocked) return blocked;
 
     return { uid: user.id, email: user.email };
   } catch (err) {

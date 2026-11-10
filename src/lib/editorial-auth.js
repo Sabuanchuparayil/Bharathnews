@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from './supabase-server';
+import { blockedAccountError } from './account-status';
 
 const EDITORIAL_ROLES = new Set(['admin', 'content_writer']);
 
@@ -14,13 +15,16 @@ export async function verifyEditorialRequest(request) {
 
     const { data: profile } = await supabase
       .from('users')
-      .select('role, display_name')
+      .select('role, display_name, status')
       .eq('id', user.id)
       .single();
 
     if (!profile || !EDITORIAL_ROLES.has(profile.role)) {
       return { error: 'Newsroom access required.', status: 403 };
     }
+
+    const blocked = blockedAccountError(profile.status);
+    if (blocked) return blocked;
 
     return {
       uid: user.id,

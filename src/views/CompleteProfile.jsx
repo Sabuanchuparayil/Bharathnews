@@ -6,30 +6,13 @@ import { toast } from 'react-toastify';
 import Layout from '../components/Layout';
 import ProfileDetailsForm from '../components/ProfileDetailsForm';
 import { useAuth } from '../context/AuthContext';
-import { EMPTY_PROFILE_DETAILS, splitChoice, validateProfileDetails, COUNTRY_OPTIONS, NATIONALITY_OPTIONS } from '@/lib/profile-fields';
+import { EMPTY_PROFILE_DETAILS, profileToDetails, validateProfileDetails } from '@/lib/profile-fields';
 import { getCreatorProfileByUserId, saveAccountProfile, updateCreatorProfile } from '../services/creator';
 
 function safeNext(value) {
   if (!value || !value.startsWith('/') || value.startsWith('//')) return '/dashboard';
   if (value.startsWith('/verify-email') || value.startsWith('/complete-profile') || value.startsWith('/login')) return '/dashboard';
   return value;
-}
-
-function detailsFromProfile(profile) {
-  const country = splitChoice(profile?.country, COUNTRY_OPTIONS);
-  const nationality = splitChoice(profile?.nationality, NATIONALITY_OPTIONS);
-  return {
-    ...EMPTY_PROFILE_DETAILS,
-    country: country.choice,
-    countryOther: country.other,
-    city: profile?.city || '',
-    nationality: nationality.choice,
-    nationalityOther: nationality.other,
-    phone: profile?.phone || '',
-    whatsapp: profile?.whatsapp || '',
-    dateOfBirth: typeof profile?.dateOfBirth === 'string' ? profile.dateOfBirth.slice(0, 10) : '',
-    profession: profile?.profession || '',
-  };
 }
 
 export default function CompleteProfile() {
@@ -57,7 +40,7 @@ export default function CompleteProfile() {
       return;
     }
     if (!seeded.current) {
-      setValues(detailsFromProfile(userProfile));
+      setValues(profileToDetails(userProfile));
       seeded.current = true;
     }
     setReady(true);

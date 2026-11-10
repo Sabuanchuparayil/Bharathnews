@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Users, TrendingUp, Rss, Settings, Shield, Mail, Video, Send, ShoppingBag } from 'lucide-react';
+import { Users, TrendingUp, Rss, Settings, Shield, Mail, Video, Send, ShoppingBag, UserRound } from 'lucide-react';
 import Layout from '../components/Layout';
 import LoginPrompt from '../components/LoginPrompt';
 import { useAuth } from '../context/AuthContext';
@@ -101,6 +101,9 @@ const AdminDashboard = () => {
             </Link>
             <Link href="/admin/settings" className="btn-secondary text-sm px-4 py-2 rounded-xl flex items-center gap-2">
               <Settings className="w-4 h-4" /> Settings
+            </Link>
+            <Link href="/admin/profile" className="btn-secondary text-sm px-4 py-2 rounded-xl flex items-center gap-2">
+              <UserRound className="w-4 h-4" /> My Profile
             </Link>
           </div>
         </div>

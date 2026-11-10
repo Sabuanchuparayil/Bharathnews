@@ -7,14 +7,16 @@ import { toast } from 'react-toastify';
 import {
   ArrowLeft, ChevronLeft, ChevronRight, Search, Rss, Settings2,
   MessageCircle, Send, Mail, Facebook, Youtube, Instagram, KeyRound, Users, UserPlus,
+  UserX, UserCheck, PauseCircle,
 } from 'lucide-react';
 import Layout from '../components/Layout';
 import LoginPrompt from '../components/LoginPrompt';
 import { useAuth } from '../context/AuthContext';
 import {
   getSiteSettings, updateSiteSettings, getUsers, setUserRole, getSources,
-  resetUserPassword, sendPasswordResetEmail,
+  resetUserPassword, sendPasswordResetEmail, setUserStatus,
 } from '../services/admin';
+import { STATUS_LABELS } from '@/lib/account-status';
 import { setAuthCookies } from '../lib/auth-cookies';
 import { mergeSiteSettings } from '../lib/site-settings';
 
@@ -33,6 +35,12 @@ const ROLE_LABELS = {
   vlogger: 'Vlogger',
   content_writer: 'Content Writer',
   admin: 'Admin',
+};
+
+const STATUS_BADGE = {
+  active: 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-300',
+  suspended: 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300',
+  deactivated: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300',
 };
 
 const WORKER_SECRETS = [
@@ -99,6 +107,11 @@ const AdminSettings = () => {
   const [resetModal, setResetModal] = useState(null);
   const [resetPassword, setResetPassword] = useState('');
   const [resettingPassword, setResettingPassword] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [appliedSearch, setAppliedSearch] = useState('');
+  const [statusModal, setStatusModal] = useState(null);
+  const [statusReason, setStatusReason] = useState('');
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   const patchIntegration = (platform, patch) => {
     setSettings(prev => ({
@@ -120,27 +133,38 @@ const AdminSettings = () => {
   const loadUsers = useCallback(async (startAfterDoc = null, reset = false) => {
     setLoadingUsers(true);
     try {
-      const result = await getUsers({ pageSize: 25, startAfterDoc, search });
+      const result = await getUsers({ pageSize: 25, startAfterDoc, search: appliedSearch, status: statusFilter });
       setUsers(result.users);
       setHasMore(result.hasMore);
       setLastDoc(result.lastDoc);
       if (reset) setCursorStack([]);
+    } catch (err) {
+      toast.error(err.message || 'Could not load users');
     } finally {
       setLoadingUsers(false);
     }
+  }, [appliedSearch, statusFilter]);
+
+  // Debounce the search box so we don't hit the API on every keystroke.
+  useEffect(() => {
+    const timer = setTimeout(() => setAppliedSearch(search), 350);
+    return () => clearTimeout(timer);
   }, [search]);
 
+  // Settings/sources load once; they must not re-run (and clobber unsaved edits) when filters change.
   useEffect(() => {
-    if (isAdmin) {
-      getSiteSettings().then(setSettings);
-      getSources().then(sources => {
-        setSourceStats({
-          total: sources.length,
-          enabled: sources.filter(s => s.enabled).length,
-        });
+    if (!isAdmin) return;
+    getSiteSettings().then(setSettings);
+    getSources().then(sources => {
+      setSourceStats({
+        total: sources.length,
+        enabled: sources.filter(s => s.enabled).length,
       });
-      loadUsers(null, true);
-    }
+    });
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (isAdmin) loadUsers(null, true);
   }, [isAdmin, loadUsers]);
 
   const saveSettings = async () => {
@@ -154,7 +178,7 @@ const AdminSettings = () => {
     try {
       await setUserRole(userId, role);
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, role } : u));
-      if (user?.uid === userId) {
+      if (user?.id === userId) {
         const profile = await refreshUserProfile();
         if (profile) {
           setAuthCookies(profile.role || 'reader', {
@@ -164,8 +188,10 @@ const AdminSettings = () => {
         }
       }
       toast.success('Role updated');
-    } catch {
-      toast.error('Failed to update role');
+    } catch (err) {
+      toast.error(err.message || 'Failed to update role');
+      // Re-sync the dropdown with the real role after a rejected change.
+      loadUsers(cursorStack[cursorStack.length - 1] || null);
     }
   };
 
@@ -202,6 +228,35 @@ const AdminSettings = () => {
       toast.error(err.message || 'Failed to reset password');
     } finally {
       setResettingPassword(false);
+    }
+  };
+
+  const openStatusModal = (target, nextStatus) => {
+    setStatusModal({ user: target, status: nextStatus });
+    setStatusReason('');
+  };
+
+  const closeStatusModal = () => {
+    setStatusModal(null);
+    setStatusReason('');
+  };
+
+  const handleStatusSubmit = async (e) => {
+    e.preventDefault();
+    if (!statusModal) return;
+    const { user: target, status: nextStatus } = statusModal;
+    setUpdatingStatus(true);
+    try {
+      await setUserStatus(target.id, nextStatus, statusReason);
+      setUsers(prev => prev.map(u => u.id === target.id
+        ? { ...u, status: nextStatus, status_reason: nextStatus === 'active' ? null : (statusReason.trim() || null) }
+        : u));
+      toast.success(`${target.email || target.displayName} is now ${STATUS_LABELS[nextStatus].toLowerCase()}`);
+      closeStatusModal();
+    } catch (err) {
+      toast.error(err.message || 'Failed to update account status');
+    } finally {
+      setUpdatingStatus(false);
     }
   };
 
@@ -549,7 +604,7 @@ const AdminSettings = () => {
               <h2 className="font-display font-bold text-lg">Create User</h2>
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Create a Firebase account with email/password and assign an RBAC role. The user can sign in immediately at /login.
+              Create an account with email/password and assign an RBAC role. The user can sign in immediately at /login.
             </p>
             <form onSubmit={handleCreateUser} className="grid sm:grid-cols-2 gap-4">
               <Field label="Email">
@@ -607,49 +662,111 @@ const AdminSettings = () => {
 
           <div className="glass-card-solid rounded-2xl p-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-              <h2 className="font-display font-bold text-lg">Manage Roles</h2>
-              <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="search"
-                  placeholder="Search users…"
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && loadUsers(null, true)}
-                  className="pl-9 pr-3 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent w-full sm:w-56"
-                />
+              <h2 className="font-display font-bold text-lg">Manage Users</h2>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <select
+                  aria-label="Filter by status"
+                  value={statusFilter}
+                  onChange={e => setStatusFilter(e.target.value)}
+                  className="text-sm px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent"
+                >
+                  <option value="all">All statuses</option>
+                  <option value="active">Active</option>
+                  <option value="suspended">Suspended</option>
+                  <option value="deactivated">Deactivated</option>
+                </select>
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="search"
+                    placeholder="Search users…"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && setAppliedSearch(search)}
+                    className="pl-9 pr-3 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent w-full sm:w-56"
+                  />
+                </div>
               </div>
             </div>
-            <div className="space-y-2 max-h-96 overflow-y-auto mb-4">
+            <p className="text-xs text-gray-500 mb-3">
+              <strong>Suspended</strong> = temporary block. <strong>Deactivated</strong> = account closed. Both stop sign-in and
+              API access until an admin reactivates the account.
+            </p>
+            <div className="space-y-2 max-h-[32rem] overflow-y-auto mb-4">
               {loadingUsers ? (
                 <p className="text-sm text-gray-500 py-4 text-center">Loading users…</p>
               ) : users.length === 0 ? (
                 <p className="text-sm text-gray-500 py-4 text-center">No users found</p>
-              ) : users.map(u => (
-                <div key={u.id} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-800 gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{u.displayName || u.email}</p>
-                    <p className="text-xs text-gray-500 truncate">{u.email}</p>
+              ) : users.map(u => {
+                const accountStatus = u.status || 'active';
+                const isSelf = u.id === user?.id;
+                return (
+                  <div key={u.id} className="py-3 border-b border-gray-100 dark:border-gray-800">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <p className="text-sm font-medium truncate">{u.displayName || u.email}</p>
+                          <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full flex-shrink-0 ${STATUS_BADGE[accountStatus] || STATUS_BADGE.active}`}>
+                            {STATUS_LABELS[accountStatus] || accountStatus}
+                          </span>
+                          {isSelf && <span className="text-[10px] text-gray-400 flex-shrink-0">(you)</span>}
+                        </div>
+                        <p className="text-xs text-gray-500 truncate">{u.email}</p>
+                        {accountStatus !== 'active' && u.status_reason && (
+                          <p className="text-xs text-gray-500 mt-0.5 truncate" title={u.status_reason}>Reason: {u.status_reason}</p>
+                        )}
+                      </div>
+                      <select
+                        value={u.role || 'reader'}
+                        onChange={e => changeRole(u.id, e.target.value)}
+                        aria-label={`Role for ${u.email}`}
+                        className="text-sm px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-transparent flex-shrink-0"
+                      >
+                        {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r] || r}</option>)}
+                      </select>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      <button
+                        type="button"
+                        onClick={() => { setResetModal(u); setResetPassword(''); }}
+                        className="btn-secondary text-xs px-3 py-1.5 rounded-lg inline-flex items-center gap-1.5"
+                      >
+                        <KeyRound className="w-3.5 h-3.5" /> Change password
+                      </button>
+                      {accountStatus === 'active' ? (
+                        <>
+                          <button
+                            type="button"
+                            disabled={isSelf}
+                            title={isSelf ? "You can't suspend your own account" : 'Temporarily block this user'}
+                            onClick={() => openStatusModal(u, 'suspended')}
+                            className="text-xs px-3 py-1.5 rounded-lg inline-flex items-center gap-1.5 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-950/30 dark:text-amber-300 disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            <PauseCircle className="w-3.5 h-3.5" /> Suspend
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isSelf}
+                            title={isSelf ? "You can't deactivate your own account" : 'Close this account'}
+                            onClick={() => openStatusModal(u, 'deactivated')}
+                            className="text-xs px-3 py-1.5 rounded-lg inline-flex items-center gap-1.5 bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-950/30 dark:text-red-300 disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            <UserX className="w-3.5 h-3.5" /> Deactivate
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => openStatusModal(u, 'active')}
+                          className="text-xs px-3 py-1.5 rounded-lg inline-flex items-center gap-1.5 bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-950/30 dark:text-green-300"
+                        >
+                          <UserCheck className="w-3.5 h-3.5" /> Reactivate
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => { setResetModal(u); setResetPassword(''); }}
-                      className="p-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-950/30 text-amber-600"
-                      title="Reset password"
-                    >
-                      <KeyRound className="w-4 h-4" />
-                    </button>
-                    <select
-                      value={u.role || 'reader'}
-                      onChange={e => changeRole(u.id, e.target.value)}
-                      className="text-sm px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-transparent"
-                    >
-                      {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r] || r}</option>)}
-                    </select>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <div className="flex items-center justify-between">
               <button type="button" onClick={prevPage} disabled={cursorStack.length === 0 && users.length === 0} className="btn-secondary text-sm px-3 py-1.5 rounded-lg flex items-center gap-1 disabled:opacity-40">
@@ -667,9 +784,10 @@ const AdminSettings = () => {
       {resetModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
           <div className="glass-card-solid rounded-2xl p-6 max-w-md w-full">
-            <h3 className="font-display font-bold text-lg mb-2">Reset Password</h3>
+            <h3 className="font-display font-bold text-lg mb-2">Change Password</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Reset password for <strong>{resetModal.email || resetModal.displayName}</strong>
+              Set a new password for <strong>{resetModal.email || resetModal.displayName}</strong>.
+              Share it with the user securely; they can change it after signing in.
             </p>
 
             <form onSubmit={handleResetPassword} className="space-y-3 mb-4">
@@ -723,6 +841,58 @@ const AdminSettings = () => {
                 <Mail className="w-3 h-3" /> Send reset email
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {statusModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" role="dialog" aria-modal="true">
+          <div className="glass-card-solid rounded-2xl p-6 max-w-md w-full">
+            <h3 className="font-display font-bold text-lg mb-2">
+              {statusModal.status === 'active' && 'Reactivate account'}
+              {statusModal.status === 'suspended' && 'Suspend account'}
+              {statusModal.status === 'deactivated' && 'Deactivate account'}
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              {statusModal.status === 'active'
+                ? <>Restore sign-in and access for <strong>{statusModal.user.email || statusModal.user.displayName}</strong>.</>
+                : <><strong>{statusModal.user.email || statusModal.user.displayName}</strong> will be signed out and blocked from signing in until an admin reactivates the account.</>}
+            </p>
+            <form onSubmit={handleStatusSubmit} className="space-y-3">
+              {statusModal.status !== 'active' && (
+                <div>
+                  <label htmlFor="status-reason" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Reason (optional, visible to admins only)
+                  </label>
+                  <textarea
+                    id="status-reason"
+                    rows={3}
+                    maxLength={300}
+                    value={statusReason}
+                    onChange={e => setStatusReason(e.target.value)}
+                    className={inputClass}
+                    placeholder="e.g. Violated community guidelines"
+                    autoFocus
+                  />
+                </div>
+              )}
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={updatingStatus}
+                  className={`px-4 py-2 rounded-xl text-sm text-white disabled:opacity-60 ${
+                    statusModal.status === 'active' ? 'bg-green-600 hover:bg-green-700'
+                      : statusModal.status === 'suspended' ? 'bg-amber-600 hover:bg-amber-700'
+                        : 'bg-red-600 hover:bg-red-700'
+                  }`}
+                >
+                  {updatingStatus ? 'Saving…' : statusModal.status === 'active' ? 'Reactivate' : statusModal.status === 'suspended' ? 'Suspend user' : 'Deactivate user'}
+                </button>
+                <button type="button" onClick={closeStatusModal} disabled={updatingStatus} className="btn-secondary px-4 py-2 rounded-xl text-sm">
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from './supabase-server';
+import { blockedAccountError } from './account-status';
 
 export async function verifyUserRequest(request) {
   const authHeader = request.headers.get('authorization') || '';
@@ -16,9 +17,12 @@ export async function verifyUserRequest(request) {
 
     const { data: profile } = await supabase
       .from('users')
-      .select('role, display_name, email')
+      .select('role, display_name, email, status')
       .eq('id', user.id)
       .single();
+
+    const blocked = blockedAccountError(profile?.status);
+    if (blocked) return blocked;
 
     return {
       uid: user.id,

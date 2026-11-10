@@ -21,6 +21,7 @@ export default function Login() {
   const reason = searchParams.get('reason');
   const isAdminFlow = reason === 'admin' || next.startsWith('/admin');
   const isForbidden = reason === 'forbidden';
+  const blockedReason = reason === 'suspended' || reason === 'deactivated' ? reason : null;
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.self !== window.top) {
@@ -98,6 +99,13 @@ export default function Login() {
           {signingIn && user && isAdminFlow && !userProfile && (
             <div className="mb-4 text-sm text-gray-600 dark:text-gray-400 text-center">
               Verifying admin access…
+            </div>
+          )}
+
+          {blockedReason && !error && (
+            <div role="alert" className="mb-4 flex items-start gap-2 text-left text-sm text-red-600 bg-red-50 dark:bg-red-950/30 rounded-xl p-3">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <span>This account has been {blockedReason}. Contact the site owner if you think this is a mistake.</span>
             </div>
           )}
 
