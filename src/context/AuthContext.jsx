@@ -74,13 +74,15 @@ export const AuthProvider = ({ children }) => {
           if (isStale()) return;
         }
         if (profile?.status && profile.status !== 'active') {
-          // Suspended/deactivated: end the session and send the user to /login with the reason.
+          // A newer sign-in may have started while this profile load was in flight.
+          if (isStale()) return;
           const blockedStatus = profile.status;
           setUser(null);
           setUserProfile(null);
           clearAuthCookies();
           setLoading(false);
           supabase.auth.signOut().finally(() => {
+            if (isStale()) return;
             window.location.replace(`/login?reason=${encodeURIComponent(blockedStatus)}`);
           });
           return;

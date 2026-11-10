@@ -50,7 +50,7 @@ export async function POST(request) {
 
     const { data: target, error: targetError } = await supabase
       .from('users')
-      .select('id, email, role, status')
+      .select('id, email, role, status, status_reason')
       .eq('id', userId)
       .maybeSingle();
     if (targetError) {
@@ -62,6 +62,11 @@ export async function POST(request) {
 
     const previousStatus = target.status || 'active';
     if (previousStatus === status && status === 'active') {
+      // Heal a ban that was left behind if the table and auth layer ever drifted.
+      const { error: unbanError } = await supabase.auth.admin.updateUserById(userId, { ban_duration: 'none' });
+      if (unbanError) {
+        return NextResponse.json({ error: unbanError.message || 'Could not update account access.' }, { status: 400 });
+      }
       return NextResponse.json({ success: true, status, email: target.email, unchanged: true });
     }
 
@@ -101,7 +106,22 @@ export async function POST(request) {
     }
 
     if (previousStatus === status) {
-      return NextResponse.json({ success: true, status, email: target.email, unchanged: true });
+      const previousReason = target.status_reason || '';
+      if (!cleanReason || cleanReason === previousReason) {
+        return NextResponse.json({ success: true, status, email: target.email, unchanged: true });
+      }
+      const { error: reasonError } = await supabase
+        .from('users')
+        .update({
+          status_reason: cleanReason,
+          status_changed_at: new Date().toISOString(),
+          status_changed_by: auth.uid,
+        })
+        .eq('id', userId);
+      if (reasonError) {
+        return NextResponse.json({ error: reasonError.message || 'Could not save status.' }, { status: 500 });
+      }
+      return NextResponse.json({ success: true, status, email: target.email });
     }
 
     // 2) Record the status for the admin UI and server-side checks.
