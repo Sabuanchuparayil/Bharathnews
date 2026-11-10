@@ -129,12 +129,11 @@ const AdminProfile = () => {
   const shownName = userProfile.displayName || email.split('@')[0] || 'Admin';
   const avatar = userProfile.photoURL
     || `https://ui-avatars.com/api/?name=${encodeURIComponent(shownName)}&background=4338ca&color=fff&size=128`;
-  const hasPassword = Array.isArray(user.identities)
-    ? user.identities.some(identity => identity.provider === 'email')
-    : true;
-  const signInMethods = Array.isArray(user.identities) && user.identities.length
-    ? user.identities.map(identity => identity.provider).join(', ')
-    : 'email';
+  const identities = Array.isArray(user.identities) ? user.identities : null;
+  const hasPassword = identities?.some(identity => identity?.provider === 'email') === true;
+  const signInMethods = identities?.length
+    ? identities.map(identity => identity?.provider).filter(Boolean).join(', ')
+    : 'an external provider';
   const memberSince = userProfile._createdAtIso || user.created_at;
   const profileDirty = displayName.trim() !== (userProfile.displayName || '')
     || photoURL.trim() !== (userProfile.photoURL || '');
@@ -406,7 +405,9 @@ const AdminProfile = () => {
                 </form>
               ) : (
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                  You sign in with {signInMethods}, so there is no password on this account yet. Send yourself a link to set one.
+                  {identities
+                    ? `You sign in with ${signInMethods}, so there is no password on this account yet. Send yourself a link to set one.`
+                    : 'We could not confirm an email password on this account. Send yourself a link to set one.'}
                 </p>
               )}
 

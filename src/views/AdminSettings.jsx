@@ -164,8 +164,9 @@ const AdminSettings = () => {
   }, [isAdmin]);
 
   useEffect(() => {
-    if (isAdmin) loadUsers(null, true);
-  }, [isAdmin, loadUsers]);
+    if (!isAdmin || tab !== 'users') return;
+    loadUsers(null, true);
+  }, [isAdmin, tab, loadUsers]);
 
   const saveSettings = async () => {
     await updateSiteSettings(settings);
@@ -248,9 +249,14 @@ const AdminSettings = () => {
     setUpdatingStatus(true);
     try {
       await setUserStatus(target.id, nextStatus, statusReason);
-      setUsers(prev => prev.map(u => u.id === target.id
-        ? { ...u, status: nextStatus, status_reason: nextStatus === 'active' ? null : (statusReason.trim() || null) }
-        : u));
+      setUsers(prev => {
+        if (statusFilter !== 'all' && statusFilter !== nextStatus) {
+          return prev.filter(u => u.id !== target.id);
+        }
+        return prev.map(u => u.id === target.id
+          ? { ...u, status: nextStatus, status_reason: nextStatus === 'active' ? null : (statusReason.trim() || null) }
+          : u);
+      });
       toast.success(`${target.email || target.displayName} is now ${STATUS_LABELS[nextStatus].toLowerCase()}`);
       closeStatusModal();
     } catch (err) {

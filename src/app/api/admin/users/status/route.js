@@ -5,6 +5,16 @@ import { BAN_DURATION, isAccountStatus } from '@/lib/account-status';
 
 const REASON_MAX = 300;
 
+// Deletes every refresh session. The current access token can still be used until it expires;
+// server routes reject it through users.status, and the client signs out on its next refresh.
+async function revokeUserSessions(supabase, userId) {
+  const { error } = await supabase.rpc('revoke_user_sessions', { target: userId });
+  if (error) {
+    return { ok: false, error: error.message || 'Could not sign the user out of existing sessions.' };
+  }
+  return { ok: true };
+}
+
 export async function POST(request) {
   const auth = await verifyAdminRequest(request);
   if (auth.error) {
@@ -51,7 +61,7 @@ export async function POST(request) {
     }
 
     const previousStatus = target.status || 'active';
-    if (previousStatus === status) {
+    if (previousStatus === status && status === 'active') {
       return NextResponse.json({ success: true, status, email: target.email, unchanged: true });
     }
 
@@ -76,6 +86,22 @@ export async function POST(request) {
     const { error: banError } = await supabase.auth.admin.updateUserById(userId, { ban_duration: banDuration });
     if (banError) {
       return NextResponse.json({ error: banError.message || 'Could not update account access.' }, { status: 400 });
+    }
+
+    // Drop existing sessions so an open tab cannot keep refreshing. Re-run this even when the
+    // status is already suspended, so a retry still closes a session that survived the first attempt.
+    if (status !== 'active') {
+      const revoked = await revokeUserSessions(supabase, userId);
+      if (!revoked.ok) {
+        await supabase.auth.admin.updateUserById(userId, {
+          ban_duration: previousStatus === 'active' ? 'none' : BAN_DURATION,
+        });
+        return NextResponse.json({ error: revoked.error || 'Could not sign the user out.' }, { status: 500 });
+      }
+    }
+
+    if (previousStatus === status) {
+      return NextResponse.json({ success: true, status, email: target.email, unchanged: true });
     }
 
     // 2) Record the status for the admin UI and server-side checks.
