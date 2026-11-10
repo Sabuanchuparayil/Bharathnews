@@ -2,7 +2,7 @@
 
 import { getSupabaseBrowser } from '@/lib/supabase-client';
 import { mergeSiteSettings } from '@/lib/site-settings';
-import { getPasswordResetRedirectUrl } from '@/lib/password-reset';
+import { requestPasswordReset } from '@/lib/password-reset';
 import { isAccountStatus } from '@/lib/account-status';
 
 function filterPublished(articles) {
@@ -207,13 +207,7 @@ export async function setUserStatus(userId, status, reason = '') {
 }
 
 export async function sendPasswordResetEmail(email) {
-  if (typeof email !== 'string' || !email.includes('@')) throw new Error('A valid email is required.');
-  const supabase = getSupabaseBrowser();
-  if (!supabase) throw new Error('Authentication unavailable');
-  const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
-    redirectTo: getPasswordResetRedirectUrl(),
-  });
-  if (error) throw new Error(error.message || 'Failed to send reset email.');
+  await requestPasswordReset(email);
 }
 
 export { filterPublished };

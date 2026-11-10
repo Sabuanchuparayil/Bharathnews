@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Lock, CheckCircle, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import Layout from '../components/Layout';
 import { getSupabaseBrowser } from '@/lib/supabase-client';
+import { isRecoverySession, readRecoveryHash } from '@/lib/password-reset';
 
 export default function ResetPassword() {
   const router = useRouter();
@@ -27,32 +28,42 @@ export default function ResetPassword() {
     }
 
     let cancelled = false;
-
-    // /auth/callback exchanges the recovery code server-side, so the session usually
-    // arrives as INITIAL_SESSION / SIGNED_IN rather than PASSWORD_RECOVERY.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const finish = (session) => {
       if (cancelled) return;
-      if (event === 'PASSWORD_RECOVERY' || (session && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION'))) {
-        setSessionReady(true);
-        setChecking(false);
-      }
-    });
+      setSessionReady(isRecoverySession(session));
+      setChecking(false);
+    };
 
-    // getSession() waits for the client's initialisation, so a missing session here is final.
-    supabase.auth.getSession()
-      .then(({ data: { session } }) => {
-        if (cancelled) return;
-        if (session) setSessionReady(true);
-        setChecking(false);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setChecking(false);
-      });
+    const loadRecoverySession = async () => {
+      const clearHash = () => {
+        window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+      };
+      const fromLink = readRecoveryHash(window.location.hash);
+      if (fromLink?.error) {
+        clearHash();
+        if (!cancelled) setError(fromLink.error);
+        finish(null);
+        return;
+      }
+      if (fromLink) {
+        const { data, error: sessionError } = await supabase.auth.setSession({
+          access_token: fromLink.accessToken,
+          refresh_token: fromLink.refreshToken,
+        });
+        // Tokens stay in the URL on failure so a reload can retry the same link.
+        if (!sessionError) clearHash();
+        finish(sessionError ? null : data.session);
+        return;
+      }
+      // Older emails go through /auth/callback, which leaves the recovery session in cookies.
+      const { data: { session } } = await supabase.auth.getSession();
+      finish(session);
+    };
+
+    loadRecoverySession().catch(() => finish(null));
 
     return () => {
       cancelled = true;
-      subscription.unsubscribe();
     };
   }, []);
 
@@ -80,6 +91,14 @@ export default function ResetPassword() {
         return;
       }
 
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!isRecoverySession(session)) {
+        setError('This reset session has expired.');
+        setSessionReady(false);
+        setUpdating(false);
+        return;
+      }
+
       const { error: updateError } = await supabase.auth.updateUser({
         password,
       });
@@ -90,8 +109,8 @@ export default function ResetPassword() {
         return;
       }
 
-      // End the recovery session so the user signs in with the new password.
-      await supabase.auth.signOut();
+      // Global sign-out also ends sessions on other devices that may have the old password.
+      await supabase.auth.signOut({ scope: 'global' });
 
       setSuccess(true);
       setTimeout(() => {
@@ -143,8 +162,8 @@ export default function ResetPassword() {
                 <div>
                   <p className="font-medium">Invalid or expired link</p>
                   <p className="mt-1">
-                    This password reset link may have expired or already been used.
-                    Please request a new one.
+                    {error || 'This password reset link may have expired or already been used.'}
+                    {' '}Please request a new one.
                   </p>
                 </div>
               </div>

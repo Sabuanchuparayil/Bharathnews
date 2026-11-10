@@ -42,6 +42,17 @@ export async function POST(request) {
       );
     }
 
+    // Skipped for the admin's own account so the request doesn't sign them out mid-session.
+    if (userId !== auth.uid) {
+      const { error: revokeError } = await supabase.rpc('revoke_user_sessions', { target: userId });
+      if (revokeError) {
+        return NextResponse.json(
+          { error: `Password changed, but existing sessions could not be signed out: ${revokeError.message}` },
+          { status: 500 },
+        );
+      }
+    }
+
     return NextResponse.json({
       success: true,
       email: data.user?.email,

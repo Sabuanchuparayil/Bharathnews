@@ -4,8 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Mail, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
 import Layout from '../components/Layout';
-import { getSupabaseBrowser } from '@/lib/supabase-client';
-import { getPasswordResetRedirectUrl } from '@/lib/password-reset';
+import { requestPasswordReset } from '@/lib/password-reset';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -26,26 +25,10 @@ export default function ForgotPassword() {
     }
 
     try {
-      const supabase = getSupabaseBrowser();
-      if (!supabase) {
-        setError('Authentication service unavailable. Please try again later.');
-        setSending(false);
-        return;
-      }
-
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(trimmed, {
-        redirectTo: getPasswordResetRedirectUrl(),
-      });
-
-      if (resetError) {
-        setError(resetError.message || 'Failed to send reset email. Please try again.');
-        setSending(false);
-        return;
-      }
-
+      await requestPasswordReset(trimmed);
       setSent(true);
-    } catch {
-      setError('Something went wrong. Please try again.');
+    } catch (err) {
+      setError(err.message || 'Something went wrong. Please try again.');
     } finally {
       setSending(false);
     }
