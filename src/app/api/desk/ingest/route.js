@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifyDeskIngestRequest } from '@/lib/desk-ingest-auth';
-import { createEditorialArticle, validateEditorialInput } from '@/lib/editorial-articles';
+import { createEditorialArticle, validateEditorialInput, logCoworkIngest } from '@/lib/editorial-articles';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,7 +51,7 @@ export async function POST(request) {
       const article = await createEditorialArticle(
         { ...parsed.value, isAiAssisted: true, scheduledAt: null },
         auth,
-        { publishNow: false },
+        { publishNow: false, autoAssign: true },
       );
       created.push({
         id: article.id,
@@ -67,6 +67,14 @@ export async function POST(request) {
       errors.push({ index: i, title: item.title || '', error: message });
     }
   }
+
+  // Log ingest activity (best-effort).
+  logCoworkIngest({
+    articleCount: created.length,
+    errorCount: errors.length,
+    source: 'cowork',
+    details: { titles: created.map(a => a.title) },
+  }).catch(() => {});
 
   if (!created.length) {
     return NextResponse.json(

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyEditorialRequest } from '@/lib/editorial-auth';
 import {
+  assignArticle,
   getEditorialArticle,
   reviewEditorialArticle,
   updateEditorialArticle,
@@ -44,6 +45,14 @@ export async function PATCH(request, { params }) {
       const parsed = validateEditorialInput(body || {});
       if (parsed.error) return NextResponse.json({ error: parsed.error }, { status: 400 });
       const article = await updateEditorialArticle(id, parsed.value);
+      return NextResponse.json({ article });
+    }
+    if (body.action === 'assign') {
+      if (auth.role !== 'admin') {
+        return NextResponse.json({ error: 'Only an admin can assign drafts.' }, { status: 403 });
+      }
+      const article = await assignArticle(id, body.assignTo || null);
+      if (!article) return NextResponse.json({ error: 'Assignment columns not available. Run the migration.' }, { status: 500 });
       return NextResponse.json({ article });
     }
     const article = await reviewEditorialArticle(id, {

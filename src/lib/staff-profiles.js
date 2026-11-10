@@ -26,6 +26,15 @@ export function validateStaffInput(body, { partial = false } = {}) {
     : 100;
   const isActive = body.isActive !== false && body.is_active !== false;
 
+  // Topic assignments for content routing.
+  const rawTopics = Array.isArray(body.assignedTopics || body.assigned_topics)
+    ? (body.assignedTopics || body.assigned_topics)
+    : [];
+  const assignedTopics = rawTopics
+    .map(t => cleanText(t, 40).toLowerCase())
+    .filter(Boolean)
+    .slice(0, 20);
+
   if (!partial || body.displayName !== undefined || body.display_name !== undefined) {
     if (displayName.length < 2) return { error: 'Add a display name.' };
   }
@@ -47,12 +56,14 @@ export function validateStaffInput(body, { partial = false } = {}) {
       slug,
       sortOrder,
       isActive,
+      assignedTopics,
     },
   };
 }
 
 const PUBLIC_STAFF_FIELDS = [
   'id', 'slug', 'displayName', 'title', 'photoURL', 'bio', 'sortOrder', 'isActive',
+  'assignedTopics',
 ];
 
 export function toPublicStaffProfile(profile) {
@@ -64,7 +75,7 @@ export function toPublicStaffProfile(profile) {
   return out;
 }
 
-export async function listStaffProfiles({ activeOnly = true } = {}) {
+export async function listStaffProfiles({ activeOnly = true, withAccounts = false } = {}) {
   const supabase = getSupabaseAdmin();
   let query = supabase
     .from('staff_profiles')
@@ -78,7 +89,27 @@ export async function listStaffProfiles({ activeOnly = true } = {}) {
     err.hint = migrationHint(error.message);
     throw err;
   }
-  return rowsToApp(data || []);
+
+  const profiles = rowsToApp(data || []);
+  if (!withAccounts) return profiles;
+
+  // Enrich with linked user account info.
+  const userIds = profiles.map(p => p.userId).filter(Boolean);
+  if (!userIds.length) return profiles;
+
+  const { data: accounts } = await supabase
+    .from('users')
+    .select('id, email, role, status')
+    .in('id', userIds);
+  const accountMap = new Map((accounts || []).map(a => [a.id, a]));
+
+  return profiles.map(p => {
+    if (!p.userId) return p;
+    const acct = accountMap.get(p.userId);
+    return acct
+      ? { ...p, account: { email: acct.email, role: acct.role, status: acct.status || 'active' } }
+      : p;
+  });
 }
 
 export async function getStaffBySlug(slug) {
@@ -142,7 +173,7 @@ export async function resolveStaffAuthor({ author, authorSlug } = {}) {
   };
 }
 
-export async function createStaffProfile(input) {
+export async function createStaffProfile(input, { userId = null } = {}) {
   const supabase = getSupabaseAdmin();
   const { data: existing } = await supabase.from('staff_profiles').select('id').eq('slug', input.slug).maybeSingle();
   if (existing) {
@@ -151,8 +182,17 @@ export async function createStaffProfile(input) {
     throw err;
   }
 
+  if (userId) {
+    const { data: linked } = await supabase.from('staff_profiles').select('id').eq('user_id', userId).maybeSingle();
+    if (linked) {
+      const err = new Error('This user account is already linked to another staff profile.');
+      err.status = 409;
+      throw err;
+    }
+  }
+
   const now = new Date().toISOString();
-  const { data, error } = await supabase.from('staff_profiles').insert({
+  const row = {
     slug: input.slug,
     display_name: input.displayName,
     title: input.title,
@@ -161,9 +201,13 @@ export async function createStaffProfile(input) {
     email: input.email,
     sort_order: input.sortOrder,
     is_active: input.isActive,
+    assigned_topics: input.assignedTopics || [],
     created_at: now,
     updated_at: now,
-  }).select('*').single();
+  };
+  if (userId) row.user_id = userId;
+
+  const { data, error } = await supabase.from('staff_profiles').insert(row).select('*').single();
 
   if (error) {
     const err = new Error(error.message || 'Could not create staff profile.');
@@ -191,7 +235,7 @@ export async function updateStaffProfile(id, input) {
     }
   }
 
-  const { data, error } = await supabase.from('staff_profiles').update({
+  const patch = {
     slug: input.slug,
     display_name: input.displayName,
     title: input.title,
@@ -200,14 +244,52 @@ export async function updateStaffProfile(id, input) {
     email: input.email,
     sort_order: input.sortOrder,
     is_active: input.isActive,
+    assigned_topics: input.assignedTopics || [],
     updated_at: new Date().toISOString(),
-  }).eq('id', id).select('*').single();
+  };
+  // Allow linking/unlinking a user account.
+  if (input.userId !== undefined) patch.user_id = input.userId || null;
+
+  const { data, error } = await supabase.from('staff_profiles').update(patch).eq('id', id).select('*').single();
 
   if (error) {
     const err = new Error(error.message || 'Could not update staff profile.');
     err.hint = migrationHint(error.message);
     throw err;
   }
+  return rowToApp(data);
+}
+
+export async function linkStaffToUser(staffId, userId) {
+  const supabase = getSupabaseAdmin();
+  const { data: profile } = await supabase.from('staff_profiles').select('id, user_id').eq('id', staffId).maybeSingle();
+  if (!profile) {
+    const err = new Error('Staff profile not found.');
+    err.status = 404;
+    throw err;
+  }
+  if (profile.user_id === userId) {
+    const { data: full, error } = await supabase.from('staff_profiles').select('*').eq('id', staffId).single();
+    if (error) throw new Error(error.message || 'Could not load staff profile.');
+    return rowToApp(full);
+  }
+
+  if (userId) {
+    const { data: clash } = await supabase.from('staff_profiles').select('id').eq('user_id', userId).maybeSingle();
+    if (clash && clash.id !== staffId) {
+      const err = new Error('This user account is already linked to another staff profile.');
+      err.status = 409;
+      throw err;
+    }
+  }
+
+  const { data, error } = await supabase
+    .from('staff_profiles')
+    .update({ user_id: userId || null, updated_at: new Date().toISOString() })
+    .eq('id', staffId)
+    .select('*')
+    .single();
+  if (error) throw new Error(error.message || 'Could not link staff profile.');
   return rowToApp(data);
 }
 

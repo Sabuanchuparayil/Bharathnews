@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import {
   TrendingUp, Users, Rss, Send, AlertTriangle, ArrowUpRight,
-  Newspaper, Clock, CheckCircle, XCircle, Copy,
+  Newspaper, Clock, CheckCircle, XCircle, Copy, Bot,
 } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import { adminFetch, getAdminStats } from '../services/admin';
@@ -90,11 +90,65 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
+function CoworkCard({ cowork, ready }) {
+  if (!ready) return (
+    <SectionCard title="Cowork Activity" icon={Bot} className="mb-6">
+      <div className="flex items-center justify-center py-4"><Skeleton className="h-16 w-full" /></div>
+    </SectionCard>
+  );
+  if (!cowork) return null;
+
+  const { lastReceived, today, week } = cowork;
+  const sinceHours = lastReceived ? Math.round((Date.now() - new Date(lastReceived).getTime()) / 3600000) : null;
+  const stale = sinceHours !== null && sinceHours > 6;
+
+  return (
+    <SectionCard
+      title="Cowork Activity"
+      icon={Bot}
+      className="mb-6"
+      action={
+        <Link href="/desk/review" className="text-xs font-medium text-brand-600 hover:text-brand-700 flex items-center gap-1">
+          Review queue <ArrowUpRight className="w-3 h-3" />
+        </Link>
+      }
+    >
+      <div className="flex flex-wrap gap-6">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Last received</p>
+          <p className={`text-sm font-medium ${stale ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>
+            {sinceHours !== null ? (sinceHours === 0 ? 'Less than 1 hour ago' : `${sinceHours}h ago`) : 'No data'}
+          </p>
+          {stale && <p className="text-[10px] text-red-500 mt-0.5">No content received in {sinceHours}+ hours</p>}
+        </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Today</p>
+          <p className="text-sm tabular-nums">
+            <span className="font-bold text-gray-900 dark:text-white">{today?.articles ?? 0}</span> articles
+            {today?.errors > 0 && <span className="text-red-500 ml-1">({today.errors} errors)</span>}
+            <span className="text-gray-400 ml-1">· {today?.batches ?? 0} batches</span>
+          </p>
+        </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">This week</p>
+          <p className="text-sm tabular-nums">
+            <span className="font-bold text-gray-900 dark:text-white">{week?.articles ?? 0}</span> articles
+            {week?.errors > 0 && <span className="text-red-500 ml-1">({week.errors} errors)</span>}
+            <span className="text-gray-400 ml-1">· {week?.batches ?? 0} batches</span>
+          </p>
+        </div>
+      </div>
+    </SectionCard>
+  );
+}
+
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
   const [pipeline, setPipeline] = useState(null);
+  const [cowork, setCowork] = useState(null);
   const [statsReady, setStatsReady] = useState(false);
   const [pipelineReady, setPipelineReady] = useState(false);
+  const [coworkReady, setCoworkReady] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -107,6 +161,11 @@ const AdminDashboard = () => {
       .then(data => { if (!cancelled) setPipeline(data); })
       .catch(() => { if (!cancelled) setPipeline(null); })
       .finally(() => { if (!cancelled) setPipelineReady(true); });
+
+    adminFetch('/api/admin/cowork')
+      .then(data => { if (!cancelled) setCowork(data); })
+      .catch(() => { if (!cancelled) setCowork(null); })
+      .finally(() => { if (!cancelled) setCoworkReady(true); });
 
     return () => { cancelled = true; };
   }, []);
@@ -210,6 +269,9 @@ const AdminDashboard = () => {
           )}
         </SectionCard>
       </div>
+
+      {/* Cowork activity */}
+      <CoworkCard cowork={cowork} ready={coworkReady} />
 
       {/* Recent articles + Language chart */}
       <div className="grid lg:grid-cols-5 gap-4">

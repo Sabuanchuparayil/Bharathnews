@@ -31,6 +31,8 @@ export async function GET(request) {
     const articles = await listEditorialArticles({
       status: view === 'mine' ? 'all' : status,
       mine: view === 'mine' ? auth.uid : null,
+      assignedTo: view === 'assigned' ? auth.uid : null,
+      unassigned: view === 'unassigned',
     });
     return NextResponse.json({ articles, role: auth.role });
   } catch (err) {

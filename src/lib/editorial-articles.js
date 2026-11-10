@@ -7,6 +7,7 @@ import { resolveStaffAuthor } from '@/lib/staff-profiles';
 const OPTIONAL_COLUMNS = [
   'is_ai_assisted', 'editor_notes', 'revision_count', 'scheduled_at', 'submitted_by',
   'image_credit', 'author_photo_url', 'author_title',
+  'assigned_to', 'assigned_at',
 ];
 
 const CATEGORIES = new Set([
@@ -151,11 +152,24 @@ async function writeRow(supabase, mode, payload, id) {
   throw new Error('Could not save the article.');
 }
 
-export async function createEditorialArticle(input, editor, { publishNow = false } = {}) {
+export async function createEditorialArticle(input, editor, { publishNow = false, autoAssign = false } = {}) {
   const supabase = getSupabaseAdmin();
   const resolved = await withResolvedStaffAuthor(input);
   const slug = await uniqueSlug(supabase, resolved.title);
   const now = new Date().toISOString();
+
+  // Auto-assign to an editor based on category + topic mapping.
+  let assignedTo = null;
+  let assignedAt = null;
+  if (!publishNow && autoAssign) {
+    try {
+      assignedTo = await resolveAssignee(resolved.category);
+      if (assignedTo) assignedAt = now;
+    } catch {
+      // Assignment is best-effort; don't block the draft.
+    }
+  }
+
   const data = await writeRow(supabase, 'insert', {
     title: resolved.title,
     slug,
@@ -179,6 +193,8 @@ export async function createEditorialArticle(input, editor, { publishNow = false
     revision_count: 0,
     scheduled_at: resolved.scheduledAt,
     submitted_by: editor.uid,
+    assigned_to: assignedTo,
+    assigned_at: assignedAt,
     translations: translationMap(resolved.language, resolved.translation),
     views: 0,
     likes: 0,
@@ -234,12 +250,14 @@ export async function updateEditorialArticle(id, input) {
   return rowToApp(data);
 }
 
-export async function listEditorialArticles({ status = 'draft', mine = null, limit = 40 } = {}) {
+export async function listEditorialArticles({ status = 'draft', mine = null, assignedTo = null, unassigned = false, limit = 40 } = {}) {
   const supabase = getSupabaseAdmin();
   let query = supabase.from('articles').select('*').eq('source', 'Bharath News Editorial').order('created_at', { ascending: false }).limit(limit);
   if (status === 'queue') query = query.in('editorial_status', ['draft', 'needs_revision']);
   else if (status !== 'all') query = query.eq('editorial_status', status);
   if (mine) query = query.eq('submitted_by', mine);
+  if (assignedTo) query = query.eq('assigned_to', assignedTo);
+  if (unassigned) query = query.is('assigned_to', null);
   const { data, error } = await query;
   if (error) throw error;
   return rowsToApp(data || []);
@@ -310,6 +328,65 @@ export async function publishDueDrafts() {
   return published;
 }
 
+// ── Content assignment ──
+
+/**
+ * Find the least-loaded editor whose assigned topics include this category.
+ * Drafts with no matching editor stay unassigned.
+ */
+export async function resolveAssignee(category) {
+  const supabase = getSupabaseAdmin();
+  const { data: editors, error } = await supabase
+    .from('staff_profiles')
+    .select('user_id, assigned_topics')
+    .eq('is_active', true)
+    .not('user_id', 'is', null);
+  if (error || !editors?.length) return null;
+
+  // Filter empty topic lists in JS. PostgREST array equality filters do not reliably match TEXT[].
+  const withTopics = editors.filter(editor => Array.isArray(editor.assigned_topics) && editor.assigned_topics.length > 0);
+  const matching = withTopics.filter(editor => editor.assigned_topics.includes(category));
+  if (!matching.length) return null;
+  const pool = matching;
+
+  // Round-robin: pick the editor with the fewest unfinished assignments.
+  const userIds = pool.map(e => e.user_id);
+  const { data: counts } = await supabase
+    .from('articles')
+    .select('assigned_to')
+    .in('assigned_to', userIds)
+    .in('editorial_status', ['draft', 'needs_revision']);
+
+  const load = new Map(userIds.map(id => [id, 0]));
+  for (const row of counts || []) {
+    if (row.assigned_to) load.set(row.assigned_to, (load.get(row.assigned_to) || 0) + 1);
+  }
+
+  let best = userIds[0];
+  let min = load.get(best) ?? 0;
+  for (const uid of userIds) {
+    const n = load.get(uid) ?? 0;
+    if (n < min) { best = uid; min = n; }
+  }
+  return best;
+}
+
+export async function assignArticle(articleId, userId) {
+  const supabase = getSupabaseAdmin();
+  const now = userId ? new Date().toISOString() : null;
+  const { data, error } = await supabase
+    .from('articles')
+    .update({ assigned_to: userId || null, assigned_at: now })
+    .eq('id', articleId)
+    .select('*')
+    .single();
+  if (error) {
+    if (/assigned_to|assigned_at/.test(error.message || '')) return null;
+    throw new Error(error.message || 'Could not assign article.');
+  }
+  return rowToApp(data);
+}
+
 export async function editorialStats() {
   const supabase = getSupabaseAdmin();
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -322,5 +399,45 @@ export async function editorialStats() {
     queue: queue.count || 0,
     publishedWeek: publishedWeek.count || 0,
     recent: rowsToApp(recent.data || []),
+  };
+}
+
+// ── Cowork ingest logging ──
+
+export async function logCoworkIngest({ articleCount, errorCount, source = 'cowork', details = {} }) {
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase.from('cowork_ingest_log').insert({
+    article_count: articleCount,
+    error_count: errorCount,
+    source,
+    details,
+  });
+  if (error) console.error('cowork_ingest_log:', error.message);
+}
+
+export async function getCoworkIngestActivity() {
+  const supabase = getSupabaseAdmin();
+  const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  const [recent, day, week] = await Promise.all([
+    supabase.from('cowork_ingest_log').select('*').order('received_at', { ascending: false }).limit(5),
+    supabase.from('cowork_ingest_log').select('article_count, error_count').gte('received_at', since24h),
+    supabase.from('cowork_ingest_log').select('article_count, error_count').gte('received_at', since7d),
+  ]);
+
+  const failed = [recent.error, day.error, week.error].find(Boolean);
+  if (failed) throw new Error(failed.message || 'Could not load cowork activity.');
+
+  const sumField = (rows, field) => (rows || []).reduce((acc, r) => acc + (r[field] || 0), 0);
+
+  const recentEntries = rowsToApp(recent.data || []);
+  const lastReceived = recent.data?.[0]?.received_at || null;
+
+  return {
+    lastReceived,
+    today: { articles: sumField(day.data, 'article_count'), errors: sumField(day.data, 'error_count'), batches: (day.data || []).length },
+    week: { articles: sumField(week.data, 'article_count'), errors: sumField(week.data, 'error_count'), batches: (week.data || []).length },
+    recent: recentEntries,
   };
 }
