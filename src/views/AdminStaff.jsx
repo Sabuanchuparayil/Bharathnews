@@ -42,6 +42,48 @@ function generatePassword(length = 12) {
   return Array.from(arr, b => chars[b % chars.length]).join('');
 }
 
+function RoleTitleField({ value, onChange }) {
+  const known = ROLE_TITLES.includes(value);
+  const [creating, setCreating] = useState(Boolean(value) && !known);
+  const showCustom = creating || (Boolean(value) && !known);
+
+  useEffect(() => {
+    if (known) setCreating(false);
+  }, [known]);
+
+  return (
+    <div>
+      <label className="block text-sm font-medium mb-1">Editorial role</label>
+      <select
+        value={showCustom ? '__new__' : (value || 'Reporter')}
+        onChange={e => {
+          if (e.target.value === '__new__') {
+            setCreating(true);
+            onChange('');
+            return;
+          }
+          setCreating(false);
+          onChange(e.target.value);
+        }}
+        className={inputClass}
+      >
+        {ROLE_TITLES.map(title => <option key={title} value={title}>{title}</option>)}
+        <option value="__new__">Create new role…</option>
+      </select>
+      {showCustom && (
+        <input
+          required
+          maxLength={80}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder="Type the new role, e.g. Deputy Editor"
+          className={`${inputClass} mt-2`}
+        />
+      )}
+    </div>
+  );
+}
+
 function TopicChips({ selected, onChange }) {
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -446,12 +488,7 @@ const AdminStaff = () => {
                       </select>
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Editorial title</label>
-                    <select value={inviteForm.title} onChange={e => setInv('title', e.target.value)} className={inputClass}>
-                      {ROLE_TITLES.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                  </div>
+                  <RoleTitleField value={inviteForm.title} onChange={value => setInv('title', value)} />
                   <div>
                     <label className="block text-sm font-medium mb-1.5">Assigned topics</label>
                     <p className="text-xs text-gray-500 mb-2">Cowork content in these categories will be routed to this person for review.</p>
@@ -628,13 +665,7 @@ function ProfileForm({ form, set, onSubmit, saving, uploading, onUpload, onCance
         <label className="block text-sm font-medium mb-1">Slug</label>
         <input value={form.slug} onChange={e => set('slug', e.target.value)} placeholder="auto from name" className={inputClass} />
       </div>
-      <div>
-        <label className="block text-sm font-medium mb-1">Role title</label>
-        <select value={ROLE_TITLES.includes(form.title) ? form.title : ''} onChange={e => set('title', e.target.value)} className={inputClass}>
-          {ROLE_TITLES.map(t => <option key={t} value={t}>{t}</option>)}
-          {!ROLE_TITLES.includes(form.title) && form.title && <option value={form.title}>{form.title}</option>}
-        </select>
-      </div>
+      <RoleTitleField value={form.title} onChange={value => set('title', value)} />
       <div>
         <label className="block text-sm font-medium mb-1">Email (for contact)</label>
         <input type="email" value={form.email} onChange={e => set('email', e.target.value)} className={inputClass} />

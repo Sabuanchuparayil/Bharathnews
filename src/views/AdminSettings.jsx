@@ -649,7 +649,7 @@ const AdminSettings = () => {
                   placeholder="Optional"
                 />
               </Field>
-              <Field label="Role">
+              <Field label="Access role" hint="Job titles such as Editor or Correspondent are created on Editorial staff.">
                 <select
                   value={newUser.role}
                   onChange={e => setNewUser(prev => ({ ...prev, role: e.target.value }))}
@@ -659,6 +659,7 @@ const AdminSettings = () => {
                     <option key={r} value={r}>{ROLE_LABELS[r] || r}</option>
                   ))}
                 </select>
+                <Link href="/admin/staff" className="inline-block text-xs text-brand-600 mt-2">Create a new editorial role</Link>
               </Field>
               <div className="sm:col-span-2">
                 <button
