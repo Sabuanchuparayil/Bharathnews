@@ -81,6 +81,9 @@ const AdminDashboard = () => {
             <Link href="/desk" className="btn-secondary text-sm px-4 py-2 rounded-xl flex items-center gap-2">
               Newsroom
             </Link>
+            <Link href="/admin/staff" className="btn-secondary text-sm px-4 py-2 rounded-xl flex items-center gap-2">
+              <Users className="w-4 h-4" /> Staff
+            </Link>
             <Link href="/admin/moderation" className="btn-secondary text-sm px-4 py-2 rounded-xl flex items-center gap-2">
               <Shield className="w-4 h-4" /> Moderation
             </Link>

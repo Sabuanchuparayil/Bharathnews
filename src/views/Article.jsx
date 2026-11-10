@@ -212,11 +212,31 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
               </p>
             )}
             <div className="flex items-center flex-wrap gap-x-4 gap-y-2 text-sm text-gray-500 dark:text-gray-400">
-              {article.authorSlug ? (
-                <Link href={`/@${article.authorSlug}`} className="font-medium text-gray-700 dark:text-gray-300 hover:text-brand-700">{article.author}</Link>
-              ) : (
-                <span className="font-medium text-gray-700 dark:text-gray-300">{article.author}</span>
-              )}
+              {(() => {
+                const isEditorial = article.source === 'Bharath News Editorial';
+                const hasStaffByline = Boolean(article.authorPhotoUrl || article.authorTitle);
+                const authorHref = article.authorSlug
+                  ? (isEditorial || hasStaffByline
+                    ? `/authors/${article.authorSlug}`
+                    : `/@${article.authorSlug}`)
+                  : null;
+                const byline = (
+                  <span className="inline-flex items-center gap-2 min-w-0">
+                    {article.authorPhotoUrl ? (
+                      <img src={article.authorPhotoUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
+                    ) : null}
+                    <span className="min-w-0">
+                      <span className="block font-medium text-gray-700 dark:text-gray-300 truncate">{article.author}</span>
+                      {article.authorTitle ? (
+                        <span className="block text-xs text-gray-500 dark:text-gray-400 truncate">{article.authorTitle}</span>
+                      ) : null}
+                    </span>
+                  </span>
+                );
+                return authorHref ? (
+                  <Link href={authorHref} className="hover:text-brand-700">{byline}</Link>
+                ) : byline;
+              })()}
               {article.isAiAssisted && (
                 <Link href="/about/ai-policy" className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200">AI-assisted</Link>
               )}

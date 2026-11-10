@@ -32,6 +32,7 @@ curl -X POST https://www.thebharathnews.com/api/desk/ingest \
     "category": "gcc",
     "language": "en",
     "author": "Bharath News Desk",
+    "authorSlug": "bharath-news-desk",
     "tags": ["uae", "visa", "nri"],
     "imageUrl": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=450&fit=crop&crop=center&editorial=1",
     "imageCredit": "Photo: Unsplash",

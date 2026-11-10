@@ -86,6 +86,7 @@ const Footer = () => {
             <ul className="flex flex-wrap gap-x-4 gap-y-1.5 sm:flex-col sm:gap-y-2.5">
               {[
                 ['About', '/about'],
+                ['Editorial Team', '/team'],
                 ['Privacy', '/privacy'],
                 ['Terms', '/terms'],
                 ['Editorial Policy', '/editorial'],

@@ -7,6 +7,7 @@ import { toast } from 'react-toastify';
 import Layout from '../components/Layout';
 import DeskGate from '../components/DeskGate';
 import CoverImagePicker from '../components/CoverImagePicker';
+import StaffAuthorPicker from '../components/StaffAuthorPicker';
 import { useAuth } from '../context/AuthContext';
 import { CATEGORIES } from '../config/feeds.config';
 import { deskFetch } from '@/lib/desk-client';
@@ -19,7 +20,9 @@ const EMPTY = {
   category: 'india',
   language: 'en',
   author: 'Bharath News Desk',
-  authorSlug: '',
+  authorSlug: 'bharath-news-desk',
+  authorPhotoUrl: '',
+  authorTitle: 'Newsroom',
   tags: '',
   imageUrl: '',
   imageCredit: '',
@@ -41,7 +44,7 @@ function toLocalInput(iso) {
 }
 
 const DeskCompose = () => {
-  const { userProfile, isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
   const searchParams = useSearchParams();
   const draftId = searchParams.get('id') || '';
   const [form, setForm] = useState(EMPTY);
@@ -62,7 +65,9 @@ const DeskCompose = () => {
           category: article.category || 'india',
           language: article.language === 'ml' ? 'ml' : 'en',
           author: article.author || 'Bharath News Desk',
-          authorSlug: article.authorSlug || '',
+          authorSlug: article.authorSlug || 'bharath-news-desk',
+          authorPhotoUrl: article.authorPhotoUrl || '',
+          authorTitle: article.authorTitle || '',
           tags: (article.topics || []).join(', '),
           imageUrl: article.imageUrl && !isStoredPlaceholderImage(article.imageUrl) ? article.imageUrl : '',
           imageCredit: article.imageCredit || '',
@@ -84,6 +89,8 @@ const DeskCompose = () => {
     language: form.language,
     author: form.author,
     authorSlug: form.authorSlug,
+    authorPhotoUrl: form.authorPhotoUrl,
+    authorTitle: form.authorTitle,
     tags: form.tags,
     imageUrl: form.imageUrl,
     imageCredit: form.imageCredit,
@@ -168,22 +175,15 @@ const DeskCompose = () => {
             </label>
           </div>
           <div className="rounded-2xl border border-stone-200 dark:border-white/10 p-4 space-y-3">
-            <h2 className="font-display font-bold">Author</h2>
-            <div className="flex flex-wrap gap-2">
-              <button type="button" className="btn-secondary px-3 py-1.5 rounded-lg text-sm" onClick={() => set('author', 'Bharath News Desk')}>Bharath News Desk</button>
-              {userProfile?.displayName && (
-                <button type="button" className="btn-secondary px-3 py-1.5 rounded-lg text-sm" onClick={() => set('author', userProfile.displayName)}>{userProfile.displayName}</button>
-              )}
-            </div>
-            <input value={form.author} onChange={e => set('author', e.target.value)} className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
-            <label className="block text-sm">
-              Creator profile slug, if this byline should link to one
-              <input value={form.authorSlug} onChange={e => set('authorSlug', e.target.value)} placeholder="optional" className="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
-            </label>
+            <StaffAuthorPicker
+              value={form}
+              onChange={next => setForm(prev => ({ ...prev, ...next }))}
+            />
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={form.isAiAssisted} onChange={e => set('isAiAssisted', e.target.checked)} />
               Mark as AI-assisted
             </label>
+            <Link href="/admin/staff" className="inline-block text-xs text-brand-700 dark:text-brand-300">Manage editorial staff</Link>
           </div>
           <div className="rounded-2xl border border-stone-200 dark:border-white/10 p-4 space-y-3">
             <h2 className="font-display font-bold">Cover image</h2>

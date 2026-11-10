@@ -27,6 +27,7 @@ const DeskHome = () => {
         <div className="mt-6 flex flex-wrap gap-3">
           <Link href="/desk/compose" className="btn-primary px-5 py-2.5 rounded-xl">Compose</Link>
           <Link href="/desk/review" className="btn-secondary px-5 py-2.5 rounded-xl">Review queue</Link>
+          <Link href="/admin/staff" className="btn-secondary px-5 py-2.5 rounded-xl">Staff</Link>
           <Link href="/editorial" className="px-5 py-2.5 text-sm text-brand-700 dark:text-brand-300">Editorial policy</Link>
         </div>
         {error && <p className="mt-6 text-sm text-red-600">{error}</p>}

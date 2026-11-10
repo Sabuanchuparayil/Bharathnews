@@ -2,8 +2,12 @@ import { getSupabaseAdmin } from './supabase-server';
 import { slugify } from '@/utils/slugify';
 import { rowToApp, rowsToApp } from '@/lib/db-mapper';
 import { onArticlePublished } from '@/lib/on-article-published';
+import { resolveStaffAuthor } from '@/lib/staff-profiles';
 
-const OPTIONAL_COLUMNS = ['is_ai_assisted', 'editor_notes', 'revision_count', 'scheduled_at', 'submitted_by', 'image_credit'];
+const OPTIONAL_COLUMNS = [
+  'is_ai_assisted', 'editor_notes', 'revision_count', 'scheduled_at', 'submitted_by',
+  'image_credit', 'author_photo_url', 'author_title',
+];
 
 const CATEGORIES = new Set([
   'india', 'gcc', 'business', 'technology', 'sports', 'entertainment', 'health',
@@ -27,6 +31,8 @@ export function validateEditorialInput(body, { partial = false } = {}) {
   const language = body.language === 'ml' ? 'ml' : 'en';
   const author = cleanText(body.author, 80);
   const authorSlug = slugify(body.authorSlug || '') || null;
+  const authorPhotoUrl = cleanText(body.authorPhotoUrl || body.author_photo_url, 500);
+  const authorTitle = cleanText(body.authorTitle || body.author_title, 80);
   const imageUrl = cleanText(body.imageUrl, 500);
   const imageCredit = cleanText(body.imageCredit, 180);
   const other = body.translation && typeof body.translation === 'object' ? body.translation : null;
@@ -68,6 +74,8 @@ export function validateEditorialInput(body, { partial = false } = {}) {
       language,
       author,
       authorSlug,
+      authorPhotoUrl: authorPhotoUrl && /^https?:\/\//i.test(authorPhotoUrl) ? authorPhotoUrl : '',
+      authorTitle,
       imageUrl,
       imageCredit,
       tags: asTags(body.tags),
@@ -75,6 +83,20 @@ export function validateEditorialInput(body, { partial = false } = {}) {
       scheduledAt,
       translation,
     },
+  };
+}
+
+async function withResolvedStaffAuthor(input) {
+  const resolved = await resolveStaffAuthor({
+    author: input.author,
+    authorSlug: input.authorSlug,
+  });
+  return {
+    ...input,
+    author: resolved.author || input.author,
+    authorSlug: resolved.authorSlug || input.authorSlug,
+    authorPhotoUrl: input.authorPhotoUrl || resolved.authorPhotoUrl || '',
+    authorTitle: input.authorTitle || resolved.authorTitle || '',
   };
 }
 
@@ -131,30 +153,33 @@ async function writeRow(supabase, mode, payload, id) {
 
 export async function createEditorialArticle(input, editor, { publishNow = false } = {}) {
   const supabase = getSupabaseAdmin();
-  const slug = await uniqueSlug(supabase, input.title);
+  const resolved = await withResolvedStaffAuthor(input);
+  const slug = await uniqueSlug(supabase, resolved.title);
   const now = new Date().toISOString();
   const data = await writeRow(supabase, 'insert', {
-    title: input.title,
+    title: resolved.title,
     slug,
-    summary: input.summary || input.fullContent.slice(0, 220),
-    full_content: input.fullContent,
-    image_url: input.imageUrl || '',
-    image_credit: input.imageCredit || '',
-    category: input.category,
+    summary: resolved.summary || resolved.fullContent.slice(0, 220),
+    full_content: resolved.fullContent,
+    image_url: resolved.imageUrl || '',
+    image_credit: resolved.imageCredit || '',
+    category: resolved.category,
     source: 'Bharath News Editorial',
-    author: input.author,
-    author_slug: input.authorSlug,
-    language: input.language,
-    topics: input.tags,
+    author: resolved.author,
+    author_slug: resolved.authorSlug,
+    author_photo_url: resolved.authorPhotoUrl || '',
+    author_title: resolved.authorTitle || '',
+    language: resolved.language,
+    topics: resolved.tags,
     editorial_status: publishNow ? 'published' : 'draft',
     published_at: publishNow ? now : null,
     is_citizen_content: false,
-    is_ai_assisted: input.isAiAssisted,
+    is_ai_assisted: resolved.isAiAssisted,
     editor_notes: '',
     revision_count: 0,
-    scheduled_at: input.scheduledAt,
+    scheduled_at: resolved.scheduledAt,
     submitted_by: editor.uid,
-    translations: translationMap(input.language, input.translation),
+    translations: translationMap(resolved.language, resolved.translation),
     views: 0,
     likes: 0,
     shares: 0,
@@ -181,25 +206,28 @@ export async function updateEditorialArticle(id, input) {
     throw err;
   }
 
-  const slug = input.title ? await uniqueSlug(supabase, input.title, id) : existing.slug;
+  const resolved = await withResolvedStaffAuthor(input);
+  const slug = resolved.title ? await uniqueSlug(supabase, resolved.title, id) : existing.slug;
   const translations = {
     ...(existing.translations || {}),
-    ...translationMap(input.language || existing.language, input.translation),
+    ...translationMap(resolved.language || existing.language, resolved.translation),
   };
   const data = await writeRow(supabase, 'update', {
-    title: input.title,
+    title: resolved.title,
     slug,
-    summary: input.summary || input.fullContent.slice(0, 220),
-    full_content: input.fullContent,
-    image_url: input.imageUrl || '',
-    image_credit: input.imageCredit || '',
-    category: input.category,
-    author: input.author,
-    author_slug: input.authorSlug,
-    language: input.language,
-    topics: input.tags,
-    is_ai_assisted: input.isAiAssisted,
-    scheduled_at: input.scheduledAt,
+    summary: resolved.summary || resolved.fullContent.slice(0, 220),
+    full_content: resolved.fullContent,
+    image_url: resolved.imageUrl || '',
+    image_credit: resolved.imageCredit || '',
+    category: resolved.category,
+    author: resolved.author,
+    author_slug: resolved.authorSlug,
+    author_photo_url: resolved.authorPhotoUrl || '',
+    author_title: resolved.authorTitle || '',
+    language: resolved.language,
+    topics: resolved.tags,
+    is_ai_assisted: resolved.isAiAssisted,
+    scheduled_at: resolved.scheduledAt,
     translations,
     revision_count: (existing.revision_count || 0) + 1,
   }, id);

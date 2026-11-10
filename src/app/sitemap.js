@@ -29,6 +29,7 @@ export default async function sitemap() {
     { url: `${SITE_URL}/privacy`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.3 },
     { url: `${SITE_URL}/terms`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.3 },
     { url: `${SITE_URL}/editorial`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.3 },
+    { url: `${SITE_URL}/team`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
     { url: `${SITE_URL}/contact`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.4 },
     { url: `${SITE_URL}/money/gold-rate-today`, lastModified: new Date(), changeFrequency: 'hourly', priority: 0.9 },
     { url: `${SITE_URL}/guides`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.8 },
@@ -141,6 +142,26 @@ export default async function sitemap() {
     console.error('[sitemap] Failed to fetch creator profiles:', err.message);
   }
 
+  let staffPages = [];
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data } = await supabase
+      .from('staff_profiles')
+      .select('slug, updated_at')
+      .eq('is_active', true)
+      .limit(200);
+    staffPages = (data || [])
+      .filter(row => row.slug)
+      .map(row => ({
+        url: `${SITE_URL}/authors/${row.slug}`,
+        lastModified: row.updated_at ? new Date(row.updated_at) : new Date(),
+        changeFrequency: 'weekly',
+        priority: 0.55,
+      }));
+  } catch (err) {
+    console.error('[sitemap] Failed to fetch staff profiles:', err.message);
+  }
+
   const guidePages = GUIDES.map(guide => ({
     url: `${SITE_URL}/guides/${guide.slug}`,
     lastModified: new Date(),
@@ -157,6 +178,7 @@ export default async function sitemap() {
     ...guidePages,
     ...pravasiPages,
     ...creatorPages,
+    ...staffPages,
     ...articlePages,
   ];
 }
