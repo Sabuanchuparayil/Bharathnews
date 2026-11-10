@@ -18,8 +18,9 @@ import {
 import { STATUS_LABELS } from '@/lib/account-status';
 import { setAuthCookies } from '../lib/auth-cookies';
 import { mergeSiteSettings } from '../lib/site-settings';
+import { ALLOWED_ROLES, ROLE_LABELS } from '@/lib/roles';
 
-const ROLES = ['reader', 'contributor', 'vlogger', 'content_writer', 'admin'];
+const ROLES = ALLOWED_ROLES;
 const LANG_OPTIONS = ['en', 'ml'];
 const TABS = [
   { id: 'general', label: 'General', icon: Settings2 },
@@ -27,14 +28,6 @@ const TABS = [
   { id: 'sources', label: 'Sources', icon: Rss },
   { id: 'users', label: 'Users & RBAC', icon: Users },
 ];
-
-const ROLE_LABELS = {
-  reader: 'Reader',
-  contributor: 'Contributor',
-  vlogger: 'Vlogger',
-  content_writer: 'Content Writer',
-  admin: 'Admin',
-};
 
 const STATUS_BADGE = {
   active: 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-300',
@@ -414,6 +407,22 @@ const AdminSettings = () => {
                 </Field>
                 <Field label="Footer text">
                   <input type="text" value={settings.footerText || ''} onChange={e => setSettings({ ...settings, footerText: e.target.value })} className={inputClass} />
+                </Field>
+                <Field label="Search suggestions" hint="Comma-separated terms shown in the header search box.">
+                  <input
+                    type="text"
+                    value={(settings.searchSuggestions || []).join(', ')}
+                    onChange={e => {
+                      const parts = e.target.value.split(',');
+                      setSettings({
+                        ...settings,
+                        searchSuggestions: parts.map((term, index) => (
+                          index === parts.length - 1 ? term.replace(/^\s+/, '') : term.trim()
+                        )),
+                      });
+                    }}
+                    className={inputClass}
+                  />
                 </Field>
               </div>
             </div>

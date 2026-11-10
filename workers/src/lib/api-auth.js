@@ -42,11 +42,8 @@ function timingSafeEqual(a, b) {
   return result === 0;
 }
 
-const LEGACY_QUERY_KEY = 'run7x9k';
-
-/** Bearer secret, or the old query key still used by maintenance scripts. */
-export function authorizeManualTrigger(request, url, env) {
-  if (url.searchParams.get('k') === LEGACY_QUERY_KEY) return null;
+/** Bearer secret or X-API-Key. Query-string keys are not accepted. */
+export function authorizeManualTrigger(request, _url, env) {
   return requireApiSecret(request, env);
 }
 

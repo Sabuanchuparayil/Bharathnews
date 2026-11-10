@@ -7,6 +7,7 @@ export const DEFAULT_SITE_SETTINGS = {
   tagline: 'Your window to India from the Gulf',
   headerText: 'The Bharath News',
   footerText: 'Your window to India from the Gulf',
+  searchSuggestions: ['India GCC Trade', 'Dubai Jobs', 'Kerala Floods', 'Tech Layoffs', 'Cricket'],
   integrations: {
     telegram: {
       enabled: true,
@@ -76,6 +77,9 @@ function deepMerge(base, patch) {
 export function mergeSiteSettings(partial = {}) {
   const merged = deepMerge(DEFAULT_SITE_SETTINGS, partial);
   merged.targetLanguages = parseTargetLanguages(merged.targetLanguages);
+  merged.searchSuggestions = (Array.isArray(merged.searchSuggestions) ? merged.searchSuggestions : [])
+    .map(term => String(term || '').trim())
+    .filter(Boolean);
   return merged;
 }
 

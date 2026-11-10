@@ -1,9 +1,11 @@
 // RSS feed registry — see shared/rss-feeds.mjs for canonical list with subcategory tags
 import { RSS_FEEDS, GOOGLE_NEWS_TOPIC_FEEDS } from '../../shared/rss-feeds.mjs';
+import { CREATOR_ROLES as CREATOR_ROLE_IDS } from '../lib/roles.js';
 
 export { RSS_FEEDS, GOOGLE_NEWS_TOPIC_FEEDS };
 
 // Channel IDs verified against live YouTube RSS feeds (2026-06-12).
+/** Bootstrap seed for first-time source import. Live ingest reads enabled YouTube sources from the database. */
 export const YOUTUBE_CHANNELS = [
   // Malayalam
   { channelId: 'UCf8w5m0YsRa8MHQ5bwSGmbw', name: 'Asianet News', category: 'india', language: 'ml' },
@@ -84,4 +86,4 @@ export const CREATOR_CONTENT_TYPES = [
 export const CREATOR_ROLES = [
   { id: 'contributor', name: 'Citizen Journalist', description: 'Submit articles, stories, poems, and journals' },
   { id: 'vlogger', name: 'Community Vlogger', description: 'Share video content from YouTube or Instagram' },
-];
+].filter(role => CREATOR_ROLE_IDS.includes(role.id));

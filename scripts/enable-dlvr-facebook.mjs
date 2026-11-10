@@ -2,10 +2,10 @@
  * Enable dlvr.it mode for Facebook — disable Worker Graph API, skip queued FB jobs.
  * Usage: npm run facebook:dlvr-mode
  */
-const WORKER = process.env.NEXT_PUBLIC_WORKER_URL || 'https://bharathnews-api.bharathnewsweb.workers.dev';
+import { workerFetch } from './worker-fetch.mjs';
 
 async function main() {
-  const res = await fetch(`${WORKER}/api/facebook-dlvr-mode?k=run7x9k`);
+  const res = await workerFetch('/api/facebook-dlvr-mode');
   const data = await res.json();
   console.log(JSON.stringify(data, null, 2));
   if (!data.ok) process.exit(1);

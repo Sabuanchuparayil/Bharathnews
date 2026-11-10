@@ -1,20 +1,20 @@
 #!/usr/bin/env node
 /** Ingest + publish Malayalam articles (OG image at publish) for dlvr.it Facebook feed. */
-const WORKER = process.env.WORKER_URL || 'https://bharathnews-api.bharathnewsweb.workers.dev';
+import { workerFetch } from './worker-fetch.mjs';
 
 async function run() {
   const rounds = parseInt(process.argv[2], 10) || 5;
   let totalIngested = 0;
   let totalPublished = 0;
 
-  const rq = await fetch(`${WORKER}/api/publish-malayalam?k=run7x9k&requeue=1`);
+  const rq = await workerFetch('/api/publish-malayalam?requeue=1');
   const rqData = await rq.json();
   console.log(`Requeue: ${rqData.requeued || 0} → published ${rqData.published || 0}`);
   totalPublished += rqData.published || 0;
 
   for (let i = 0; i < rounds; i++) {
     const offset = i % 8;
-    const res = await fetch(`${WORKER}/api/ingest-lang?k=run7x9k&lang=ml&offset=${offset}`);
+    const res = await workerFetch(`/api/ingest-lang?lang=ml&offset=${offset}`);
     const data = await res.json();
     totalIngested += data.ingested || 0;
     totalPublished += data.published || 0;

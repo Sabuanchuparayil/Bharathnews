@@ -5,6 +5,7 @@ import YandexMetrika from '@/components/YandexMetrika';
 import { Amaranth, Manjari, JetBrains_Mono } from 'next/font/google';
 import { safeJsonLd } from '@/lib/metadata';
 import { SITE_URL } from '@/lib/site-url';
+import { mergeSiteSettings } from '@/lib/site-settings';
 
 const amaranth = Amaranth({
   weight: ['400', '700'],
@@ -200,13 +201,43 @@ const organizationJsonLd = {
     email: 'bharathnewsweb@gmail.com',
     availableLanguage: ['English', 'Malayalam'],
   },
-  sameAs: [
-    'https://t.me/TheBharathNews',
-    'https://www.facebook.com/TheBharathNewsIndia',
-  ],
+  sameAs: [],
 };
 
-export default function RootLayout({ children }) {
+function organizationSameAs(settings) {
+  const integrations = settings?.integrations || {};
+  return [
+    integrations.telegram?.channelUrl,
+    integrations.facebook?.pageUrl,
+    integrations.youtube?.channelUrl,
+    integrations.instagram?.profileUrl,
+  ].filter(url => typeof url === 'string' && url.startsWith('http'));
+}
+
+async function loadPublicSettings() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return mergeSiteSettings();
+  try {
+    const res = await fetch(`${url}/rest/v1/site_settings?key=eq.site&select=value`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+      next: { revalidate: 300 },
+    });
+    if (!res.ok) return mergeSiteSettings();
+    const rows = await res.json();
+    return mergeSiteSettings(rows?.[0]?.value || {});
+  } catch {
+    return mergeSiteSettings();
+  }
+}
+
+export default async function RootLayout({ children }) {
+  const settings = await loadPublicSettings();
+  const organizationLd = {
+    ...organizationJsonLd,
+    name: settings.siteName || organizationJsonLd.name,
+    sameAs: organizationSameAs(settings),
+  };
   return (
     <html lang="en" suppressHydrationWarning className={`${amaranth.variable} ${manjari.variable} ${jetbrainsMono.variable}`}>
       <head>
@@ -224,7 +255,7 @@ export default function RootLayout({ children }) {
         )}
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: safeJsonLd([websiteJsonLd, organizationJsonLd]) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLd([websiteJsonLd, organizationLd]) }}
         />
       </head>
       <body className="min-h-screen bg-surface-1 dark:bg-dark-surface-0 text-gray-900 dark:text-gray-50 transition-colors duration-300 font-body">

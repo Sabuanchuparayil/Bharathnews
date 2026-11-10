@@ -2,7 +2,7 @@
 /** Diagnose Malayalam/English social RSS feeds for dlvr.it → Facebook compatibility. */
 const DEBUG_LOG_URL = 'http://127.0.0.1:7274/ingest/d79347f0-a0aa-400f-b1f9-67a99a6beb00';
 const SESSION_ID = '41010d';
-const WORKER = process.env.WORKER_URL || 'https://bharathnews-api.bharathnewsweb.workers.dev';
+import { workerFetch } from './worker-fetch.mjs';
 
 // #region agent log
 function debugLog(hypothesisId, message, data, runId = 'fb-feed-check') {
@@ -93,7 +93,7 @@ async function main() {
 
   let pipeline = {};
   try {
-    const res = await fetch(`${WORKER}/api/pipeline-status?k=run7x9k`);
+    const res = await workerFetch('/api/pipeline-status');
     pipeline = await res.json();
     const social = pipeline.social || {};
     console.log('\nPipeline:', {

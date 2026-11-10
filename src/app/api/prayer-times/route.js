@@ -1,24 +1,13 @@
 import { NextResponse } from 'next/server';
+import { getPrayerCity } from '@/config/prayer-cities';
 
 export const revalidate = 3600;
-
-const CITIES = {
-  dubai: { city: 'Dubai', country: 'United Arab Emirates', label: 'Dubai' },
-  abudhabi: { city: 'Abu Dhabi', country: 'United Arab Emirates', label: 'Abu Dhabi' },
-  sharjah: { city: 'Sharjah', country: 'United Arab Emirates', label: 'Sharjah' },
-  riyadh: { city: 'Riyadh', country: 'Saudi Arabia', label: 'Riyadh' },
-  jeddah: { city: 'Jeddah', country: 'Saudi Arabia', label: 'Jeddah' },
-  doha: { city: 'Doha', country: 'Qatar', label: 'Doha' },
-  kuwait: { city: 'Kuwait City', country: 'Kuwait', label: 'Kuwait' },
-  manama: { city: 'Manama', country: 'Bahrain', label: 'Manama' },
-  muscat: { city: 'Muscat', country: 'Oman', label: 'Muscat' },
-};
 
 const PRAYERS = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
 
 export async function GET(request) {
   const requested = new URL(request.url).searchParams.get('city') || 'dubai';
-  const place = CITIES[requested];
+  const place = getPrayerCity(requested);
   if (!place) {
     return NextResponse.json({ error: 'Unknown city' }, { status: 400 });
   }

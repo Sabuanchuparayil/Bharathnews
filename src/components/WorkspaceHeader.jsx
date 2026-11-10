@@ -9,12 +9,18 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { WORKSPACES } from '../config/workspace-nav';
+import { useSiteSettings } from '../context/SiteSettingsContext';
 
 const iconButton = 'p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-surface-2 dark:hover:bg-dark-surface-2 hover:text-gray-900 dark:hover:text-white transition-colors';
 const menuItem = 'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-surface-2 dark:hover:bg-dark-surface-2';
 
 const WorkspaceHeader = ({ workspace, onOpenNav }) => {
   const { user, userProfile, isAdmin, logout } = useAuth();
+  const { siteName, headerText } = useSiteSettings();
+  const brandName = headerText || siteName || 'The Bharath News';
+  const brandParts = brandName.trim().split(/\s+/);
+  const brandTail = brandParts.length > 1 ? brandParts.pop() : '';
+  const brandLead = brandParts.join(' ');
   const { isDark, toggleTheme } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
@@ -40,7 +46,7 @@ const WorkspaceHeader = ({ workspace, onOpenNav }) => {
         <Link href={current.home} className="flex items-center gap-2.5 min-w-0">
           <img src="/logo-mark.png" alt="" width={32} height={32} className="w-8 h-8 rounded-lg flex-shrink-0" />
           <span className="hidden sm:inline font-display font-bold text-sm text-gray-900 dark:text-white whitespace-nowrap">
-            The Bharath <span className="text-brand-600 dark:text-brand-400">News</span>
+            {brandLead}{brandTail ? ' ' : ''}{brandTail && <span className="text-brand-600 dark:text-brand-400">{brandTail}</span>}
           </span>
           <span className="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md bg-brand-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300">
             {current.label}

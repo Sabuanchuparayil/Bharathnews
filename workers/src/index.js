@@ -163,7 +163,9 @@ export default {
       return new Response(JSON.stringify({ status: 'ok', setup, ...result }, null, 2), { headers: cors });
     }
 
-    if (url.pathname === '/api/distribution-setup' && url.searchParams.get('k') === 'run7x9k') {
+    if (url.pathname === '/api/distribution-setup') {
+      const authDenied = authorizeManualTrigger(request, url, env);
+      if (authDenied) return authDenied;
       const { checkDistributionSetup } = await import('./lib/distribution-jobs.js');
       const { checkFacebookToken } = await import('./lib/facebook.js');
       const setup = await checkDistributionSetup(env);
@@ -191,13 +193,17 @@ export default {
       }, null, 2), { headers: cors });
     }
 
-    if (url.pathname === '/api/facebook-dlvr-mode' && url.searchParams.get('k') === 'run7x9k') {
+    if (url.pathname === '/api/facebook-dlvr-mode') {
+      const authDenied = authorizeManualTrigger(request, url, env);
+      if (authDenied) return authDenied;
       const { enableDlvrItFacebookMode } = await import('./lib/distribution-jobs.js');
       const result = await enableDlvrItFacebookMode(env);
       return new Response(JSON.stringify({ status: 'ok', ...result }, null, 2), { headers: cors });
     }
 
-    if (url.pathname === '/api/facebook-graph-mode' && url.searchParams.get('k') === 'run7x9k') {
+    if (url.pathname === '/api/facebook-graph-mode') {
+      const authDenied = authorizeManualTrigger(request, url, env);
+      if (authDenied) return authDenied;
       const { enableFacebookGraphMode } = await import('./lib/distribution-jobs.js');
       const lang = url.searchParams.get('lang') || 'en';
       const result = await enableFacebookGraphMode(env, { postLanguage: lang });
@@ -221,7 +227,11 @@ export default {
       return new Response(JSON.stringify({ status: 'ok', ...result }), { headers: cors });
     }
 
-    if (url.pathname === '/api/fix-slugs' && (request.method === 'POST' || url.searchParams.get('k') === 'run7x9k')) {
+    if (url.pathname === '/api/fix-slugs') {
+      if (request.method !== 'POST') {
+        const authDenied = authorizeManualTrigger(request, url, env);
+        if (authDenied) return authDenied;
+      }
       let body = {};
       if (request.method === 'POST') {
         try { if (request.headers.get('content-length')) body = await request.json(); } catch { /* empty */ }
@@ -246,7 +256,9 @@ export default {
       return new Response(JSON.stringify({ status: 'ok', ...result }), { headers: cors });
     }
 
-    if (url.pathname === '/api/backlog-flush' && (request.method === 'POST' || url.searchParams.get('k') === 'run7x9k')) {
+    if (url.pathname === '/api/backlog-flush') {
+      const authDenied = authorizeManualTrigger(request, url, env);
+      if (authDenied) return authDenied;
       let body = {};
       if (request.method === 'POST') {
         try { if (request.headers.get('content-length')) body = await request.json(); } catch { /* empty */ }
@@ -270,7 +282,9 @@ export default {
       return new Response(JSON.stringify({ status: 'ok', ...result }), { headers: cors });
     }
 
-    if (url.pathname === '/api/ingest-lang' && url.searchParams.get('k') === 'run7x9k') {
+    if (url.pathname === '/api/ingest-lang') {
+      const authDenied = authorizeManualTrigger(request, url, env);
+      if (authDenied) return authDenied;
       const L = getLimits(env);
       const lang = url.searchParams.get('lang') || 'ml';
       const isMl = lang === 'ml';
@@ -302,7 +316,9 @@ export default {
       return new Response(JSON.stringify(results, null, 2), { headers: cors });
     }
 
-    if (url.pathname === '/api/publish-malayalam' && url.searchParams.get('k') === 'run7x9k') {
+    if (url.pathname === '/api/publish-malayalam') {
+      const authDenied = authorizeManualTrigger(request, url, env);
+      if (authDenied) return authDenied;
       const requeue = url.searchParams.get('requeue') !== '0';
       let requeued = 0;
       if (requeue) {
@@ -313,12 +329,16 @@ export default {
       return new Response(JSON.stringify({ status: 'ok', requeued, ...pub }, null, 2), { headers: cors });
     }
 
-    if (url.pathname === '/api/publish-now' && url.searchParams.get('k') === 'run7x9k') {
+    if (url.pathname === '/api/publish-now') {
+      const authDenied = authorizeManualTrigger(request, url, env);
+      if (authDenied) return authDenied;
       const pub = await handleFastPublish(env, getCronPublishOpts(env));
       return new Response(JSON.stringify({ status: 'ok', ...pub }, null, 2), { headers: cors });
     }
 
-    if (url.pathname === '/api/ingest-all-langs' && url.searchParams.get('k') === 'run7x9k') {
+    if (url.pathname === '/api/ingest-all-langs') {
+      const authDenied = authorizeManualTrigger(request, url, env);
+      if (authDenied) return authDenied;
       const results = await handleRegionalIngestCron(env, { allLanguages: true });
       return new Response(JSON.stringify(results, null, 2), { headers: cors });
     }
@@ -383,11 +403,8 @@ export default {
     }
 
     if (url.pathname === '/api/pipeline-status') {
-      const needsAuth = url.searchParams.get('k') !== 'run7x9k';
-      if (needsAuth) {
-        const authDenied = requireApiSecret(request, env);
-        if (authDenied) return authDenied;
-      }
+      const authDenied = requireApiSecret(request, env);
+      if (authDenied) return authDenied;
       const result = await getPipelineStatus(env);
       return new Response(JSON.stringify(result), { headers: cors });
     }

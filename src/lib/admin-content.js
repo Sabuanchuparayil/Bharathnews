@@ -1,11 +1,10 @@
 import { rowsToApp } from '@/lib/db-mapper';
 import { slugify } from '@/utils/slugify';
+import { CREATOR_ROLE_SET as CREATOR_ROLES } from '@/lib/roles';
 
 const SOURCE_CATEGORIES = new Set(['india', 'gcc', 'business', 'technology', 'sports', 'entertainment', 'health', 'education', 'jobs', 'realestate', 'world', 'lifestyle', 'opinion']);
 const SOURCE_LANGUAGES = new Set(['en', 'hi', 'ml', 'ta', 'kn', 'te', 'bn']);
 const SOURCE_TYPES = new Set(['rss', 'googlenews', 'youtube']);
-const CREATOR_ROLES = new Set(['contributor', 'vlogger']);
-
 export function sourceIdFromName(name) {
   const slug = String(name || 'source')
     .toLowerCase()

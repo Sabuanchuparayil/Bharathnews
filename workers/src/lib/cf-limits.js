@@ -11,7 +11,7 @@
  *   2. wrangler.toml → PIPELINE_TIER = "paid"
  *   3. wrangler.toml → uncomment [limits] subrequests = 200
  *   4. cd workers && npx wrangler deploy
- *   5. Verify: /api/pipeline-status?k=run7x9k shows tier:"paid"
+ *   5. Verify: GET /api/pipeline-status with Authorization: Bearer $WORKER_API_SECRET shows tier:"paid"
  *
  * @see https://developers.cloudflare.com/workers/platform/limits/
  */

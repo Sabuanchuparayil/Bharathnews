@@ -4,6 +4,9 @@ import { getSupabaseBrowser } from '@/lib/supabase-client';
 import { mergeSiteSettings } from '@/lib/site-settings';
 import { requestPasswordReset } from '@/lib/password-reset';
 import { isAccountStatus } from '@/lib/account-status';
+import { ALLOWED_ROLES } from '@/lib/roles';
+
+export { ALLOWED_ROLES };
 
 function filterPublished(articles) {
   return articles.filter(a =>
@@ -135,8 +138,6 @@ export async function getUsersLegacy(limitCount = 50) {
   const { users } = await getUsers({ pageSize: limitCount });
   return users;
 }
-
-export const ALLOWED_ROLES = ['reader', 'contributor', 'vlogger', 'content_writer', 'admin', 'employer'];
 
 export async function createAdminUser({ email, password, displayName, role }) {
   if (!ALLOWED_ROLES.includes(role)) throw new Error(`Invalid role: ${role}`);

@@ -9,6 +9,7 @@ export const FALLBACK_RSS_FEEDS = [
   ...REGIONAL_RSS_SOURCES.map(({ type, ...feed }) => feed),
 ];
 
+/** Bootstrap only. Used when the sources table has no enabled YouTube channels. */
 export const FALLBACK_YOUTUBE_CHANNELS = [
   { channelId: 'UCf8w5m0YsRa8MHQ5bwSGmbw', name: 'Asianet News', category: 'india', language: 'ml' },
   { channelId: 'UCP0uG-mcMImgKnJz-VjJZmQ', name: 'Manorama News', category: 'india', language: 'ml' },

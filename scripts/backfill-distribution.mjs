@@ -7,11 +7,11 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const WORKER = process.env.NEXT_PUBLIC_WORKER_URL || 'https://bharathnews-api.bharathnewsweb.workers.dev';
+import { workerFetch } from './worker-fetch.mjs';
 
 async function main() {
   console.log('Checking distribution setup...');
-  const setupRes = await fetch(`${WORKER}/api/distribution-setup?k=run7x9k`);
+  const setupRes = await workerFetch('/api/distribution-setup');
   const setupData = await setupRes.json();
   console.log('Setup:', setupData.setup, setupData.hint || '');
 
@@ -38,7 +38,7 @@ async function main() {
   while (batch < 50) {
     batch++;
     const skipSetup = batch > 1 ? '&skipSetup=1' : '';
-    const res = await fetch(`${WORKER}/api/backfill-distribution-jobs?k=run7x9k&limit=40${skipSetup}`);
+    const res = await workerFetch(`/api/backfill-distribution-jobs?limit=40${skipSetup}`);
     const data = await res.json();
 
     if (data.error) {
@@ -58,7 +58,7 @@ async function main() {
   let totalTg = 0;
   let totalFb = 0;
   for (let i = 0; i < 30; i++) {
-    const res = await fetch(`${WORKER}/api/distribute-now?k=run7x9k&telegram=3&facebook=0`);
+    const res = await workerFetch('/api/distribute-now?telegram=3&facebook=0');
     const data = await res.json();
     if (!res.ok) {
       console.error('Process failed:', data);

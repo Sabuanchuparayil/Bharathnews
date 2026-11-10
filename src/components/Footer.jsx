@@ -36,7 +36,7 @@ const Footer = () => {
             <Link href="/" className="flex items-center space-x-3 mb-4">
               <img
                 src="/logo-mark.png"
-                alt="The Bharath News"
+                alt={siteName || 'The Bharath News'}
                 className="w-11 h-11 rounded-xl"
               />
               <span className="font-display font-bold text-lg text-brand-700 dark:text-brand-400">
@@ -111,10 +111,10 @@ const Footer = () => {
             />
             <div className="min-w-0">
               <p className="font-display font-bold text-base leading-none bg-gradient-to-r from-brand-700 via-brand-500 to-accent-emerald bg-clip-text text-transparent">
-                The Bharath News
+                {siteName || 'The Bharath News'}
               </p>
               <p className="text-xs text-gray-400 dark:text-gray-500 truncate">
-                Your window to India from the Gulf
+                {publicTagline}
               </p>
             </div>
           </div>

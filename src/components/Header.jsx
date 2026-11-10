@@ -18,6 +18,7 @@ import NavDropdown from './NavDropdown';
 import LanguageSwitcher from './LanguageSwitcher';
 import NotificationsPanel from './NotificationsPanel';
 import UtilityBar from './UtilityBar';
+import { useSiteSettings } from '../context/SiteSettingsContext';
 
 let _trendingCache = { value: null, ts: 0 };
 const TRENDING_CACHE_MS = 5 * 60 * 1000;
@@ -40,6 +41,14 @@ const Header = () => {
   const menuPhoto = userProfile?.photoURL || user?.user_metadata?.avatar_url
     || `https://ui-avatars.com/api/?name=${encodeURIComponent(menuName)}&background=4338ca&color=fff`;
   const { isDark, toggleTheme } = useTheme();
+  const { siteName, headerText, settings } = useSiteSettings();
+  const brandName = headerText || siteName || 'The Bharath News';
+  const brandParts = brandName.trim().split(/\s+/);
+  const brandTail = brandParts.length > 1 ? brandParts.pop() : '';
+  const brandLead = brandParts.join(' ');
+  const searchSuggestions = Array.isArray(settings?.searchSuggestions) && settings.searchSuggestions.length
+    ? settings.searchSuggestions
+    : ['India GCC Trade', 'Dubai Jobs', 'Kerala Floods', 'Tech Layoffs', 'Cricket'];
   const pathname = usePathname();
   const router = useRouter();
 
@@ -86,14 +95,16 @@ const Header = () => {
             <Link href="/" className="flex items-center gap-2 group flex-shrink-0 z-10 min-w-0">
               <img
                 src="/logo-mark.png"
-                alt="The Bharath News"
+                alt={brandName}
                 width={40}
                 height={40}
                 className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200 flex-shrink-0"
               />
               <div className="hidden sm:block min-w-0">
-                <span className="font-display font-bold text-sm lg:text-base text-gray-900 dark:text-white whitespace-nowrap">The Bharath </span>
-                <span className="font-display font-bold text-sm lg:text-base text-brand-600 dark:text-brand-400 whitespace-nowrap">News</span>
+                <span className="font-display font-bold text-sm lg:text-base text-gray-900 dark:text-white whitespace-nowrap">{brandLead}{brandTail ? ' ' : ''}</span>
+                {brandTail && (
+                  <span className="font-display font-bold text-sm lg:text-base text-brand-600 dark:text-brand-400 whitespace-nowrap">{brandTail}</span>
+                )}
               </div>
             </Link>
 
@@ -262,7 +273,7 @@ const Header = () => {
               <div className="p-4">
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Trending</p>
                 <div className="flex flex-wrap gap-2">
-                  {['India GCC Trade', 'Dubai Jobs', 'Kerala Floods', 'Tech Layoffs', 'Cricket'].map(term => (
+                  {searchSuggestions.map(term => (
                     <button
                       key={term}
                       onClick={() => { router.push(`/search?q=${encodeURIComponent(term)}`); setSearchOpen(false); }}

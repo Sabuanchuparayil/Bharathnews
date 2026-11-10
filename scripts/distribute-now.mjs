@@ -2,14 +2,13 @@
  * Flush Telegram + Facebook backlog manually.
  * Usage: npm run distribute:now
  */
-const WORKER = process.env.NEXT_PUBLIC_WORKER_URL || 'https://bharathnews-api.bharathnewsweb.workers.dev';
+import { workerFetch } from './worker-fetch.mjs';
 
 async function run(rounds = 10) {
   let totalTg = 0;
   let totalFb = 0;
   for (let i = 0; i < rounds; i++) {
-    const url = `${WORKER}/api/distribute-now?k=run7x9k&telegram=3&facebook=0`;
-    const res = await fetch(url);
+    const res = await workerFetch('/api/distribute-now?telegram=3&facebook=0');
     const data = await res.json();
     if (!res.ok) {
       console.error('Failed:', data);

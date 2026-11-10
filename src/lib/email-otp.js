@@ -1,5 +1,6 @@
 import { createHash, randomInt, timingSafeEqual } from 'crypto';
 import { getSupabaseAdmin } from './supabase-server';
+import { mergeSiteSettings } from './site-settings';
 
 const OTP_TTL_MS = 10 * 60 * 1000;
 const HOUR_MS = 60 * 60 * 1000;
@@ -24,8 +25,19 @@ function migrationHint(message) {
   return '';
 }
 
+async function resolveFromAddress() {
+  if (process.env.EMAIL_FROM) return process.env.EMAIL_FROM;
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data } = await supabase.from('site_settings').select('value').eq('key', 'site').maybeSingle();
+    return mergeSiteSettings(data?.value || {}).integrations.email.newsletterFrom;
+  } catch {
+    return mergeSiteSettings().integrations.email.newsletterFrom;
+  }
+}
+
 async function deliverOtpEmail({ to, code }) {
-  const from = process.env.EMAIL_FROM || 'The Bharath News <news@thebharathnews.com>';
+  const from = await resolveFromAddress();
   const subject = 'Your Bharath News verification code';
   const html = `
     <div style="font-family:Arial,sans-serif;color:#111;max-width:480px">

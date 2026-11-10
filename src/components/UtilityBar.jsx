@@ -3,24 +3,15 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useLanguage } from '@/context/LanguageContext';
+import { DEFAULT_PRAYER_CITY, PRAYER_CITIES } from '@/config/prayer-cities';
 
-const CITIES = [
-  { id: 'dubai', label: 'Dubai' },
-  { id: 'abudhabi', label: 'Abu Dhabi' },
-  { id: 'sharjah', label: 'Sharjah' },
-  { id: 'riyadh', label: 'Riyadh' },
-  { id: 'jeddah', label: 'Jeddah' },
-  { id: 'doha', label: 'Doha' },
-  { id: 'kuwait', label: 'Kuwait' },
-  { id: 'manama', label: 'Manama' },
-  { id: 'muscat', label: 'Muscat' },
-];
+const CITIES = PRAYER_CITIES.map(({ id, label }) => ({ id, label }));
 
 const CITY_KEY = 'bn-prayer-city';
 
 export default function UtilityBar() {
   const { language, setLanguage } = useLanguage();
-  const [city, setCity] = useState('dubai');
+  const [city, setCity] = useState(DEFAULT_PRAYER_CITY);
   const [gold, setGold] = useState(null);
   const [prayer, setPrayer] = useState(null);
 

@@ -3,8 +3,7 @@
 import { getSupabaseBrowser } from '@/lib/supabase-client';
 import { rowToApp, rowsToApp } from '@/lib/db-mapper';
 import { slugify } from '../utils/slugify';
-
-const CREATOR_ROLES = ['contributor', 'vlogger'];
+import { CREATOR_ROLES } from '@/lib/roles';
 
 function sb() {
   const client = getSupabaseBrowser();

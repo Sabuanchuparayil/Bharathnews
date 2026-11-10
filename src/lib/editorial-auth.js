@@ -1,7 +1,6 @@
 import { getSupabaseAdmin } from './supabase-server';
 import { blockedAccountError } from './account-status';
-
-const EDITORIAL_ROLES = new Set(['admin', 'content_writer']);
+import { EDITORIAL_ROLES } from './roles';
 
 export async function verifyEditorialRequest(request) {
   const authHeader = request.headers.get('authorization') || '';

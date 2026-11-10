@@ -6,14 +6,14 @@
  *   npm run facebook:graph-mode
  *   npm run facebook:graph-mode -- --lang en
  */
-const WORKER = process.env.NEXT_PUBLIC_WORKER_URL || 'https://bharathnews-api.bharathnewsweb.workers.dev';
+import { workerFetch } from './worker-fetch.mjs';
 
 const lang = process.argv.includes('--lang')
   ? process.argv[process.argv.indexOf('--lang') + 1]
   : 'en';
 
 async function main() {
-  const res = await fetch(`${WORKER}/api/facebook-graph-mode?k=run7x9k&lang=${encodeURIComponent(lang)}`);
+  const res = await workerFetch(`/api/facebook-graph-mode?lang=${encodeURIComponent(lang)}`);
   const data = await res.json();
   console.log(JSON.stringify(data, null, 2));
   if (!data.ok) process.exit(1);

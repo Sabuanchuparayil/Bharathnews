@@ -11,7 +11,7 @@ crons = ["*/5 * * * *", "*/10 * * * *", "0 8 * * *", "0 2 * * *"]
 #   1. Set PIPELINE_TIER = "paid" below
 #   2. Uncomment [limits] subrequests = 200
 #   3. cd workers && npx wrangler deploy
-#   4. Check /api/pipeline-status?k=run7x9k → tier:"paid"
+#   4. Check /api/pipeline-status with Authorization: Bearer $WORKER_API_SECRET → tier:"paid"
 # [limits]
 # subrequests = 200
 
