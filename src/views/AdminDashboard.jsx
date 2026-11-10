@@ -125,7 +125,6 @@ const AdminDashboard = () => {
           label="Published Articles"
           value={statsReady ? (stats?.totalArticles || 0).toLocaleString('en-IN') : '…'}
           color="bg-brand-600"
-          href="/desk"
           loading={!statsReady}
         />
         <StatCard
@@ -219,8 +218,8 @@ const AdminDashboard = () => {
           icon={Newspaper}
           className="lg:col-span-3"
           action={
-            <Link href="/desk" className="text-xs font-medium text-brand-600 hover:text-brand-700 flex items-center gap-1">
-              View all <ArrowUpRight className="w-3 h-3" />
+            <Link href="/desk/review" className="text-xs font-medium text-brand-600 hover:text-brand-700 flex items-center gap-1">
+              Review queue <ArrowUpRight className="w-3 h-3" />
             </Link>
           }
         >
@@ -236,7 +235,18 @@ const AdminDashboard = () => {
                 <div key={article.id || index} className="flex items-center gap-3 px-5 py-3 hover:bg-surface-1 dark:hover:bg-dark-surface-2 transition-colors">
                   <span className="text-[10px] font-bold text-gray-300 dark:text-gray-600 w-5 text-right tabular-nums">{index + 1}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-900 dark:text-white truncate leading-snug">{article.title}</p>
+                    {article.slug ? (
+                      <a
+                        href={`/article/${article.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block text-sm text-gray-900 dark:text-white truncate leading-snug hover:text-brand-600"
+                      >
+                        {article.title}
+                      </a>
+                    ) : (
+                      <p className="text-sm text-gray-900 dark:text-white truncate leading-snug">{article.title}</p>
+                    )}
                   </div>
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 bg-surface-2 dark:bg-dark-surface-2 px-2 py-0.5 rounded-md flex-shrink-0">
                     {article.category || '—'}

@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
 import { toast } from 'react-toastify';
 import {
   ShieldCheck, BadgeCheck, Mail, CalendarDays, Clock, KeyRound, LogOut,
-  Camera, UserRound, MapPin, Lock, Eye, EyeOff, Users, Settings, ArrowLeft,
+  Camera, UserRound, MapPin, Lock, Eye, EyeOff,
 } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import ProfileDetailsForm from '../components/ProfileDetailsForm';
@@ -201,11 +200,11 @@ const AdminProfile = () => {
   const passwordType = showPasswords ? 'text' : 'password';
 
   return (
-    <AdminLayout title="My Profile">
+    <AdminLayout title="My profile" description="Your account, contact details, and sign-in security.">
         <div className="glass-card-solid rounded-2xl p-6 mb-6 flex flex-col sm:flex-row sm:items-center gap-5">
-          <img src={avatar} alt="" className="w-24 h-24 rounded-2xl object-cover shadow-md flex-shrink-0" />
+          <img src={avatar} alt="" className="w-20 h-20 rounded-2xl object-cover shadow-md flex-shrink-0" />
           <div className="min-w-0 flex-1">
-            <h1 className="font-display font-bold text-3xl text-gray-900 dark:text-white truncate">{shownName}</h1>
+            <h2 className="font-display font-bold text-2xl text-gray-900 dark:text-white truncate">{shownName}</h2>
             <p className="text-sm text-gray-500 truncate">{email}</p>
             <div className="flex flex-wrap gap-2 mt-3">
               <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300">
@@ -236,20 +235,6 @@ const AdminProfile = () => {
                 <InfoRow icon={CalendarDays} label="Member since">{formatDate(memberSince)}</InfoRow>
                 <InfoRow icon={Clock} label="Last sign-in">{formatDateTime(user.last_sign_in_at)}</InfoRow>
                 <InfoRow icon={KeyRound} label="Sign-in method"><span className="capitalize">{signInMethods}</span></InfoRow>
-              </div>
-            </Section>
-
-            <Section icon={Settings} title="Quick links">
-              <div className="flex flex-col gap-2">
-                <Link href="/admin/settings?tab=users" className="btn-secondary text-sm px-4 py-2 rounded-xl flex items-center gap-2">
-                  <Users className="w-4 h-4" /> Manage users &amp; roles
-                </Link>
-                <Link href="/admin/settings" className="btn-secondary text-sm px-4 py-2 rounded-xl flex items-center gap-2">
-                  <Settings className="w-4 h-4" /> Site settings
-                </Link>
-                <Link href="/admin/dashboard" className="btn-secondary text-sm px-4 py-2 rounded-xl flex items-center gap-2">
-                  <ArrowLeft className="w-4 h-4" /> Dashboard
-                </Link>
               </div>
             </Section>
           </div>

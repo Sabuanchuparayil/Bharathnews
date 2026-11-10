@@ -3,8 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'react-toastify';
-import Layout from '../components/Layout';
-import DeskGate from '../components/DeskGate';
+import DeskLayout from '../components/DeskLayout';
 import { deskFetch } from '@/lib/desk-client';
 
 const TABS = [
@@ -61,14 +60,12 @@ const DeskReview = () => {
   };
 
   return (
-    <DeskGate>
-      <Layout showBottomNav={false} mainClassName="max-w-4xl mx-auto px-4 py-10">
-        <Link href="/desk" className="text-sm text-brand-700 dark:text-brand-300">Newsroom</Link>
-        <div className="flex items-center justify-between gap-3 mt-2">
-          <h1 className="font-display font-bold text-3xl">Review</h1>
-          <button type="button" onClick={publishDue} className="btn-secondary px-4 py-2 rounded-xl text-sm">Publish scheduled</button>
-        </div>
-        <div className="flex flex-wrap gap-2 my-6">
+    <DeskLayout
+      title="Review queue"
+      maxWidth="max-w-4xl"
+      actions={<button type="button" onClick={publishDue} className="btn-secondary px-4 py-2 rounded-xl text-sm">Publish scheduled</button>}
+    >
+        <div className="flex flex-wrap gap-2 mb-6">
           {TABS.map(item => (
             <button
               key={item.id}
@@ -121,8 +118,7 @@ const DeskReview = () => {
             </article>
           ))}
         </div>
-      </Layout>
-    </DeskGate>
+    </DeskLayout>
   );
 };
 

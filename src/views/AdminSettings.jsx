@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'react-toastify';
 import {
   ChevronLeft, ChevronRight, Search, Rss, Settings2,
@@ -82,11 +82,15 @@ const inputClass = 'w-full px-3 py-2 rounded-xl border border-gray-200 dark:bord
 
 const AdminSettings = () => {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const { isAdmin, loading, user, refreshUserProfile } = useAuth();
-  const [tab, setTab] = useState(() => {
-    const initial = searchParams.get('tab');
-    return TABS.some(t => t.id === initial) ? initial : 'general';
-  });
+  const urlTab = searchParams.get('tab');
+  const tab = TABS.some(t => t.id === urlTab) ? urlTab : 'general';
+  const setTab = (nextTab) => {
+    const query = nextTab === 'general' ? '' : `?tab=${nextTab}`;
+    router.replace(`${pathname}${query}`, { scroll: false });
+  };
   const [settings, setSettings] = useState(() => mergeSiteSettings());
   const [settingsReady, setSettingsReady] = useState(false);
   const [users, setUsers] = useState([]);
@@ -107,6 +111,7 @@ const AdminSettings = () => {
   const [resetModal, setResetModal] = useState(null);
   const [resetPassword, setResetPassword] = useState('');
   const [resettingPassword, setResettingPassword] = useState(false);
+  const [sendingResetEmail, setSendingResetEmail] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
   const [appliedSearch, setAppliedSearch] = useState('');
   const [statusModal, setStatusModal] = useState(null);
@@ -283,11 +288,19 @@ const AdminSettings = () => {
   };
 
   const handleSendResetEmail = async (userEmail) => {
+    if (!userEmail) {
+      toast.error('No email on file for this user.');
+      return;
+    }
+    setSendingResetEmail(true);
     try {
       await sendPasswordResetEmail(userEmail);
       toast.success(`Password reset email sent to ${userEmail}`);
+      closeResetModal();
     } catch (err) {
       toast.error(err.message || 'Failed to send reset email');
+    } finally {
+      setSendingResetEmail(false);
     }
   };
 
@@ -826,17 +839,11 @@ const AdminSettings = () => {
               <p className="text-xs text-gray-500 mb-2">Or send the user a reset link via email:</p>
               <button
                 type="button"
-                onClick={() => {
-                  if (resetModal.email) {
-                    handleSendResetEmail(resetModal.email);
-                    closeResetModal();
-                  } else {
-                    toast.error('No email on file for this user.');
-                  }
-                }}
-                className="btn-secondary text-xs px-3 py-1.5 rounded-lg flex items-center gap-2"
+                onClick={() => handleSendResetEmail(resetModal.email)}
+                disabled={sendingResetEmail}
+                className="btn-secondary text-xs px-3 py-1.5 rounded-lg flex items-center gap-2 disabled:opacity-60"
               >
-                <Mail className="w-3 h-3" /> Send reset email
+                <Mail className="w-3 h-3" /> {sendingResetEmail ? 'Sending…' : 'Send reset email'}
               </button>
             </div>
           </div>

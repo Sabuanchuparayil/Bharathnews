@@ -2,8 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Layout from '../components/Layout';
-import DeskGate from '../components/DeskGate';
+import DeskLayout from '../components/DeskLayout';
 import { deskFetch } from '@/lib/desk-client';
 
 const DeskHome = () => {
@@ -17,23 +16,26 @@ const DeskHome = () => {
   }, []);
 
   return (
-    <DeskGate>
-      <Layout showBottomNav={false} mainClassName="max-w-5xl mx-auto px-4 py-10">
-        <p className="text-sm font-semibold text-brand-700 dark:text-brand-300">Newsroom</p>
-        <h1 className="font-display font-bold text-3xl text-stone-900 dark:text-white mt-1">Editorial desk</h1>
-        <p className="mt-2 text-gray-600 dark:text-gray-300 max-w-2xl">
-          Paste Claude co-work copy in English or Malayalam, choose a cover, name the author, and send it through review before it is published.
-        </p>
-        <div className="mt-6 flex flex-wrap gap-3">
-          <Link href="/desk/compose" className="btn-primary px-5 py-2.5 rounded-xl">Compose</Link>
-          <Link href="/desk/review" className="btn-secondary px-5 py-2.5 rounded-xl">Review queue</Link>
-          <Link href="/admin/staff" className="btn-secondary px-5 py-2.5 rounded-xl">Staff</Link>
-          <Link href="/editorial" className="px-5 py-2.5 text-sm text-brand-700 dark:text-brand-300">Editorial policy</Link>
-        </div>
-        {error && <p className="mt-6 text-sm text-red-600">{error}</p>}
+    <DeskLayout
+      title="Editorial desk"
+      description="Paste co-work copy in English or Malayalam, choose a cover, name the author, and send it through review before it is published."
+      actions={(
+        <>
+          <Link href="/editorial" className="px-3 py-2 text-sm text-brand-700 dark:text-brand-300">Editorial policy</Link>
+          <Link href="/desk/review" className="btn-secondary px-4 py-2 rounded-xl text-sm">Review queue</Link>
+          <Link href="/desk/compose" className="btn-primary px-4 py-2 rounded-xl text-sm">Compose</Link>
+        </>
+      )}
+    >
+        {!stats && !error && (
+          <div className="flex justify-center py-12">
+            <div className="w-8 h-8 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
+        {error && <p className="text-sm text-red-600">{error}</p>}
         {stats && (
           <>
-            <div className="mt-8 grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <div className="rounded-2xl border border-stone-200 dark:border-white/10 p-4">
                 <p className="text-sm text-gray-500">Waiting for review</p>
                 <p className="font-display font-bold text-3xl">{stats.queue}</p>
@@ -55,8 +57,7 @@ const DeskHome = () => {
             </ul>
           </>
         )}
-      </Layout>
-    </DeskGate>
+    </DeskLayout>
   );
 };
 

@@ -39,7 +39,7 @@ export async function GET(request) {
       exactCount(supabase, 'distribution_jobs', query => query.eq('status', 'failed')),
       supabase.rpc('admin_article_facets'),
       supabase.from('articles')
-        .select('id, title, category')
+        .select('id, title, category, slug')
         .or('editorial_status.eq.published,editorial_status.is.null')
         .order('published_at', { ascending: false })
         .limit(5),

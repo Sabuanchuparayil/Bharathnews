@@ -4,8 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { toast } from 'react-toastify';
-import Layout from '../components/Layout';
-import DeskGate from '../components/DeskGate';
+import DeskLayout from '../components/DeskLayout';
 import CoverImagePicker from '../components/CoverImagePicker';
 import StaffAuthorPicker from '../components/StaffAuthorPicker';
 import { useAuth } from '../context/AuthContext';
@@ -133,13 +132,11 @@ const DeskCompose = () => {
   const otherLabel = form.language === 'ml' ? 'English' : 'Malayalam';
 
   return (
-    <DeskGate>
-      <Layout showBottomNav={false} mainClassName="max-w-3xl mx-auto px-4 py-10">
-        <Link href="/desk" className="text-sm text-brand-700 dark:text-brand-300">Newsroom</Link>
-        <h1 className="font-display font-bold text-3xl mt-2">{draftId ? 'Edit draft' : 'Compose'}</h1>
-        <p className="text-sm text-gray-500 mt-2 mb-6">
-          Paste the Claude co-work draft here. It stays unpublished until someone approves it on the review queue.
-        </p>
+    <DeskLayout
+      title={draftId ? 'Edit draft' : 'Compose'}
+      description="Paste the co-work draft here. It stays unpublished until someone approves it on the review queue."
+      maxWidth="max-w-3xl"
+    >
         <form
           className="space-y-5"
           onSubmit={e => {
@@ -183,7 +180,9 @@ const DeskCompose = () => {
               <input type="checkbox" checked={form.isAiAssisted} onChange={e => set('isAiAssisted', e.target.checked)} />
               Mark as AI-assisted
             </label>
-            <Link href="/admin/staff" className="inline-block text-xs text-brand-700 dark:text-brand-300">Manage editorial staff</Link>
+            {isAdmin && (
+              <Link href="/admin/staff" className="inline-block text-xs text-brand-700 dark:text-brand-300">Manage editorial staff</Link>
+            )}
           </div>
           <div className="rounded-2xl border border-stone-200 dark:border-white/10 p-4 space-y-3">
             <h2 className="font-display font-bold">Cover image</h2>
@@ -217,8 +216,7 @@ const DeskCompose = () => {
             <Link href="/desk/review" className="px-5 py-2.5 text-sm text-gray-500">Review queue</Link>
           </div>
         </form>
-      </Layout>
-    </DeskGate>
+    </DeskLayout>
   );
 };
 

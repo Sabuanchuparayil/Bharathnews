@@ -10,8 +10,8 @@ const DeskGate = ({ children }) => {
 
   if (loading) {
     return (
-      <Layout showBottomNav={false}>
-        <div className="min-h-[60vh] flex items-center justify-center">
+      <Layout showHeader={false} showFooter={false} showBottomNav={false} showChatbot={false} mainClassName="!pb-0">
+        <div className="min-h-screen flex items-center justify-center">
           <div className="w-8 h-8 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
         </div>
       </Layout>

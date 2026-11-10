@@ -2,7 +2,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Search, Bell, Sun, Moon, LogIn, BookmarkIcon, Settings as SettingsIcon, ChevronDown } from 'lucide-react';
+import {
+  Menu, X, Search, Bell, Sun, Moon, LogIn, LogOut, BookmarkIcon, Settings as SettingsIcon, ChevronDown,
+  LayoutDashboard, PenSquare,
+} from 'lucide-react';
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
@@ -181,23 +184,20 @@ const Header = () => {
                         <Link href="/settings" className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-surface-2 dark:hover:bg-dark-surface-2 text-sm text-gray-700 dark:text-gray-300">
                           <SettingsIcon className="w-4 h-4" /><span>Settings</span>
                         </Link>
-                        {isContentWriter && (
-                          <Link href="/desk" className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-950/30 text-sm text-brand-700 dark:text-brand-300">
-                            <SettingsIcon className="w-4 h-4" /><span>Newsroom</span>
-                          </Link>
-                        )}
-                        {isAdmin && (
-                          <>
-                            <Link href="/admin/dashboard" className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-950/30 text-sm text-brand-700 dark:text-brand-300">
-                              <SettingsIcon className="w-4 h-4" /><span>Admin</span>
+                        {(isContentWriter || isAdmin) && (
+                          <div className="border-t border-gray-100 dark:border-gray-800 mt-1 pt-1">
+                            {isAdmin && (
+                              <Link href="/admin/dashboard" className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-950/30 text-sm text-brand-700 dark:text-brand-300">
+                                <LayoutDashboard className="w-4 h-4" /><span>Admin console</span>
+                              </Link>
+                            )}
+                            <Link href="/desk" className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-950/30 text-sm text-brand-700 dark:text-brand-300">
+                              <PenSquare className="w-4 h-4" /><span>Newsroom desk</span>
                             </Link>
-                            <Link href="/admin/profile" className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-950/30 text-sm text-brand-700 dark:text-brand-300">
-                              <SettingsIcon className="w-4 h-4" /><span>Admin Profile</span>
-                            </Link>
-                          </>
+                          </div>
                         )}
                         <button onClick={logout} className="w-full flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/30 text-sm text-red-600">
-                          <LogIn className="w-4 h-4" /><span>Sign Out</span>
+                          <LogOut className="w-4 h-4" /><span>Sign Out</span>
                         </button>
                       </motion.div>
                     )}
