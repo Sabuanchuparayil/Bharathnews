@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyAdminRequest, createUserWithRole } from '@/lib/supabase-admin';
 import { getSupabaseAdmin } from '@/lib/supabase-server';
+import { readAccessRoles, roleHasCap } from '@/lib/access-roles';
 import {
   listStaffProfiles,
   createStaffProfile,
@@ -72,8 +73,9 @@ export async function POST(request) {
     if (!password || password.length < 8) {
       return NextResponse.json({ error: 'Password must be at least 8 characters.' }, { status: 400 });
     }
-    if (role !== 'content_writer' && role !== 'admin') {
-      return NextResponse.json({ error: 'Editorial role must be content_writer or admin.' }, { status: 400 });
+    const roles = await readAccessRoles(getSupabaseAdmin());
+    if (!roleHasCap(roles, role, 'editorial') && !roleHasCap(roles, role, 'admin')) {
+      return NextResponse.json({ error: 'Choose a role that includes newsroom or admin access.' }, { status: 400 });
     }
 
     const parsed = validateStaffInput({

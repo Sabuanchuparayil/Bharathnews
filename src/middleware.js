@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { SITE_APEX_HOST, SITE_CANONICAL_HOST } from '@/lib/site-url';
 import { VALID_ROLES } from '@/lib/roles';
+import { fallbackCaps } from '@/lib/access-roles';
 
 const AUTH_REQUIRED = ['/dashboard', '/settings', '/bookmarks', '/creator', '/employer', '/jobs/post', '/jobs/my', '/classifieds/post', '/classifieds/my'];
 const ADMIN_PREFIX = '/admin';
@@ -14,6 +15,13 @@ function sanitizeNext(nextPath) {
   const decoded = decodeURIComponent(nextPath);
   if (decoded.startsWith('/') && !decoded.startsWith('//') && !decoded.includes('\\')) return decoded;
   return '/dashboard';
+}
+
+function requestCaps(request, role) {
+  const raw = request.cookies.get('bn_caps')?.value;
+  if (raw === '0') return new Set();
+  if (raw) return new Set(raw.split('.').filter(Boolean));
+  return new Set(fallbackCaps(VALID_ROLES.has(role) ? role : ''));
 }
 
 /** Old URLs still requested by crawlers and shared links. */
@@ -110,7 +118,8 @@ export function middleware(request) {
 
   const auth = request.cookies.get('bn_auth')?.value;
   const rawRole = request.cookies.get('bn_role')?.value || '';
-  const role = VALID_ROLES.has(rawRole) ? rawRole : 'reader';
+  const role = VALID_ROLES.has(rawRole) ? rawRole : (rawRole || 'reader');
+  const caps = requestCaps(request, role);
   const verified = request.cookies.get('bn_verified')?.value === '1';
   const profileReady = request.cookies.get('bn_profile')?.value === '1';
 
@@ -124,7 +133,7 @@ export function middleware(request) {
       url.searchParams.set('next', sanitizeNext(pathname));
       return NextResponse.redirect(url);
     }
-    if (role !== 'admin' && role !== 'content_writer') {
+    if (!caps.has('editorial') && !caps.has('admin')) {
       const url = request.nextUrl.clone();
       url.pathname = '/login';
       url.searchParams.set('next', sanitizeNext(pathname));
@@ -141,7 +150,7 @@ export function middleware(request) {
       url.searchParams.set('reason', 'admin');
       return NextResponse.redirect(url);
     }
-    if (role !== 'admin') {
+    if (!caps.has('admin')) {
       const url = request.nextUrl.clone();
       url.pathname = '/login';
       url.searchParams.set('next', sanitizeNext(pathname));

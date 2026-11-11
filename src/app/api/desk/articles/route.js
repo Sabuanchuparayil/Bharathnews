@@ -64,7 +64,7 @@ export async function POST(request) {
   if (parsed.error) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
   const publishNow = body.publishNow === true;
-  if (publishNow && auth.role !== 'admin') {
+  if (publishNow && !auth.caps?.includes('admin')) {
     return NextResponse.json({ error: 'Only an editor-in-chief can publish without review.' }, { status: 403 });
   }
 

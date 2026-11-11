@@ -11,6 +11,8 @@ import { useAuth } from '../context/AuthContext';
 import { adminFetch } from '../services/admin';
 import { deskAuthHeaders } from '@/lib/desk-client';
 import { ROLE_TITLES, ASSIGNABLE_TOPICS, ACCOUNT_ROLES } from '@/lib/staff-profiles-client';
+import { getSupabaseBrowser } from '@/lib/supabase-client';
+import { readAccessRoles } from '@/lib/access-roles';
 
 const inputClass = 'w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent text-sm';
 
@@ -159,6 +161,7 @@ const AdminStaff = () => {
   const [inviting, setInviting] = useState(false);
   const [credentials, setCredentials] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [accountRoles, setAccountRoles] = useState(() => Object.entries(ACCOUNT_ROLES).map(([id, label]) => ({ id, label })));
 
   // Link modal state
   const [linkTarget, setLinkTarget] = useState(null);
@@ -181,6 +184,15 @@ const AdminStaff = () => {
   useEffect(() => {
     if (isAdmin) load();
   }, [isAdmin, load]);
+
+  useEffect(() => {
+    const supabase = getSupabaseBrowser();
+    if (!supabase) return;
+    readAccessRoles(supabase).then(roles => {
+      const editorial = roles.filter(role => role.caps.includes('editorial') || role.caps.includes('admin'));
+      if (editorial.length) setAccountRoles(editorial);
+    }).catch(() => {});
+  }, []);
 
   const set = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
   const setInv = (field, value) => setInviteForm(prev => ({ ...prev, [field]: value }));
@@ -482,8 +494,8 @@ const AdminStaff = () => {
                     <div>
                       <label className="block text-sm font-medium mb-1">Account role</label>
                       <select value={inviteForm.role} onChange={e => setInv('role', e.target.value)} className={inputClass}>
-                        {Object.entries(ACCOUNT_ROLES).map(([val, label]) => (
-                          <option key={val} value={val}>{label}</option>
+                        {accountRoles.map(role => (
+                          <option key={role.id} value={role.id}>{role.label}</option>
                         ))}
                       </select>
                     </div>
@@ -516,7 +528,7 @@ const AdminStaff = () => {
                   <CopyableField label="Name" value={credentials.displayName} />
                   <CopyableField label="Email" value={credentials.email} />
                   <CopyableField label="Password" value={credentials.password} />
-                  <CopyableField label="Role" value={ACCOUNT_ROLES[credentials.role] || credentials.role} />
+                  <CopyableField label="Role" value={accountRoles.find(role => role.id === credentials.role)?.label || ACCOUNT_ROLES[credentials.role] || credentials.role} />
                   <CopyableField label="Login URL" value={`${typeof window !== 'undefined' ? window.location.origin : ''}/login`} />
                 </div>
                 <button type="button" onClick={closeInvite} className="btn-primary px-5 py-2 rounded-xl text-sm">

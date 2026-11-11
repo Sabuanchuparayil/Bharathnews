@@ -30,7 +30,7 @@ export async function GET(request) {
 export async function POST(request) {
   const auth = await verifyEditorialRequest(request);
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
-  if (auth.role !== 'admin') {
+  if (!auth.caps?.includes('admin')) {
     return NextResponse.json({ error: 'Only admins can add staff profiles.' }, { status: 403 });
   }
 

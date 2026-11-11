@@ -12,7 +12,7 @@ function jsonError(err) {
 export async function PATCH(request, { params }) {
   const auth = await verifyEditorialRequest(request);
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
-  if (auth.role !== 'admin') {
+  if (!auth.caps?.includes('admin')) {
     return NextResponse.json({ error: 'Only admins can edit staff profiles.' }, { status: 403 });
   }
 

@@ -2,6 +2,7 @@ import { getSupabaseAdmin } from './supabase-server';
 import { rowToApp } from '@/lib/db-mapper';
 import { blockedAccountError } from '@/lib/account-status';
 import { ALLOWED_ROLES } from './roles';
+import { isRoleId, readAccessRoles, roleHasCap } from './access-roles';
 
 export { ALLOWED_ROLES };
 
@@ -27,7 +28,8 @@ export async function verifyAdminRequest(request) {
       .eq('id', user.id)
       .single();
 
-    if (!profile || profile.role !== 'admin') {
+    const roles = await readAccessRoles(supabase);
+    if (!profile || !roleHasCap(roles, profile.role, 'admin')) {
       return { error: 'Admin access required.', status: 403 };
     }
 
@@ -43,9 +45,10 @@ export async function verifyAdminRequest(request) {
 export async function createUserWithRole({ email, password, displayName, role }) {
   if (!email?.includes('@')) throw new Error('Valid email is required.');
   if (!password || password.length < 8) throw new Error('Password must be at least 8 characters.');
-  if (!ALLOWED_ROLES.includes(role)) throw new Error(`Invalid role: ${role}`);
-
+  if (!isRoleId(role)) throw new Error('Choose an access role.');
   const supabase = getSupabaseAdmin();
+  const roles = await readAccessRoles(supabase);
+  if (!roles.some(item => item.id === role)) throw new Error('That access role does not exist.');
   const normalizedEmail = email.trim().toLowerCase();
   const name = (displayName || normalizedEmail.split('@')[0]).trim();
 
@@ -65,7 +68,7 @@ export async function createUserWithRole({ email, password, displayName, role })
     throw error;
   }
 
-  await supabase.from('users').upsert({
+  const { error: profileError } = await supabase.from('users').upsert({
     id: data.user.id,
     email: normalizedEmail,
     display_name: name,
@@ -75,6 +78,13 @@ export async function createUserWithRole({ email, password, displayName, role })
     likes: [],
     interests: { categories: {}, topics: [], sources: {}, readingTimes: {} },
   });
+  if (profileError) {
+    await supabase.auth.admin.deleteUser(data.user.id);
+    const message = /users_role_check|check constraint/i.test(profileError.message || '')
+      ? 'Run supabase/migrations/20261111120000_custom_access_roles.sql in the Supabase SQL editor, then create the user again.'
+      : (profileError.message || 'Could not save the new account.');
+    throw new Error(message);
+  }
 
   return { uid: data.user.id, email: normalizedEmail, displayName: name, role };
 }

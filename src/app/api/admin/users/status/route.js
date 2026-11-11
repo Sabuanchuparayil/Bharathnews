@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifyAdminRequest } from '@/lib/supabase-admin';
 import { getSupabaseAdmin } from '@/lib/supabase-server';
 import { BAN_DURATION, isAccountStatus } from '@/lib/account-status';
+import { countOtherActiveAdmins, readAccessRoles, roleHasCap } from '@/lib/access-roles';
 
 const REASON_MAX = 300;
 
@@ -71,17 +72,10 @@ export async function POST(request) {
     }
 
     // Never leave the site without an active admin.
-    if (target.role === 'admin' && status !== 'active') {
-      const { count, error: countError } = await supabase
-        .from('users')
-        .select('id', { count: 'exact', head: true })
-        .eq('role', 'admin')
-        .eq('status', 'active')
-        .neq('id', userId);
-      if (countError) {
-        return NextResponse.json({ error: countError.message || 'Could not verify admins.' }, { status: 500 });
-      }
-      if (!count) {
+    const roles = await readAccessRoles(supabase);
+    if (roleHasCap(roles, target.role, 'admin') && status !== 'active') {
+      const others = await countOtherActiveAdmins(supabase, roles, userId);
+      if (!others) {
         return NextResponse.json({ error: "You can't disable the last active admin." }, { status: 400 });
       }
     }

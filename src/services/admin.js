@@ -140,7 +140,7 @@ export async function getUsersLegacy(limitCount = 50) {
 }
 
 export async function createAdminUser({ email, password, displayName, role }) {
-  if (!ALLOWED_ROLES.includes(role)) throw new Error(`Invalid role: ${role}`);
+  if (!role || typeof role !== 'string') throw new Error('Choose an access role.');
   const token = await getAdminAccessToken();
   const res = await fetch('/api/admin/users', {
     method: 'POST',
@@ -157,7 +157,7 @@ export async function createAdminUser({ email, password, displayName, role }) {
 
 export async function setUserRole(userId, role) {
   if (!userId || typeof userId !== 'string') throw new Error('Invalid userId');
-  if (!ALLOWED_ROLES.includes(role)) throw new Error(`Invalid role: ${role}`);
+  if (!role || typeof role !== 'string') throw new Error('Choose an access role.');
   const token = await getAdminAccessToken();
   const res = await fetch('/api/admin/users/role', {
     method: 'POST',
@@ -209,6 +209,16 @@ export async function setUserStatus(userId, status, reason = '') {
 
 export async function sendPasswordResetEmail(email) {
   await requestPasswordReset(email);
+}
+
+export async function getAccessRoles() {
+  const data = await adminFetch('/api/admin/roles');
+  return data.roles || [];
+}
+
+export async function saveAccessRoles(roles) {
+  const data = await adminFetch('/api/admin/roles', { method: 'PUT', body: { roles } });
+  return data.roles || [];
 }
 
 export { filterPublished };

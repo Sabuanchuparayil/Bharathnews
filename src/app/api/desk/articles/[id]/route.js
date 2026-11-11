@@ -48,7 +48,7 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ article });
     }
     if (body.action === 'assign') {
-      if (auth.role !== 'admin') {
+      if (!auth.caps?.includes('admin')) {
         return NextResponse.json({ error: 'Only an admin can assign drafts.' }, { status: 403 });
       }
       const article = await assignArticle(id, body.assignTo || null);

@@ -13,15 +13,15 @@ import AdminLayout from '../components/AdminLayout';
 import { useAuth } from '../context/AuthContext';
 import {
   getSiteSettings, updateSiteSettings, getUsers, setUserRole, getSources,
-  resetUserPassword, sendPasswordResetEmail, setUserStatus,
+  resetUserPassword, sendPasswordResetEmail, setUserStatus, getAccessRoles, saveAccessRoles,
 } from '../services/admin';
 import { STATUS_LABELS } from '@/lib/account-status';
 import { setAuthCookies } from '../lib/auth-cookies';
 import { hasCompleteProfile } from '@/lib/profile-fields';
 import { mergeSiteSettings } from '../lib/site-settings';
-import { ALLOWED_ROLES, ROLE_LABELS } from '@/lib/roles';
-
-const ROLES = ALLOWED_ROLES;
+import {
+  CAPABILITY_OPTIONS, READER_BLOCKED_CAPS, capsForRole, defaultAccessRoles, slugifyRoleId,
+} from '@/lib/access-roles';
 const LANG_OPTIONS = ['en', 'ml'];
 const TABS = [
   { id: 'general', label: 'General', icon: Settings2 },
@@ -111,6 +111,9 @@ const AdminSettings = () => {
   const [statusModal, setStatusModal] = useState(null);
   const [statusReason, setStatusReason] = useState('');
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [accessRoles, setAccessRoles] = useState(() => defaultAccessRoles());
+  const [savingRoles, setSavingRoles] = useState(false);
+  const [newRoleName, setNewRoleName] = useState('');
 
   const patchIntegration = (platform, patch) => {
     setSettings(prev => ({
@@ -171,6 +174,7 @@ const AdminSettings = () => {
 
   useEffect(() => {
     if (!isAdmin || tab !== 'users') return;
+    getAccessRoles().then(setAccessRoles).catch(err => toast.error(err.message || 'Could not load roles'));
     loadUsers(null, true);
   }, [isAdmin, tab, loadUsers]);
 
@@ -190,7 +194,7 @@ const AdminSettings = () => {
   };
 
   const changeRole = async (userId, role) => {
-    if (!ROLES.includes(role)) return;
+    if (!accessRoles.some(item => item.id === role)) return;
     try {
       await setUserRole(userId, role);
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, role } : u));
@@ -200,6 +204,7 @@ const AdminSettings = () => {
           setAuthCookies(profile.role || 'reader', {
             emailVerified: profile.emailVerified,
             profileComplete: hasCompleteProfile(profile),
+            caps: capsForRole(accessRoles, profile.role || 'reader'),
           });
         }
       }
@@ -217,7 +222,8 @@ const AdminSettings = () => {
     try {
       const { createAdminUser } = await import('../services/admin');
       const created = await createAdminUser(newUser);
-      toast.success(`Created ${created.email} as ${ROLE_LABELS[created.role] || created.role}`);
+      const label = accessRoles.find(item => item.id === created.role)?.label || created.role;
+      toast.success(`Created ${created.email} as ${label}`);
       setNewUser({ email: '', password: '', displayName: '', role: 'reader' });
       await loadUsers(null, true);
     } catch (err) {
@@ -314,6 +320,48 @@ const AdminSettings = () => {
     const prevCursor = stack[stack.length - 1] || null;
     setCursorStack(stack);
     await loadUsers(prevCursor);
+  };
+
+  const updateRoleDraft = (id, patch) => {
+    setAccessRoles(prev => prev.map(role => (role.id === id ? { ...role, ...patch } : role)));
+  };
+
+  const toggleRoleCap = (id, cap) => {
+    setAccessRoles(prev => prev.map(role => {
+      if (role.id !== id) return role;
+      if (role.id === 'admin' && cap === 'admin') return role;
+      if (role.id === 'reader' && READER_BLOCKED_CAPS.has(cap)) return role;
+      const has = role.caps.includes(cap);
+      return { ...role, caps: has ? role.caps.filter(item => item !== cap) : [...role.caps, cap] };
+    }));
+  };
+
+  const addAccessRole = () => {
+    const label = newRoleName.trim();
+    const id = slugifyRoleId(label);
+    if (!id) {
+      toast.error('Use a name with letters, such as Moderator.');
+      return;
+    }
+    if (accessRoles.some(role => role.id === id)) {
+      toast.error('A role with that name already exists.');
+      return;
+    }
+    setAccessRoles(prev => [...prev, { id, label, builtin: false, caps: [] }]);
+    setNewRoleName('');
+  };
+
+  const saveRoleCatalog = async () => {
+    setSavingRoles(true);
+    try {
+      const saved = await saveAccessRoles(accessRoles);
+      setAccessRoles(saved);
+      toast.success('Access roles saved. People should sign in again to pick up permission changes.');
+    } catch (err) {
+      toast.error(err.message || 'Could not save roles');
+    } finally {
+      setSavingRoles(false);
+    }
   };
 
   const i = settings.integrations || {};
@@ -621,6 +669,68 @@ const AdminSettings = () => {
         {tab === 'users' && (
           <div className="space-y-6">
           <div className="glass-card-solid rounded-2xl p-6">
+            <h2 className="font-display font-bold text-lg mb-1">Access roles</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Rename a role, change what it can open, or add a new one. The Admin role always keeps the admin area.
+              Reader is the role new sign-ups get, so it cannot open the newsroom or admin area.
+            </p>
+            <div className="space-y-4">
+              {accessRoles.map(role => (
+                <div key={role.id} className="rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    <input
+                      value={role.label}
+                      onChange={e => updateRoleDraft(role.id, { label: e.target.value })}
+                      className={`${inputClass} max-w-xs`}
+                      aria-label={`${role.label} name`}
+                    />
+                    {role.builtin ? (
+                      <span className="text-[10px] uppercase tracking-wide text-gray-400">Built in</span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setAccessRoles(prev => prev.filter(item => item.id !== role.id))}
+                        className="text-xs text-red-600"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {CAPABILITY_OPTIONS.map(cap => {
+                      const locked = (role.id === 'admin' && cap.id === 'admin')
+                        || (role.id === 'reader' && READER_BLOCKED_CAPS.has(cap.id));
+                      const checked = role.caps.includes(cap.id);
+                      return (
+                        <label key={cap.id} className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700" title={cap.detail}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={locked}
+                            onChange={() => toggleRoleCap(role.id, cap.id)}
+                          />
+                          {cap.label}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-2 mt-4">
+              <input
+                value={newRoleName}
+                onChange={e => setNewRoleName(e.target.value)}
+                placeholder="New role name, e.g. Moderator"
+                className={`${inputClass} max-w-xs`}
+              />
+              <button type="button" onClick={addAccessRole} className="btn-secondary px-4 py-2 rounded-xl text-sm">Add role</button>
+              <button type="button" onClick={saveRoleCatalog} disabled={savingRoles} className="btn-primary px-4 py-2 rounded-xl text-sm disabled:opacity-60">
+                {savingRoles ? 'Saving…' : 'Save roles'}
+              </button>
+            </div>
+          </div>
+          <div className="glass-card-solid rounded-2xl p-6">
             <div className="flex items-center gap-2 mb-4">
               <UserPlus className="w-5 h-5 text-brand-600" />
               <h2 className="font-display font-bold text-lg">Create User</h2>
@@ -659,14 +769,14 @@ const AdminSettings = () => {
                   placeholder="Optional"
                 />
               </Field>
-              <Field label="Access role" hint="Job titles such as Editor or Correspondent are created on Editorial staff.">
+              <Field label="Access role" hint="Create and rename roles in the list above. Editorial job titles stay on Editorial staff.">
                 <select
                   value={newUser.role}
                   onChange={e => setNewUser(prev => ({ ...prev, role: e.target.value }))}
                   className={inputClass}
                 >
-                  {ROLES.map(r => (
-                    <option key={r} value={r}>{ROLE_LABELS[r] || r}</option>
+                  {accessRoles.map(role => (
+                    <option key={role.id} value={role.id}>{role.label}</option>
                   ))}
                 </select>
                 <Link href="/admin/staff" className="inline-block text-xs text-brand-600 mt-2">Create a new editorial role</Link>
@@ -745,7 +855,9 @@ const AdminSettings = () => {
                         aria-label={`Role for ${u.email}`}
                         className="text-sm px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-transparent flex-shrink-0"
                       >
-                        {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r] || r}</option>)}
+                        {(accessRoles.some(role => role.id === (u.role || 'reader')) ? accessRoles : [...accessRoles, { id: u.role, label: u.role }]).map(role => (
+                          <option key={role.id} value={role.id}>{role.label}</option>
+                        ))}
                       </select>
                     </div>
                     <div className="flex flex-wrap gap-2 mt-2">

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyUserRequest } from '@/lib/marketplace-auth';
 import { getSupabaseAdmin } from '@/lib/supabase-server';
+import { readAccessRoles, roleHasCap } from '@/lib/access-roles';
 
 export async function GET(request) {
   const auth = await verifyUserRequest(request);
@@ -22,7 +23,9 @@ export async function POST(request) {
   const auth = await verifyUserRequest(request);
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
-  if (auth.role === 'employer') {
+  const supabase = getSupabaseAdmin();
+  const roles = await readAccessRoles(supabase);
+  if (roleHasCap(roles, auth.role, 'employer') && !roleHasCap(roles, auth.role, 'admin')) {
     return NextResponse.json({ error: 'Already an approved employer.' }, { status: 400 });
   }
 
@@ -44,8 +47,6 @@ export async function POST(request) {
     try { const u = new URL(companyWebsite.trim()); if (!['http:', 'https:'].includes(u.protocol)) throw 0; }
     catch { return NextResponse.json({ error: 'Company website must be a valid http/https URL.' }, { status: 400 }); }
   }
-
-  const supabase = getSupabaseAdmin();
 
   const { data: existing } = await supabase
     .from('employer_applications')

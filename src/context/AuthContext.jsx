@@ -6,6 +6,7 @@ import { rowToApp } from '@/lib/db-mapper';
 import { toggleBookmark, toggleLike } from '../services/articles';
 import { setAuthCookies, clearAuthCookies } from '../lib/auth-cookies';
 import { hasCompleteProfile } from '@/lib/profile-fields';
+import { capsForRole, defaultAccessRoles, readAccessRoles } from '@/lib/access-roles';
 import logger from '../utils/logger';
 
 const AuthContext = createContext(null);
@@ -20,6 +21,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState(null);
+  const [accessRoles, setAccessRoles] = useState(() => defaultAccessRoles());
 
   const loadProfile = useCallback(async (supabase, userId) => {
     const { data, error } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
@@ -89,9 +91,13 @@ export const AuthProvider = ({ children }) => {
           return;
         }
         setUserProfile(profile);
+        const catalog = await readAccessRoles(supabase).catch(() => accessRoles);
+        if (isStale()) return;
+        setAccessRoles(catalog);
         setAuthCookies(profile?.role || 'reader', {
           emailVerified: profile?.emailVerified,
           profileComplete: hasCompleteProfile(profile),
+          caps: capsForRole(catalog, profile?.role || 'reader'),
         });
       } catch (err) {
         if (isStale()) return;
@@ -137,14 +143,17 @@ export const AuthProvider = ({ children }) => {
       return null;
     }
     if (profile) {
+      const catalog = await readAccessRoles(supabase).catch(() => accessRoles);
+      setAccessRoles(catalog);
       setUserProfile(profile);
       setAuthCookies(profile.role || 'reader', {
         emailVerified: profile.emailVerified,
         profileComplete: hasCompleteProfile(profile),
+        caps: capsForRole(catalog, profile.role || 'reader'),
       });
     }
     return profile;
-  }, [user, loadProfile]);
+  }, [user, loadProfile, accessRoles]);
 
   const loginWithGoogle = async (nextPath = '/dashboard') => {
     const supabase = getSupabaseBrowser();
@@ -255,6 +264,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const role = userProfile?.role || 'reader';
+  const caps = new Set(capsForRole(accessRoles, role));
 
   const value = {
     user,
@@ -271,12 +281,12 @@ export const AuthProvider = ({ children }) => {
     toggleLike: handleToggleLike,
     isEmailVerified: userProfile?.emailVerified === true,
     isProfileComplete: userProfile?.profileComplete === true,
-    isAdmin: role === 'admin',
-    isContentWriter: role === 'content_writer' || role === 'admin',
-    isContributor: role === 'contributor' || role === 'admin',
-    isVlogger: role === 'vlogger' || role === 'admin',
-    isCreator: ['contributor', 'vlogger', 'content_writer', 'admin'].includes(role),
-    isEmployer: role === 'employer' || role === 'admin',
+    isAdmin: caps.has('admin'),
+    isContentWriter: caps.has('editorial') || caps.has('admin'),
+    isContributor: caps.has('contributor') || caps.has('admin'),
+    isVlogger: caps.has('vlogger') || caps.has('admin'),
+    isCreator: caps.has('contributor') || caps.has('vlogger') || caps.has('editorial') || caps.has('admin'),
+    isEmployer: caps.has('employer') || caps.has('admin'),
     role,
   };
 
