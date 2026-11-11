@@ -5,6 +5,7 @@ import { getSupabaseBrowser } from '@/lib/supabase-client';
 import { rowToApp } from '@/lib/db-mapper';
 import { toggleBookmark, toggleLike } from '../services/articles';
 import { setAuthCookies, clearAuthCookies } from '../lib/auth-cookies';
+import { hasCompleteProfile } from '@/lib/profile-fields';
 import logger from '../utils/logger';
 
 const AuthContext = createContext(null);
@@ -90,7 +91,7 @@ export const AuthProvider = ({ children }) => {
         setUserProfile(profile);
         setAuthCookies(profile?.role || 'reader', {
           emailVerified: profile?.emailVerified,
-          profileComplete: profile?.profileComplete,
+          profileComplete: hasCompleteProfile(profile),
         });
       } catch (err) {
         if (isStale()) return;
@@ -139,7 +140,7 @@ export const AuthProvider = ({ children }) => {
       setUserProfile(profile);
       setAuthCookies(profile.role || 'reader', {
         emailVerified: profile.emailVerified,
-        profileComplete: profile.profileComplete,
+        profileComplete: hasCompleteProfile(profile),
       });
     }
     return profile;

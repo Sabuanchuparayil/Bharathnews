@@ -126,23 +126,20 @@ export const updateCreatorProfile = async (slug, updates) => {
   }
 };
 
-export const saveAccountProfile = async (userId, details) => {
-  const { error } = await sb().from('users').update({
-    country: details.country,
-    city: details.city,
-    nationality: details.nationality,
-    phone: details.phone || '',
-    whatsapp: details.whatsapp || '',
-    date_of_birth: details.dateOfBirth || null,
-    profession: details.profession,
-    profile_complete: true,
-  }).eq('id', userId);
-  if (error) {
-    if (/column .* does not exist|schema cache/i.test(error.message || '')) {
-      throw new Error('Run supabase/migrations/20261109160000_email_otp_profiles.sql in the Supabase SQL editor.');
-    }
-    throw error;
-  }
+export const saveAccountProfile = async (_userId, details) => {
+  const supabase = sb();
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) throw new Error('Sign in required.');
+  const res = await fetch('/api/account/profile', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify(details),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Could not save your details.');
 };
 
 export const createCreatorPost = async (authorId, post) => {

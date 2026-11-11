@@ -17,6 +17,7 @@ import {
 } from '../services/admin';
 import { STATUS_LABELS } from '@/lib/account-status';
 import { setAuthCookies } from '../lib/auth-cookies';
+import { hasCompleteProfile } from '@/lib/profile-fields';
 import { mergeSiteSettings } from '../lib/site-settings';
 import { ALLOWED_ROLES, ROLE_LABELS } from '@/lib/roles';
 
@@ -198,7 +199,7 @@ const AdminSettings = () => {
         if (profile) {
           setAuthCookies(profile.role || 'reader', {
             emailVerified: profile.emailVerified,
-            profileComplete: profile.profileComplete,
+            profileComplete: hasCompleteProfile(profile),
           });
         }
       }

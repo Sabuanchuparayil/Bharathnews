@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'react-toastify';
 import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
+import { hasCompleteProfile } from '@/lib/profile-fields';
 import { deskAuthHeaders } from '@/lib/desk-client';
 
 function safeNext(value) {
@@ -26,9 +27,9 @@ export default function VerifyEmail() {
   useEffect(() => {
     if (loading || !user || !userProfile) return;
     if (userProfile.emailVerified !== true) return;
-    const dest = userProfile.profileComplete === false
-      ? `/complete-profile?next=${encodeURIComponent(next)}`
-      : next;
+    const dest = hasCompleteProfile(userProfile)
+      ? next
+      : `/complete-profile?next=${encodeURIComponent(next)}`;
     router.replace(dest);
   }, [loading, user, userProfile, next, router]);
 
@@ -61,9 +62,9 @@ export default function VerifyEmail() {
       if (!res.ok) throw new Error(data.error || 'Could not verify that code.');
       const profile = await refreshUserProfile();
       toast.success('Email verified.');
-      const dest = profile?.profileComplete === false
-        ? `/complete-profile?next=${encodeURIComponent(next)}`
-        : next;
+      const dest = hasCompleteProfile(profile)
+        ? next
+        : `/complete-profile?next=${encodeURIComponent(next)}`;
       router.replace(dest);
     } catch (err) {
       toast.error(err.message || 'Could not verify that code.');

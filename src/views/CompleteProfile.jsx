@@ -6,7 +6,7 @@ import { toast } from 'react-toastify';
 import Layout from '../components/Layout';
 import ProfileDetailsForm from '../components/ProfileDetailsForm';
 import { useAuth } from '../context/AuthContext';
-import { EMPTY_PROFILE_DETAILS, profileToDetails, validateProfileDetails } from '@/lib/profile-fields';
+import { EMPTY_PROFILE_DETAILS, hasCompleteProfile, profileToDetails, validateProfileDetails } from '@/lib/profile-fields';
 import { getCreatorProfileByUserId, saveAccountProfile, updateCreatorProfile } from '../services/creator';
 
 function safeNext(value) {
@@ -37,6 +37,10 @@ export default function CompleteProfile() {
     }
     if (!userProfile) {
       setReady(true);
+      return;
+    }
+    if (hasCompleteProfile(userProfile)) {
+      router.replace(next);
       return;
     }
     if (!seeded.current) {

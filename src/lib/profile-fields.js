@@ -46,6 +46,13 @@ function choiceValue(choice, other, options, label) {
   return { value: selected };
 }
 
+function resolveChoice(selected, other, options, label) {
+  const choice = clean(selected, 80);
+  if (options.includes(choice)) return choiceValue(choice, other, options, label);
+  if (choice.length >= 2) return { value: choice };
+  return { error: `Choose a ${label}.` };
+}
+
 function optionalPhone(value, label) {
   const raw = clean(value, 20);
   if (!raw) return { value: '' };
@@ -82,11 +89,11 @@ export function profileToDetails(profile) {
 }
 
 export function validateProfileDetails(input) {
-  const country = choiceValue(input?.country, input?.countryOther, COUNTRY_OPTIONS, 'country of residence');
+  const country = resolveChoice(input?.country, input?.countryOther, COUNTRY_OPTIONS, 'country of residence');
   if (country.error) return country;
   const city = clean(input?.city, 80);
   if (city.length < 2) return { error: 'Enter the city where you live.' };
-  const nationality = choiceValue(input?.nationality, input?.nationalityOther, NATIONALITY_OPTIONS, 'nationality');
+  const nationality = resolveChoice(input?.nationality, input?.nationalityOther, NATIONALITY_OPTIONS, 'nationality');
   if (nationality.error) return nationality;
   const phone = optionalPhone(input?.phone, 'phone number');
   if (phone.error) return phone;
@@ -118,6 +125,22 @@ export function validateProfileDetails(input) {
       location: `${city}, ${country.value}`,
     },
   };
+}
+
+/** True when the account already has the residency details the sign-in gate asks for. */
+export function hasCompleteProfile(profile) {
+  if (!profile) return false;
+  if (profile.profileComplete === true) return true;
+  const city = String(profile.city || '').trim();
+  const country = String(profile.country || '').trim();
+  const nationality = String(profile.nationality || '').trim();
+  const profession = String(profile.profession || '').trim();
+  const dob = profile.dateOfBirth ? String(profile.dateOfBirth).slice(0, 10) : '';
+  return city.length >= 2
+    && country.length >= 2
+    && nationality.length >= 2
+    && profession.length >= 2
+    && /^\d{4}-\d{2}-\d{2}$/.test(dob);
 }
 
 export function isHttpUrl(value) {
