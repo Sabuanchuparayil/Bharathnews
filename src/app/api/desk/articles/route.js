@@ -6,6 +6,7 @@ import {
   listEditorialArticles,
   publishDueDrafts,
   validateEditorialInput,
+  validatePublishInput,
 } from '@/lib/editorial-articles';
 
 function jsonError(err) {
@@ -53,8 +54,8 @@ export async function POST(request) {
 
   if (body.action === 'publish_due') {
     try {
-      const articles = await publishDueDrafts();
-      return NextResponse.json({ articles });
+      const { published, skipped } = await publishDueDrafts();
+      return NextResponse.json({ articles: published, skipped });
     } catch (err) {
       return jsonError(err);
     }
@@ -67,9 +68,15 @@ export async function POST(request) {
   if (publishNow && !auth.caps?.includes('admin')) {
     return NextResponse.json({ error: 'Only an editor-in-chief can publish without review.' }, { status: 403 });
   }
+  let publishing = null;
+  if (publishNow) {
+    const checked = validatePublishInput(body);
+    if (checked.error) return NextResponse.json({ error: checked.error }, { status: 400 });
+    publishing = checked.value;
+  }
 
   try {
-    const article = await createEditorialArticle(parsed.value, auth, { publishNow });
+    const article = await createEditorialArticle(parsed.value, auth, { publishNow, publishing });
     return NextResponse.json({ article }, { status: 201 });
   } catch (err) {
     return jsonError(err);

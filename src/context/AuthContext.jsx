@@ -155,6 +155,26 @@ export const AuthProvider = ({ children }) => {
     return profile;
   }, [user, loadProfile, accessRoles]);
 
+  // Role or catalog changes made by an admin reach open tabs without a new sign-in.
+  useEffect(() => {
+    if (!user || typeof window === 'undefined') return undefined;
+    let lastRun = Date.now();
+    const recheck = () => {
+      if (document.visibilityState === 'hidden') return;
+      if (Date.now() - lastRun < 60 * 1000) return;
+      lastRun = Date.now();
+      refreshUserProfile().catch(err => logger.error('Failed to refresh access:', err));
+    };
+    const timer = window.setInterval(recheck, 5 * 60 * 1000);
+    window.addEventListener('focus', recheck);
+    document.addEventListener('visibilitychange', recheck);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', recheck);
+      document.removeEventListener('visibilitychange', recheck);
+    };
+  }, [user, refreshUserProfile]);
+
   const loginWithGoogle = async (nextPath = '/dashboard') => {
     const supabase = getSupabaseBrowser();
     if (!supabase) throw new Error('Authentication unavailable. Please refresh and try again.');

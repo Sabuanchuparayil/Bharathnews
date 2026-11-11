@@ -5,7 +5,7 @@ import { siteMetadata } from '@/lib/metadata';
 
 export const metadata = siteMetadata({
   title: 'How AI-assisted stories are published',
-  description: 'The Bharath News desk may draft with Claude, then a person reviews the copy, names the author, and publishes it.',
+  description: 'The Bharath News desk may draft with Claude, then a member of the editorial board reviews both language versions and publishes it.',
   path: '/about/ai-policy',
 });
 
@@ -20,7 +20,7 @@ export default function AiPolicyPage() {
             Some platform stories start as a draft written with Claude. A content writer or editor pastes that draft into the newsroom, adds the author name, and chooses a cover image.
           </p>
           <p>
-            The story stays unpublished until someone on the desk approves it. The byline is the name entered on the draft. Stories marked AI-assisted show that label under the author.
+            The story stays unpublished until a member of the editorial board checks the English and Malayalam versions, confirms the category, and publishes it. That board member&apos;s name appears as the byline.
           </p>
           <p>
             Pravasi Jaalakam pieces are separate. Those come from creators and are read in the moderation queue before they appear.

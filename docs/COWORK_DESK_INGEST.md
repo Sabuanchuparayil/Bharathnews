@@ -17,7 +17,7 @@ Or `X-API-Key: <DESK_INGEST_SECRET>`.
 
 Body: one article object, a JSON array, or `{ "articles": [ ... ] }` (max 10).
 
-Drafts are always saved as `editorial_status: draft` with `isAiAssisted: true`. They never auto-publish.
+Drafts are always saved as `editorial_status: draft`. They never auto-publish. Send the `translation` block too: a story cannot be published until it has both an English and a Malayalam version.
 
 ## Example
 
@@ -36,7 +36,6 @@ curl -X POST https://www.thebharathnews.com/api/desk/ingest \
     "tags": ["uae", "visa", "nri"],
     "imageUrl": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=450&fit=crop&crop=center&editorial=1",
     "imageCredit": "Photo: Unsplash",
-    "isAiAssisted": true,
     "translation": {
       "lang": "ml",
       "title": "Malayalam title",
@@ -50,7 +49,7 @@ curl -X POST https://www.thebharathnews.com/api/desk/ingest \
 
 1. Cowork posts drafts here every 2 hours
 2. Open https://www.thebharathnews.com/desk/review
-3. Edit, request changes, or approve and publish
+3. Edit, request changes, or approve and publish. Publishing asks for the editorial board member who signs it off (they become the byline) and a confirmed category.
 
 ## Env
 

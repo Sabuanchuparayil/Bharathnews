@@ -7,6 +7,7 @@ import { toast } from 'react-toastify';
 import DeskLayout from '../components/DeskLayout';
 import CoverImagePicker from '../components/CoverImagePicker';
 import StaffAuthorPicker from '../components/StaffAuthorPicker';
+import PublishDialog, { languageStatus } from '../components/PublishDialog';
 import { useAuth } from '../context/AuthContext';
 import { CATEGORIES } from '../config/feeds.config';
 import { deskFetch } from '@/lib/desk-client';
@@ -25,7 +26,6 @@ const EMPTY = {
   tags: '',
   imageUrl: '',
   imageCredit: '',
-  isAiAssisted: true,
   scheduledAt: '',
   translationTitle: '',
   translationSummary: '',
@@ -48,6 +48,7 @@ const DeskCompose = () => {
   const draftId = searchParams.get('id') || '';
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
+  const [publishOpen, setPublishOpen] = useState(false);
 
   const set = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
 
@@ -70,7 +71,6 @@ const DeskCompose = () => {
           tags: (article.topics || []).join(', '),
           imageUrl: article.imageUrl && !isStoredPlaceholderImage(article.imageUrl) ? article.imageUrl : '',
           imageCredit: article.imageCredit || '',
-          isAiAssisted: article.isAiAssisted !== false,
           scheduledAt: toLocalInput(article._scheduledAtIso),
           translationTitle: other.title || '',
           translationSummary: other.summary || '',
@@ -80,11 +80,12 @@ const DeskCompose = () => {
       .catch(err => toast.error(err.message || 'Could not open this draft.'));
   }, [draftId]);
 
-  const payload = (publishNow = false) => ({
+  const payload = (publishNow = false, publishing = null) => ({
     title: form.title,
     summary: form.summary,
     fullContent: form.fullContent,
-    category: form.category,
+    category: publishing?.category || form.category,
+    publisherSlug: publishing?.publisherSlug || '',
     language: form.language,
     author: form.author,
     authorSlug: form.authorSlug,
@@ -93,7 +94,6 @@ const DeskCompose = () => {
     tags: form.tags,
     imageUrl: form.imageUrl,
     imageCredit: form.imageCredit,
-    isAiAssisted: form.isAiAssisted,
     scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).toISOString() : null,
     publishNow,
     translation: {
@@ -104,7 +104,7 @@ const DeskCompose = () => {
     },
   });
 
-  const save = async (publishNow = false) => {
+  const save = async (publishNow = false, publishing = null) => {
     setSaving(true);
     try {
       const data = draftId
@@ -114,8 +114,9 @@ const DeskCompose = () => {
         })
         : await deskFetch('/api/desk/articles', {
           method: 'POST',
-          body: JSON.stringify(payload(publishNow)),
+          body: JSON.stringify(payload(publishNow, publishing)),
         });
+      setPublishOpen(false);
       toast.success(publishNow ? 'Published.' : 'Draft saved for review.');
       if (!draftId && data.article?.id && !publishNow) {
         window.history.replaceState(null, '', `/desk/compose?id=${data.article.id}`);
@@ -176,10 +177,6 @@ const DeskCompose = () => {
               value={form}
               onChange={next => setForm(prev => ({ ...prev, ...next }))}
             />
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={form.isAiAssisted} onChange={e => set('isAiAssisted', e.target.checked)} />
-              Mark as AI-assisted
-            </label>
             {isAdmin && (
               <Link href="/admin/staff" className="inline-block text-xs text-brand-700 dark:text-brand-300">Manage editorial staff</Link>
             )}
@@ -203,7 +200,7 @@ const DeskCompose = () => {
           </label>
           <div className="rounded-2xl border border-stone-200 dark:border-white/10 p-4 space-y-3">
             <h2 className="font-display font-bold">{otherLabel} version</h2>
-            <p className="text-xs text-gray-500">Optional. Readers can switch language on the article when this is filled in.</p>
+            <p className="text-xs text-gray-500">Required before publishing. Every story goes live in both English and Malayalam.</p>
             <input value={form.translationTitle} onChange={e => set('translationTitle', e.target.value)} placeholder={`${otherLabel} title`} className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
             <textarea value={form.translationSummary} onChange={e => set('translationSummary', e.target.value)} rows={2} placeholder={`${otherLabel} summary`} className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
             <textarea value={form.translationBody} onChange={e => set('translationBody', e.target.value)} rows={8} placeholder={`${otherLabel} full content`} className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
@@ -211,11 +208,28 @@ const DeskCompose = () => {
           <div className="flex flex-wrap gap-3">
             <button type="submit" disabled={saving} className="btn-primary px-5 py-2.5 rounded-xl disabled:opacity-50">Save draft</button>
             {isAdmin && !draftId && (
-              <button type="button" disabled={saving} onClick={() => save(true)} className="btn-secondary px-5 py-2.5 rounded-xl disabled:opacity-50">Publish now</button>
+              <button type="button" disabled={saving} onClick={() => setPublishOpen(true)} className="btn-secondary px-5 py-2.5 rounded-xl disabled:opacity-50">Publish now</button>
             )}
             <Link href="/desk/review" className="px-5 py-2.5 text-sm text-gray-500">Review queue</Link>
           </div>
         </form>
+        <PublishDialog
+          open={publishOpen}
+          title={form.title}
+          category={form.category}
+          authorSlug={form.authorSlug}
+          languages={languageStatus({
+            language: form.language,
+            title: form.title,
+            fullContent: form.fullContent,
+            translations: {
+              [form.language === 'ml' ? 'en' : 'ml']: { title: form.translationTitle, fullContent: form.translationBody },
+            },
+          })}
+          busy={saving}
+          onCancel={() => setPublishOpen(false)}
+          onConfirm={publishing => save(true, publishing)}
+        />
     </DeskLayout>
   );
 };

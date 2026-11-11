@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { toast } from 'react-toastify';
 import { UserCircle } from 'lucide-react';
 import DeskLayout from '../components/DeskLayout';
+import PublishDialog, { languageStatus } from '../components/PublishDialog';
 import { useAuth } from '../context/AuthContext';
 import { deskFetch } from '@/lib/desk-client';
 
@@ -24,6 +25,8 @@ const DeskReview = () => {
   const [notes, setNotes] = useState({});
   const [openId, setOpenId] = useState('');
   const [editors, setEditors] = useState([]);
+  const [publishTarget, setPublishTarget] = useState(null);
+  const [publishing, setPublishing] = useState(false);
 
   const load = useCallback(async () => {
     const view = ['queue', 'mine', 'assigned', 'unassigned'].includes(tab) ? tab : null;
@@ -47,17 +50,27 @@ const DeskReview = () => {
     load().catch(err => toast.error(err.message || 'Could not load the queue.'));
   }, [load]);
 
-  const act = async (id, action) => {
+  const act = async (id, action, extra = {}) => {
     try {
       await deskFetch(`/api/desk/articles/${id}`, {
         method: 'PATCH',
-        body: JSON.stringify({ action, notes: notes[id] || '' }),
+        body: JSON.stringify({ action, notes: notes[id] || '', ...extra }),
       });
       toast.success(action === 'publish' ? 'Published.' : 'Updated.');
       load();
+      return true;
     } catch (err) {
       toast.error(err.message || 'Could not update this draft.');
+      return false;
     }
+  };
+
+  const confirmPublish = async (choice) => {
+    if (!publishTarget) return;
+    setPublishing(true);
+    const ok = await act(publishTarget.id, 'publish', choice);
+    setPublishing(false);
+    if (ok) setPublishTarget(null);
   };
 
   const assignTo = async (articleId, userId) => {
@@ -80,6 +93,9 @@ const DeskReview = () => {
         body: JSON.stringify({ action: 'publish_due' }),
       });
       toast.success(`Published ${data.articles?.length || 0} scheduled draft(s).`);
+      for (const item of data.skipped || []) {
+        toast.warning(`Not published: ${item.title || 'Untitled'}. ${item.reason}`);
+      }
       load();
     } catch (err) {
       toast.error(err.message || 'Could not publish scheduled drafts.');
@@ -121,7 +137,7 @@ const DeskReview = () => {
                 <div>
                   <p className="text-xs uppercase text-brand-700 dark:text-brand-300">{article.language} · {article.category} · {article.editorialStatus}</p>
                   <h2 className="font-display font-bold text-xl mt-1">{article.title}</h2>
-                  <p className="text-sm text-gray-500 mt-1">By {article.author}{article.isAiAssisted ? ' · AI-assisted' : ''}</p>
+                  <p className="text-sm text-gray-500 mt-1">By {article.author}</p>
                   {assignee && (
                     <p className="text-xs text-brand-600 dark:text-brand-400 mt-1 flex items-center gap-1">
                       <UserCircle className="w-3.5 h-3.5" /> Assigned to {isAssignedToMe ? 'you' : assignee}
@@ -162,7 +178,7 @@ const DeskReview = () => {
                     className="w-full mt-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-3 py-2 text-sm"
                   />
                   <div className="flex flex-wrap gap-2 mt-3">
-                    <button type="button" onClick={() => act(article.id, 'publish')} className="px-4 py-2 bg-green-700 text-white rounded-xl text-sm">Approve and publish</button>
+                    <button type="button" onClick={() => setPublishTarget(article)} className="px-4 py-2 bg-green-700 text-white rounded-xl text-sm">Approve and publish</button>
                     <button type="button" onClick={() => act(article.id, 'needs_revision')} className="px-4 py-2 bg-amber-600 text-white rounded-xl text-sm">Request changes</button>
                     <button type="button" onClick={() => act(article.id, 'reject')} className="px-4 py-2 bg-red-700 text-white rounded-xl text-sm">Reject</button>
                     <Link href={`/desk/compose?id=${article.id}`} className="px-4 py-2 rounded-xl text-sm border border-stone-200 dark:border-white/10">Edit</Link>
@@ -176,6 +192,17 @@ const DeskReview = () => {
           );
         })}
       </div>
+      <PublishDialog
+        open={Boolean(publishTarget)}
+        title={publishTarget?.title}
+        category={publishTarget?.category}
+        authorSlug={publishTarget?.authorSlug}
+        languages={publishTarget ? languageStatus(publishTarget) : []}
+        fixHref={publishTarget ? `/desk/compose?id=${publishTarget.id}` : ''}
+        busy={publishing}
+        onCancel={() => setPublishTarget(null)}
+        onConfirm={confirmPublish}
+      />
     </DeskLayout>
   );
 };

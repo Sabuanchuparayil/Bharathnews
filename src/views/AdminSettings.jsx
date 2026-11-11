@@ -16,11 +16,9 @@ import {
   resetUserPassword, sendPasswordResetEmail, setUserStatus, getAccessRoles, saveAccessRoles,
 } from '../services/admin';
 import { STATUS_LABELS } from '@/lib/account-status';
-import { setAuthCookies } from '../lib/auth-cookies';
-import { hasCompleteProfile } from '@/lib/profile-fields';
 import { mergeSiteSettings } from '../lib/site-settings';
 import {
-  CAPABILITY_OPTIONS, READER_BLOCKED_CAPS, capsForRole, defaultAccessRoles, slugifyRoleId,
+  CAPABILITY_OPTIONS, READER_BLOCKED_CAPS, defaultAccessRoles, slugifyRoleId,
 } from '@/lib/access-roles';
 const LANG_OPTIONS = ['en', 'ml'];
 const TABS = [
@@ -198,16 +196,7 @@ const AdminSettings = () => {
     try {
       await setUserRole(userId, role);
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, role } : u));
-      if (user?.id === userId) {
-        const profile = await refreshUserProfile();
-        if (profile) {
-          setAuthCookies(profile.role || 'reader', {
-            emailVerified: profile.emailVerified,
-            profileComplete: hasCompleteProfile(profile),
-            caps: capsForRole(accessRoles, profile.role || 'reader'),
-          });
-        }
-      }
+      if (user?.id === userId) await refreshUserProfile();
       toast.success('Role updated');
     } catch (err) {
       toast.error(err.message || 'Failed to update role');
@@ -356,7 +345,8 @@ const AdminSettings = () => {
     try {
       const saved = await saveAccessRoles(accessRoles);
       setAccessRoles(saved);
-      toast.success('Access roles saved. People should sign in again to pick up permission changes.');
+      await refreshUserProfile();
+      toast.success('Access roles saved. Open sessions pick up the change within a few minutes.');
     } catch (err) {
       toast.error(err.message || 'Could not save roles');
     } finally {

@@ -38,7 +38,6 @@ export async function POST(request) {
     const parsed = validateEditorialInput({
       ...item,
       author: item.author || 'Bharath News Desk',
-      isAiAssisted: true,
       publishNow: false,
       scheduledAt: null,
     });
@@ -49,7 +48,7 @@ export async function POST(request) {
 
     try {
       const article = await createEditorialArticle(
-        { ...parsed.value, isAiAssisted: true, scheduledAt: null },
+        { ...parsed.value, scheduledAt: null },
         auth,
         { publishNow: false, autoAssign: true },
       );

@@ -162,6 +162,7 @@ const AdminStaff = () => {
   const [credentials, setCredentials] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [accountRoles, setAccountRoles] = useState(() => Object.entries(ACCOUNT_ROLES).map(([id, label]) => ({ id, label })));
+  const [roleLabels, setRoleLabels] = useState(ACCOUNT_ROLES);
 
   // Link modal state
   const [linkTarget, setLinkTarget] = useState(null);
@@ -189,6 +190,7 @@ const AdminStaff = () => {
     const supabase = getSupabaseBrowser();
     if (!supabase) return;
     readAccessRoles(supabase).then(roles => {
+      setRoleLabels(Object.fromEntries(roles.map(role => [role.id, role.label])));
       const editorial = roles.filter(role => role.caps.includes('editorial') || role.caps.includes('admin'));
       if (editorial.length) setAccountRoles(editorial);
     }).catch(() => {});
@@ -380,6 +382,7 @@ const AdminStaff = () => {
                 <PersonCard
                   key={person.id}
                   person={person}
+                  roleLabels={roleLabels}
                   isEdit={editId === person.id}
                   onEdit={() => startEdit(person)}
                   onUnlink={() => unlinkAccount(person.id)}
@@ -403,6 +406,7 @@ const AdminStaff = () => {
                   <PersonCard
                     key={person.id}
                     person={person}
+                    roleLabels={roleLabels}
                     isEdit={editId === person.id}
                     onEdit={() => startEdit(person)}
                     onLink={() => openLink(person)}
@@ -587,7 +591,7 @@ const AdminStaff = () => {
 };
 
 // ── Person card ──
-function PersonCard({ person, isEdit, onEdit, onLink, onUnlink }) {
+function PersonCard({ person, roleLabels, isEdit, onEdit, onLink, onUnlink }) {
   const [expanded, setExpanded] = useState(false);
   const hasAccount = Boolean(person.account);
   const topics = person.assignedTopics || [];
@@ -609,7 +613,7 @@ function PersonCard({ person, isEdit, onEdit, onLink, onUnlink }) {
           </div>
           <p className="text-xs text-gray-500 truncate">
             {person.title}
-            {hasAccount && <> · <span className="text-brand-600">{ACCOUNT_ROLES[person.account.role] || person.account.role}</span></>}
+            {hasAccount && <> · <span className="text-brand-600">{roleLabels?.[person.account.role] || person.account.role}</span></>}
             {hasAccount && <> · <StatusBadge status={person.account.status} /></>}
           </p>
           {hasAccount && (

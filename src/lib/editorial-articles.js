@@ -15,8 +15,74 @@ const CATEGORIES = new Set([
   'education', 'jobs', 'realestate', 'lifestyle', 'opinion', 'world', 'breaking',
 ]);
 
+const LANGUAGE_NAMES = { en: 'English', ml: 'Malayalam' };
+
 function cleanText(value, max) {
   return String(value || '').replace(/\s+/g, ' ').trim().slice(0, max);
+}
+
+function badRequest(message) {
+  const err = new Error(message);
+  err.status = 400;
+  return err;
+}
+
+/** Checked on every publish: the board member signs it off and confirms the category. */
+export function validatePublishInput(body) {
+  const publisherSlug = slugify(body?.publisherSlug || '');
+  const category = cleanText(body?.category, 40);
+  if (!publisherSlug) return { error: 'Choose the editorial board member publishing this story.' };
+  if (!CATEGORIES.has(category)) return { error: 'Confirm a valid category before publishing.' };
+  return { value: { publisherSlug, category } };
+}
+
+async function resolveBoardMember(supabase, slug) {
+  const { data, error } = await supabase
+    .from('staff_profiles')
+    .select('*')
+    .eq('slug', slug)
+    .eq('is_active', true)
+    .maybeSingle();
+  if (error) throw new Error(error.message || 'Could not load the editorial board.');
+  if (!data) throw badRequest('That editorial board member is not active. Pick someone else.');
+  const profile = rowToApp(data);
+  return {
+    author: profile.displayName,
+    author_slug: profile.slug,
+    author_photo_url: profile.photoURL || '',
+    author_title: profile.title || '',
+  };
+}
+
+/** Both English and Malayalam must be complete; returns the missing language names. */
+function missingLanguages({ language, title, fullContent, translations }) {
+  const primary = language === 'ml' ? 'ml' : 'en';
+  const other = primary === 'en' ? 'ml' : 'en';
+  const missing = [];
+  if (cleanText(title, 200).length < 4 || String(fullContent || '').trim().length < 40) {
+    missing.push(LANGUAGE_NAMES[primary]);
+  }
+  const version = translations?.[other] || {};
+  if (cleanText(version.title, 200).length < 4 || String(version.fullContent || '').trim().length < 40) {
+    missing.push(LANGUAGE_NAMES[other]);
+  }
+  return missing;
+}
+
+function assertBilingual(article) {
+  const missing = missingLanguages(article);
+  if (missing.length) {
+    throw badRequest(`Add the ${missing.join(' and ')} version (title and full story) before publishing.`);
+  }
+}
+
+/** Board sign-off means the translation was checked by a person. */
+function markTranslationsReviewed(translations) {
+  const out = { ...(translations || {}) };
+  for (const code of ['en', 'ml']) {
+    if (out[code]) out[code] = { ...out[code], machineAssisted: false, reviewedAt: new Date().toISOString() };
+  }
+  return out;
 }
 
 function asTags(value) {
@@ -80,7 +146,6 @@ export function validateEditorialInput(body, { partial = false } = {}) {
       imageUrl,
       imageCredit,
       tags: asTags(body.tags),
-      isAiAssisted: Boolean(body.isAiAssisted),
       scheduledAt,
       translation,
     },
@@ -152,9 +217,24 @@ async function writeRow(supabase, mode, payload, id) {
   throw new Error('Could not save the article.');
 }
 
-export async function createEditorialArticle(input, editor, { publishNow = false, autoAssign = false } = {}) {
+export async function createEditorialArticle(input, editor, { publishNow = false, autoAssign = false, publishing = null } = {}) {
   const supabase = getSupabaseAdmin();
   const resolved = await withResolvedStaffAuthor(input);
+  let translations = translationMap(resolved.language, resolved.translation);
+  let byline = {
+    author: resolved.author,
+    author_slug: resolved.authorSlug,
+    author_photo_url: resolved.authorPhotoUrl || '',
+    author_title: resolved.authorTitle || '',
+  };
+  let category = resolved.category;
+  if (publishNow) {
+    if (!publishing) throw badRequest('Choose the editorial board member and confirm the category before publishing.');
+    assertBilingual({ ...resolved, translations });
+    byline = await resolveBoardMember(supabase, publishing.publisherSlug);
+    category = publishing.category;
+    translations = markTranslationsReviewed(translations);
+  }
   const slug = await uniqueSlug(supabase, resolved.title);
   const now = new Date().toISOString();
 
@@ -177,25 +257,22 @@ export async function createEditorialArticle(input, editor, { publishNow = false
     full_content: resolved.fullContent,
     image_url: resolved.imageUrl || '',
     image_credit: resolved.imageCredit || '',
-    category: resolved.category,
+    category,
     source: 'Bharath News Editorial',
-    author: resolved.author,
-    author_slug: resolved.authorSlug,
-    author_photo_url: resolved.authorPhotoUrl || '',
-    author_title: resolved.authorTitle || '',
+    ...byline,
     language: resolved.language,
     topics: resolved.tags,
     editorial_status: publishNow ? 'published' : 'draft',
     published_at: publishNow ? now : null,
     is_citizen_content: false,
-    is_ai_assisted: resolved.isAiAssisted,
+    is_ai_assisted: false,
     editor_notes: '',
     revision_count: 0,
     scheduled_at: resolved.scheduledAt,
     submitted_by: editor.uid,
     assigned_to: assignedTo,
     assigned_at: assignedAt,
-    translations: translationMap(resolved.language, resolved.translation),
+    translations,
     views: 0,
     likes: 0,
     shares: 0,
@@ -242,7 +319,7 @@ export async function updateEditorialArticle(id, input) {
     author_title: resolved.authorTitle || '',
     language: resolved.language,
     topics: resolved.tags,
-    is_ai_assisted: resolved.isAiAssisted,
+    is_ai_assisted: false,
     scheduled_at: resolved.scheduledAt,
     translations,
     revision_count: (existing.revision_count || 0) + 1,
@@ -270,7 +347,7 @@ export async function getEditorialArticle(id) {
   return data ? rowToApp(data) : null;
 }
 
-export async function reviewEditorialArticle(id, { action, notes }) {
+export async function reviewEditorialArticle(id, { action, notes, publishing = null }) {
   const supabase = getSupabaseAdmin();
   const { data: existing, error } = await supabase.from('articles').select('*').eq('id', id).maybeSingle();
   if (error) throw error;
@@ -284,7 +361,23 @@ export async function reviewEditorialArticle(id, { action, notes }) {
   let patch = { editor_notes: notes || existing.editor_notes || '' };
 
   if (action === 'publish') {
-    patch = { ...patch, editorial_status: 'published', published_at: existing.published_at || now };
+    if (!publishing) throw badRequest('Choose the editorial board member and confirm the category before publishing.');
+    assertBilingual({
+      language: existing.language,
+      title: existing.title,
+      fullContent: existing.full_content,
+      translations: existing.translations,
+    });
+    const byline = await resolveBoardMember(supabase, publishing.publisherSlug);
+    patch = {
+      ...patch,
+      ...byline,
+      category: publishing.category,
+      is_ai_assisted: false,
+      translations: markTranslationsReviewed(existing.translations),
+      editorial_status: 'published',
+      published_at: existing.published_at || now,
+    };
   } else if (action === 'needs_revision') {
     patch = { ...patch, editorial_status: 'needs_revision', revision_count: (existing.revision_count || 0) + 1 };
   } else if (action === 'reject') {
@@ -316,8 +409,32 @@ export async function publishDueDrafts() {
   }
 
   const published = [];
+  const skipped = [];
   for (const row of data || []) {
+    const missing = missingLanguages({
+      language: row.language,
+      title: row.title,
+      fullContent: row.full_content,
+      translations: row.translations,
+    });
+    if (missing.length) {
+      skipped.push({ id: row.id, title: row.title, reason: `Missing the ${missing.join(' and ')} version.` });
+      continue;
+    }
+    let byline;
+    try {
+      byline = row.author_slug ? await resolveBoardMember(supabase, row.author_slug) : null;
+    } catch {
+      byline = null;
+    }
+    if (!byline) {
+      skipped.push({ id: row.id, title: row.title, reason: 'The byline is not an active editorial board member.' });
+      continue;
+    }
     const saved = await writeRow(supabase, 'update', {
+      ...byline,
+      is_ai_assisted: false,
+      translations: markTranslationsReviewed(row.translations),
       editorial_status: 'published',
       published_at: now,
     }, row.id);
@@ -325,7 +442,7 @@ export async function publishDueDrafts() {
     await onArticlePublished({ ...article, editorialStatus: 'published' });
     published.push(article);
   }
-  return published;
+  return { published, skipped };
 }
 
 // ── Content assignment ──

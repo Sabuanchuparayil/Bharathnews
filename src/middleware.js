@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { SITE_APEX_HOST, SITE_CANONICAL_HOST } from '@/lib/site-url';
 import { VALID_ROLES } from '@/lib/roles';
-import { fallbackCaps } from '@/lib/access-roles';
+import { capsForRole, fallbackCaps, fetchAccessRolesPublic } from '@/lib/access-roles';
 
 const AUTH_REQUIRED = ['/dashboard', '/settings', '/bookmarks', '/creator', '/employer', '/jobs/post', '/jobs/my', '/classifieds/post', '/classifieds/my'];
 const ADMIN_PREFIX = '/admin';
@@ -17,11 +17,14 @@ function sanitizeNext(nextPath) {
   return '/dashboard';
 }
 
-function requestCaps(request, role) {
+async function requestCaps(request, role, needsLookup) {
   const raw = request.cookies.get('bn_caps')?.value;
   if (raw === '0') return new Set();
   if (raw) return new Set(raw.split('.').filter(Boolean));
-  return new Set(fallbackCaps(VALID_ROLES.has(role) ? role : ''));
+  if (VALID_ROLES.has(role)) return new Set(fallbackCaps(role));
+  if (!needsLookup) return new Set();
+  const catalog = await fetchAccessRolesPublic();
+  return new Set(catalog ? capsForRole(catalog, role) : []);
 }
 
 /** Old URLs still requested by crawlers and shared links. */
@@ -77,7 +80,7 @@ function legacyRedirectPath(pathname) {
   return null;
 }
 
-export function middleware(request) {
+export async function middleware(request) {
   const host = request.headers.get('host')?.split(':')[0]?.toLowerCase();
 
   if (host === SITE_APEX_HOST) {
@@ -119,7 +122,8 @@ export function middleware(request) {
   const auth = request.cookies.get('bn_auth')?.value;
   const rawRole = request.cookies.get('bn_role')?.value || '';
   const role = VALID_ROLES.has(rawRole) ? rawRole : (rawRole || 'reader');
-  const caps = requestCaps(request, role);
+  const isStaffPath = pathname === '/desk' || pathname.startsWith('/desk/') || pathname.startsWith(ADMIN_PREFIX);
+  const caps = await requestCaps(request, role, auth === '1' && isStaffPath);
   const verified = request.cookies.get('bn_verified')?.value === '1';
   const profileReady = request.cookies.get('bn_profile')?.value === '1';
 

@@ -6,6 +6,7 @@ import {
   reviewEditorialArticle,
   updateEditorialArticle,
   validateEditorialInput,
+  validatePublishInput,
 } from '@/lib/editorial-articles';
 
 function jsonError(err) {
@@ -55,9 +56,16 @@ export async function PATCH(request, { params }) {
       if (!article) return NextResponse.json({ error: 'Assignment columns not available. Run the migration.' }, { status: 500 });
       return NextResponse.json({ article });
     }
+    let publishing = null;
+    if (body.action === 'publish') {
+      const checked = validatePublishInput(body);
+      if (checked.error) return NextResponse.json({ error: checked.error }, { status: 400 });
+      publishing = checked.value;
+    }
     const article = await reviewEditorialArticle(id, {
       action: body.action,
       notes: typeof body.notes === 'string' ? body.notes.slice(0, 1000) : '',
+      publishing,
     });
     return NextResponse.json({ article });
   } catch (err) {

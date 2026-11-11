@@ -95,6 +95,24 @@ export async function readAccessRoles(supabase) {
   return normalizeAccessRoles(data?.value);
 }
 
+/** Reads the catalog through the public REST endpoint, for code that has no Supabase client (middleware). */
+export async function fetchAccessRolesPublic() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  try {
+    const res = await fetch(`${url}/rest/v1/site_settings?key=eq.access_roles&select=value`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+      cache: 'no-store',
+    });
+    if (!res.ok) return null;
+    const rows = await res.json();
+    return normalizeAccessRoles(Array.isArray(rows) ? rows[0]?.value : null);
+  } catch {
+    return null;
+  }
+}
+
 export async function countOtherActiveAdmins(supabase, roles, userId) {
   const ids = adminRoleIds(roles);
   if (!ids.length) return 0;

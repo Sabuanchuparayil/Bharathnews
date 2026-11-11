@@ -42,7 +42,8 @@ export function resolveArticleDisplay(article, readLang) {
       fullContent: decodeHtmlEntities(stored.fullContent || article.fullContent),
       lang: target,
       isTranslation: true,
-      machineAssisted: !!stored.machineAssisted,
+      // Newsroom translations are checked by the editorial board before publishing.
+      machineAssisted: !!stored.machineAssisted && stored.provider !== 'claude-cowork',
     };
   }
 

@@ -237,9 +237,6 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
                   <Link href={authorHref} className="hover:text-brand-700">{byline}</Link>
                 ) : byline;
               })()}
-              {article.isAiAssisted && (
-                <Link href="/about/ai-policy" className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200">AI-assisted</Link>
-              )}
               <span className="flex items-center space-x-1">
                 <Clock className="w-4 h-4" />
                 <span><RelativeTime date={publishedDate} /></span>
