@@ -68,8 +68,11 @@ const CoverImagePicker = ({ category, imageUrl, imageCredit, onChange }) => {
           More
         </button>
       </div>
+      {source === 'openverse' && images.length > 0 && (
+        <p className="text-xs text-gray-500">Openly licensed photos from Openverse. Choosing one saves the photographer credit on the story.</p>
+      )}
       {source === 'catalog' && images.length > 0 && (
-        <p className="text-xs text-gray-500">Showing the newsroom catalog. Add UNSPLASH_ACCESS_KEY on the server to search the full Unsplash library.</p>
+        <p className="text-xs text-gray-500">Openverse had no match for that search. Showing the newsroom catalog.</p>
       )}
       {images.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">

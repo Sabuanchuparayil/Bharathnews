@@ -2,6 +2,7 @@
  * Article image resolution for Workers pipeline.
  * Unique per-article fallbacks (slug hash) — avoids duplicate thumbnails on Facebook/Telegram.
  */
+import { findOpenImage } from './open-images.js';
 
 const GLOBAL_IMAGE_POOL = [
   'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=800&h=450&fit=crop&crop=center',
@@ -142,12 +143,20 @@ async function fetchOgImage(url, timeoutMs = 4000) {
   }
 }
 
-/** Resolve the best available image URL for an article at publish time. Returns '' if none found. */
-export async function resolveArticleImage({ imageUrl, sourceUrl, category, slug, title, ogTimeoutMs = 4000 }) {
-  if (imageUrl && isRealArticleImage(imageUrl)) return imageUrl;
+/** Resolve a publishable image. A missing publisher photo falls back to an openly licensed reference. */
+export async function resolveArticlePicture({ imageUrl, sourceUrl, category, title, ogTimeoutMs = 4000 }) {
+  if (imageUrl && isRealArticleImage(imageUrl)) return { url: imageUrl, credit: '' };
   if (sourceUrl) {
     const og = await fetchOgImage(sourceUrl, ogTimeoutMs);
-    if (og && isRealArticleImage(og)) return og;
+    if (og && isRealArticleImage(og)) return { url: og, credit: '' };
   }
-  return '';
+  const open = await findOpenImage({ title, category, timeoutMs: 3500, fallback: false });
+  if (open?.url && isRealArticleImage(open.url)) return { url: open.url, credit: open.credit || '' };
+  return { url: '', credit: '' };
+}
+
+/** Resolve the best available image URL for an article at publish time. Returns '' if none found. */
+export async function resolveArticleImage(input) {
+  const picture = await resolveArticlePicture(input);
+  return picture.url;
 }

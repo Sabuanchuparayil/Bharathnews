@@ -6,6 +6,7 @@ import { resolveStaffAuthor } from '@/lib/staff-profiles';
 import { SOURCE_CATEGORY_IDS } from '@/config/category-taxonomy';
 import { readSiteSettings } from '@/lib/site-settings';
 import { recordAudit, snapshotArticle } from '@/lib/audit-log';
+import { findOpenImage } from '@/lib/open-images';
 
 const OPTIONAL_COLUMNS = [
   'is_ai_assisted', 'editor_notes', 'revision_count', 'scheduled_at', 'submitted_by',
@@ -274,6 +275,15 @@ export async function createEditorialArticle(input, editor, { publishNow = false
     category = publishing.category;
     translations = markTranslationsReviewed(translations, languages);
   }
+  let imageUrl = resolved.imageUrl || '';
+  let imageCredit = resolved.imageCredit || '';
+  if (!imageUrl) {
+    const open = await findOpenImage({ title: resolved.title, category, timeoutMs: 3500, fallback: false });
+    if (open?.url) {
+      imageUrl = open.url;
+      imageCredit = imageCredit || open.credit;
+    }
+  }
   const slug = await uniqueSlug(supabase, resolved.title);
   const now = new Date().toISOString();
 
@@ -294,8 +304,8 @@ export async function createEditorialArticle(input, editor, { publishNow = false
     slug,
     summary: resolved.summary || resolved.fullContent.slice(0, 220),
     full_content: resolved.fullContent,
-    image_url: resolved.imageUrl || '',
-    image_credit: resolved.imageCredit || '',
+    image_url: imageUrl,
+    image_credit: imageCredit,
     category,
     source,
     ...byline,

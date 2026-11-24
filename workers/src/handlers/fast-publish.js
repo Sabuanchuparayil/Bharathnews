@@ -2,7 +2,7 @@
  * Fast publish — skip Claude classification and Llama rewriting.
  * Publishes RSS content directly to the articles table for maximum throughput.
  */
-import { isCategoryFallbackImage, resolveArticleImage, isRealArticleImage } from '../lib/image-resolver.js';
+import { isCategoryFallbackImage, resolveArticlePicture, isRealArticleImage } from '../lib/image-resolver.js';
 import { resolveArticleBody } from '../lib/article-content.js';
 import { runQuery, upsertRow, patchRawArticle, patchRow, selectRows, supabaseHeaders } from '../lib/supabase-rest.js';
 import { onArticlePublished } from '../lib/on-article-published.js';
@@ -47,27 +47,29 @@ async function publishOne(env, raw, { skipImageResolve = false, skipSourceFetch 
   const body = await resolveArticleBody(raw, { skipSourceFetch: skipSourceFetch || skipImageResolve });
 
   let imageUrl = raw.imageUrl || raw.image_url || '';
+  let imageCredit = '';
   if (needsRealImage || !skipImageResolve) {
-    imageUrl = await resolveArticleImage({
+    const picture = await resolveArticlePicture({
       imageUrl: raw.imageUrl || raw.image_url || '',
       sourceUrl: raw.sourceUrl || raw.source_url || '',
       category,
-      slug,
       title: raw.title,
       ogTimeoutMs: needsRealImage ? 4000 : 2500,
     });
+    imageUrl = picture.url;
+    imageCredit = picture.credit;
   } else if (!imageUrl || isCategoryFallbackImage(imageUrl)) {
     imageUrl = raw.imageUrl || raw.image_url || '';
   }
 
   if (needsRealImage && !isRealArticleImage(imageUrl)) {
-    return 'skipped';
+    return 'no-image';
   }
 
   const summary = body.slice(0, 300) || raw.title.slice(0, 300);
 
   try {
-    const ok = await upsertRow(env, 'articles', {
+    const row = {
       slug,
       title: raw.title.trim(),
       summary,
@@ -91,7 +93,9 @@ async function publishOne(env, raw, { skipImageResolve = false, skipSourceFetch 
       shares: 0,
       published_at: raw.publishedAt || raw.published_at || new Date().toISOString(),
       distributed: { telegram: false, facebook: false, whatsapp: false },
-    }, 'slug');
+    };
+    if (imageCredit) row.image_credit = imageCredit;
+    const ok = await upsertRow(env, 'articles', row, 'slug');
     if (!ok) {
       const [existing] = await selectRows(env, 'articles', {
         filters: { slug },
@@ -165,7 +169,7 @@ export async function handleFastPublish(env, options = {}) {
 
     for (const raw of queue) {
       const outcome = await publishOne(env, raw, { skipImageResolve });
-      totals[outcome]++;
+      totals[outcome === 'no-image' ? 'skipped' : outcome]++;
       if (outcome === 'published') publishedSlugs.push(raw.slug || raw.id);
     }
 
@@ -231,10 +235,10 @@ export async function handlePublishMalayalam(env, options = {}) {
       });
       if (outcome === 'published') totals.published++;
       else if (outcome === 'failed') totals.failed++;
-      else {
+      else if (outcome === 'no-image') {
         totals.skipped++;
         totals.noImage++;
-      }
+      } else totals.skipped++;
     }
 
     if (queue.length < batchSize) break;

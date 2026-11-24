@@ -1,5 +1,5 @@
 import { generateMultilingualArticle } from '../lib/llama.js';
-import { resolveArticleImage, isCategoryFallbackImage } from '../lib/image-resolver.js';
+import { resolveArticlePicture, isCategoryFallbackImage } from '../lib/image-resolver.js';
 import { runQuery, insertRow, patchRawArticle } from '../lib/supabase-rest.js';
 import { loadSiteSettings } from '../lib/sources-loader.js';
 import { onArticlePublished } from '../lib/on-article-published.js';
@@ -76,13 +76,18 @@ async function processOneArticle(env, raw, targetLangs, settings) {
   const source = raw.source || '';
   const category = raw.category || 'india';
   const region = raw.region || 'india';
-  const imageUrl = (!raw.imageUrl || isCategoryFallbackImage(raw.imageUrl))
-    ? await resolveArticleImage({
-        imageUrl: '',
-        sourceUrl: raw.sourceUrl || raw.link || '',
-        category,
-      })
-    : raw.imageUrl;
+  let imageUrl = raw.imageUrl || '';
+  let imageCredit = '';
+  if (!imageUrl || isCategoryFallbackImage(imageUrl)) {
+    const picture = await resolveArticlePicture({
+      imageUrl: '',
+      sourceUrl: raw.sourceUrl || raw.link || '',
+      category,
+      title,
+    });
+    imageUrl = picture.url;
+    imageCredit = picture.credit;
+  }
   const topics = raw.topics || [category];
   const qualityScore = raw.qualityScore || 6;
   const language = raw.language || raw.detectedLanguage || 'en';
@@ -126,7 +131,7 @@ async function processOneArticle(env, raw, targetLangs, settings) {
 
   let articleRow;
   try {
-    articleRow = await insertRow(env, 'articles', {
+    const article = {
       title: finalTitle,
       slug,
       summary: parsed.summary || '',
@@ -150,7 +155,9 @@ async function processOneArticle(env, raw, targetLangs, settings) {
       topics: parsed.topics || topics,
       published_at: new Date().toISOString(),
       distributed: { telegram: false, facebook: false, whatsapp: false },
-    });
+    };
+    if (imageCredit) article.image_credit = imageCredit;
+    articleRow = await insertRow(env, 'articles', article);
   } catch (err) {
     console.error(`Failed to publish "${title.slice(0, 40)}":`, err.message);
     await patchRawArticle(env, slug, { status: 'classified' });

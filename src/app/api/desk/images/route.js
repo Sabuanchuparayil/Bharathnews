@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyEditorialRequest } from '@/lib/editorial-auth';
 import { searchImageCatalog } from '@/data/image-catalog';
+import { searchOpenImages } from '@/lib/open-images';
 
 export async function GET(request) {
   const auth = await verifyEditorialRequest(request);
@@ -10,6 +11,11 @@ export async function GET(request) {
   const query = (searchParams.get('q') || '').slice(0, 80);
   const category = (searchParams.get('category') || '').slice(0, 40);
   const offset = Number(searchParams.get('offset') || 0) || 0;
+  const lookup = query.trim() || category.trim() || 'news';
+  const page = Math.floor(Math.max(0, offset) / 8) + 1;
+  const open = await searchOpenImages({ query: lookup, page, pageSize: 8 });
+  if (open.length) return NextResponse.json({ source: 'openverse', images: open });
+
   const key = process.env.UNSPLASH_ACCESS_KEY;
 
   if (key && query.trim()) {
