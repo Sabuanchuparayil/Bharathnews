@@ -6,7 +6,7 @@ import {
 import { getStoredTranslation } from '@/lib/article-translations';
 
 const WORKER_URL = (process.env.NEXT_PUBLIC_WORKER_URL || '').replace(/\/$/, '');
-const ALLOWED = new Set(['ml', 'hi', 'ta', 'te', 'kn', 'bn']);
+const ALLOWED = new Set(['en', 'ml']);
 
 export async function POST(request, { params }) {
   const { slug } = await params;
@@ -21,7 +21,7 @@ export async function POST(request, { params }) {
     return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 });
   }
 
-  const targetLang = typeof body.targetLang === 'string' ? body.targetLang.trim() : '';
+  const targetLang = typeof body.targetLang === 'string' ? body.targetLang.trim().toLowerCase() : '';
   if (!ALLOWED.has(targetLang)) {
     return NextResponse.json({ error: 'Unsupported target language.' }, { status: 400 });
   }
@@ -40,7 +40,7 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Article not found.' }, { status: 404 });
     }
 
-    const sourceLang = article.language || 'en';
+    const sourceLang = String(article.language || 'en').trim().toLowerCase();
     if (targetLang === sourceLang) {
       return NextResponse.json({
         translation: {

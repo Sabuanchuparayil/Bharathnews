@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from './supabase-server';
+import { editorialSourceName, readSiteSettings } from './site-settings';
 import { rowToApp, rowsToApp } from './db-mapper';
 import { slugify } from '@/utils/slugify';
 import { ROLE_TITLES } from './staff-profiles-client';
@@ -381,11 +382,12 @@ export async function listArticlesByAuthorSlug(slug, { limit = 24 } = {}) {
   const safe = slugify(slug);
   if (!safe) return [];
   const supabase = getSupabaseAdmin();
+  const settings = await readSiteSettings(supabase);
   const { data, error } = await supabase
     .from('articles')
     .select('*')
     .eq('author_slug', safe)
-    .eq('source', 'Bharath News Editorial')
+    .eq('source', editorialSourceName(settings))
     .or('editorial_status.eq.published,editorial_status.is.null')
     .order('published_at', { ascending: false })
     .limit(limit);

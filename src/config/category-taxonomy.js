@@ -208,6 +208,9 @@ export const CATEGORIES = [
   { id: 'world', name: 'World', color: 'bg-violet-100 text-violet-700' },
 ];
 
+/** Categories a source, a draft, or a beat can use. `all` is a filter, not a stored category. */
+export const SOURCE_CATEGORY_IDS = CATEGORIES.map(item => item.id).filter(id => id !== 'all');
+
 /** Sections shown on homepage browse zone */
 export const HOME_SECTION_IDS = ['money', 'sports', 'tech', 'life', 'world'];
 

@@ -9,6 +9,7 @@ import {
   getPendingApplications, reviewRoleApplication,
   getPendingCreatorPosts, moderateCreatorPost,
 } from '../services/creator';
+import { adminFetch } from '../services/admin';
 import { getCategoryLabel } from '../utils/categoryColors';
 
 const AdminModeration = () => {
@@ -16,15 +17,18 @@ const AdminModeration = () => {
   const [tab, setTab] = useState('posts');
   const [applications, setApplications] = useState([]);
   const [posts, setPosts] = useState([]);
+  const [messages, setMessages] = useState([]);
   const [feedback, setFeedback] = useState({});
 
   const load = async () => {
-    const [apps, pendingPosts] = await Promise.all([
+    const [apps, pendingPosts, inbox] = await Promise.all([
       getPendingApplications(),
       getPendingCreatorPosts(),
+      adminFetch('/api/admin/messages').catch(() => ({ messages: [] })),
     ]);
     setApplications(apps);
     setPosts(pendingPosts);
+    setMessages(inbox.messages || []);
   };
 
   useEffect(() => {
@@ -58,7 +62,7 @@ const AdminModeration = () => {
   };
 
   return (
-    <AdminLayout title="Moderation Queue" description={`${posts.length} posts · ${applications.length} applications pending`}>
+    <AdminLayout title="Moderation Queue" description={`${posts.length} posts · ${applications.length} applications · ${messages.length} messages`}>
       <div className="flex gap-2 mb-6">
         <button
           onClick={() => setTab('posts')}
@@ -71,6 +75,12 @@ const AdminModeration = () => {
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === 'applications' ? 'bg-brand-600 text-white' : 'bg-surface-2 dark:bg-dark-surface-2 hover:bg-surface-3'}`}
         >
           <Users className="w-4 h-4" /> Applications ({applications.length})
+        </button>
+        <button
+          onClick={() => setTab('messages')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === 'messages' ? 'bg-brand-600 text-white' : 'bg-surface-2 dark:bg-dark-surface-2 hover:bg-surface-3'}`}
+        >
+          Messages ({messages.filter(item => item.status !== 'closed').length})
         </button>
       </div>
 
@@ -131,6 +141,37 @@ const AdminModeration = () => {
                   <X className="w-4 h-4" /> Reject
                 </button>
               </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === 'messages' && (
+        <div className="space-y-4">
+          {messages.length === 0 && <p className="text-gray-500 py-8 text-center">No messages yet.</p>}
+          {messages.map(item => (
+            <div key={item.id} className="glass-card-solid rounded-2xl p-6">
+              <p className="text-xs font-semibold uppercase text-brand-600">{item.topic} · {item.status}</p>
+              <h3 className="font-display font-bold text-lg mt-1">{item.subject || 'No subject'}</h3>
+              <p className="text-sm text-gray-500 mt-1">{item.name} · {item.email}</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300 mt-3 whitespace-pre-wrap">{item.message}</p>
+              {item.status !== 'closed' && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await adminFetch('/api/admin/messages', { method: 'PATCH', body: { id: item.id, status: 'closed' } });
+                      toast.success('Message closed');
+                      load();
+                    } catch (err) {
+                      toast.error(err.message || 'Could not close the message');
+                    }
+                  }}
+                  className="mt-3 px-4 py-2 rounded-xl text-sm border border-gray-200 dark:border-gray-700"
+                >
+                  Mark closed
+                </button>
+              )}
             </div>
           ))}
         </div>

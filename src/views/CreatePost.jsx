@@ -6,6 +6,7 @@ import { toast } from 'react-toastify';
 import Layout from '../components/Layout';
 import ContentEditor from '../components/ContentEditor';
 import { useAuth } from '../context/AuthContext';
+import { sessionUserId } from '@/lib/session-user';
 import { createCreatorPost } from '../services/creator';
 
 const CreatePost = () => {
@@ -29,7 +30,7 @@ const CreatePost = () => {
     if (!user) return;
     setSubmitting(true);
     try {
-      const docRef = await createCreatorPost(user.uid, {
+      const docRef = await createCreatorPost(sessionUserId(user), {
         type: form.type,
         title: form.title,
         body: form.body,

@@ -8,19 +8,28 @@ import NewsCard from '../components/NewsCard';
 import EmptyState from '../components/EmptyState';
 import { useAuth } from '../context/AuthContext';
 import { getArticlesByIds, getBookmarks } from '../services/articles';
+import { sessionUserId } from '@/lib/session-user';
 import { getCategoryLabel } from '../utils/categoryColors';
 
 const ReaderDashboard = () => {
-  const { user, userProfile, loading, loginWithGoogle } = useAuth();
+  const { user, userProfile, loading } = useAuth();
   const [bookmarkedArticles, setBookmarkedArticles] = useState([]);
+  const [likedArticles, setLikedArticles] = useState([]);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
-    if (user) {
-      getBookmarks(user.uid).then(ids => {
-        if (ids.length) getArticlesByIds(ids).then(setBookmarkedArticles);
-      });
+    const userId = sessionUserId(user);
+    if (!userId) return;
+    setLoadError('');
+    getBookmarks(userId)
+      .then(ids => (ids.length ? getArticlesByIds(ids) : []))
+      .then(setBookmarkedArticles)
+      .catch(err => setLoadError(err.message || 'Could not load saved stories.'));
+    const likeIds = userProfile?.likes || [];
+    if (likeIds.length) {
+      getArticlesByIds(likeIds).then(setLikedArticles).catch(() => setLikedArticles([]));
     }
-  }, [user]);
+  }, [user, userProfile?.likes]);
 
   if (loading) {
     return (
@@ -39,8 +48,8 @@ const ReaderDashboard = () => {
           icon={TrendingUp}
           title="Your personal dashboard"
           description="Sign in to track bookmarks, interests, and reading habits."
-          actionLabel="Sign in with Google"
-          onAction={loginWithGoogle}
+          actionLabel="Sign in"
+          actionTo="/login?next=/dashboard"
         />
       </Layout>
     );
@@ -86,6 +95,7 @@ const ReaderDashboard = () => {
         </div>
       )}
 
+      {loadError && <p className="mb-4 text-sm text-red-600">{loadError}</p>}
       <h2 className="font-display font-bold text-xl text-gray-900 dark:text-white mb-4">Saved Articles</h2>
       {bookmarkedArticles.length === 0 ? (
         <EmptyState
@@ -99,6 +109,14 @@ const ReaderDashboard = () => {
         <div className="grid sm:grid-cols-2 gap-4">
           {bookmarkedArticles.map((a, i) => <NewsCard key={a.id} article={a} index={i} variant="compact" />)}
         </div>
+      )}
+      {likedArticles.length > 0 && (
+        <>
+          <h2 className="font-display font-bold text-xl text-gray-900 dark:text-white mt-10 mb-4">Liked stories</h2>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {likedArticles.map((a, i) => <NewsCard key={a.id} article={a} index={i} variant="compact" />)}
+          </div>
+        </>
       )}
     </Layout>
   );

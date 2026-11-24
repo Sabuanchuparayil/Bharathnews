@@ -315,6 +315,7 @@ export const AuthProvider = ({ children }) => {
     toggleLike: handleToggleLike,
     isEmailVerified: userProfile?.emailVerified === true,
     isProfileComplete: hasCompleteProfile(userProfile),
+    caps: [...caps],
     isAdmin: caps.has('admin'),
     isContentWriter: caps.has('editorial') || caps.has('admin'),
     isContributor: caps.has('contributor') || caps.has('admin'),

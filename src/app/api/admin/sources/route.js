@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { verifyAdminRequest } from '@/lib/supabase-admin';
 import { getSupabaseAdmin } from '@/lib/supabase-server';
 import { mapRows, sourceIdFromName, sourceRowFromBody } from '@/lib/admin-content';
+import { readSiteSettings } from '@/lib/site-settings';
+import { recordAudit } from '@/lib/audit-log';
 
 export async function GET(request) {
   const auth = await verifyAdminRequest(request);
@@ -24,15 +26,17 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 });
   }
 
-  const parsed = sourceRowFromBody(body);
+  const supabase = getSupabaseAdmin();
+  const settings = await readSiteSettings(supabase);
+  const parsed = sourceRowFromBody(body, { newsroom: settings.newsroom });
   if (parsed.error) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
   const id = sourceIdFromName(body.id || parsed.row.name);
-  const supabase = getSupabaseAdmin();
   const { error } = await supabase.from('sources').insert({ id, ...parsed.row });
   if (error) {
     const status = /duplicate|unique/i.test(error.message || '') ? 409 : 500;
     return NextResponse.json({ error: error.message || 'Could not create the source.' }, { status });
   }
+  await recordAudit({ actorId: auth.uid, action: 'create', entityType: 'source', entityId: id, summary: parsed.row.name }, supabase);
   return NextResponse.json({ id });
 }

@@ -6,6 +6,7 @@ import { toast } from 'react-toastify';
 import { PenLine, Video, CheckCircle, Clock } from 'lucide-react';
 import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
+import { sessionUserId } from '@/lib/session-user';
 import { CREATOR_ROLES } from '../config/feeds.config';
 import { submitRoleApplication, getUserApplication } from '../services/creator';
 
@@ -20,7 +21,7 @@ const CreatorApply = () => {
 
   useEffect(() => {
     if (user) {
-      getUserApplication(user.uid).then(setExistingApp).catch(() => {});
+      getUserApplication(sessionUserId(user)).then(setExistingApp).catch(() => {});
     }
   }, [user]);
 
@@ -29,9 +30,9 @@ const CreatorApply = () => {
     if (!user) return;
     setSubmitting(true);
     try {
-      await submitRoleApplication(user.uid, { requestedRole, bio, portfolioUrl, sampleWork });
+      await submitRoleApplication(sessionUserId(user), { requestedRole, bio, portfolioUrl, sampleWork });
       toast.success('Application submitted! We will review it shortly.');
-      const app = await getUserApplication(user.uid);
+      const app = await getUserApplication(sessionUserId(user));
       setExistingApp(app);
     } catch (err) {
       if (err.message === 'PENDING_APPLICATION_EXISTS') {

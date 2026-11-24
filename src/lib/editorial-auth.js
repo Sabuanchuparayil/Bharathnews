@@ -1,6 +1,6 @@
 import { getSupabaseAdmin } from './supabase-server';
 import { blockedAccountError } from './account-status';
-import { readAccessRoles, roleHasCap, capsForRole } from './access-roles';
+import { capsForUser } from './access-roles';
 
 export async function verifyEditorialRequest(request) {
   const authHeader = request.headers.get('authorization') || '';
@@ -18,9 +18,8 @@ export async function verifyEditorialRequest(request) {
       .eq('id', user.id)
       .single();
 
-    const roles = await readAccessRoles(supabase);
-    const editorial = roleHasCap(roles, profile?.role, 'editorial') || roleHasCap(roles, profile?.role, 'admin');
-    if (!profile || !editorial) {
+    const { caps } = await capsForUser(supabase, profile, user.id);
+    if (!profile || (!caps.includes('editorial') && !caps.includes('admin'))) {
       return { error: 'Newsroom access required.', status: 403 };
     }
 
@@ -31,7 +30,7 @@ export async function verifyEditorialRequest(request) {
       uid: user.id,
       email: user.email,
       role: profile.role,
-      caps: capsForRole(roles, profile.role),
+      caps,
       displayName: profile.display_name || user.email?.split('@')[0] || 'Editor',
     };
   } catch (err) {

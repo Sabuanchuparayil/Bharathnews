@@ -19,6 +19,8 @@ import { resolveArticleImage } from '../utils/articleImages';
 import { getCategoryColor, getCategoryLabel } from '../utils/categoryColors';
 import { getArticleBySlug } from '../services/articles';
 import { useAuth } from '../context/AuthContext';
+import { useSiteSettings } from '../context/SiteSettingsContext';
+import { editorialSourceName } from '@/lib/site-settings';
 import { useInterests } from '../context/InterestContext';
 import { getArticleSourceLang, resolveArticleDisplay } from '../lib/article-translations';
 import { useLanguage } from '../context/LanguageContext';
@@ -28,6 +30,7 @@ import Breadcrumbs, { categoryCrumb } from '../components/Breadcrumbs';
 const Article = ({ slug: slugProp, initialArticle = null }) => {
   const slug = slugProp;
   const { user, isBookmarked, isLiked, toggleBookmark, toggleLike } = useAuth();
+  const { settings } = useSiteSettings();
   const { trackRead, trackBookmark } = useInterests();
   const { language: siteLanguage } = useLanguage();
   const [article, setArticle] = useState(initialArticle);
@@ -53,6 +56,19 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
       articleRef.current = initialArticle;
     }
   }, [initialArticle]);
+
+  useEffect(() => {
+    const slugToCount = article?.slug;
+    if (!slugToCount || typeof window === 'undefined') return;
+    const key = `bn-view:${slugToCount}`;
+    if (window.sessionStorage.getItem(key)) return;
+    window.sessionStorage.setItem(key, '1');
+    fetch('/api/articles/view', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: slugToCount, referrer: document.referrer || '' }),
+    }).catch(() => {});
+  }, [article?.slug]);
 
   useEffect(() => {
     if (initialArticle) return undefined;
@@ -213,7 +229,7 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
             )}
             <div className="flex items-center flex-wrap gap-x-4 gap-y-2 text-sm text-gray-500 dark:text-gray-400">
               {(() => {
-                const isEditorial = article.source === 'Bharath News Editorial';
+                const isEditorial = article.source === editorialSourceName(settings);
                 const hasStaffByline = Boolean(article.authorPhotoUrl || article.authorTitle);
                 const authorHref = article.authorSlug
                   ? (isEditorial || hasStaffByline
@@ -266,6 +282,11 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
           </div>
           {article.imageCredit && (
             <p className="text-xs text-gray-500 -mt-6 mb-8">{article.imageCredit}</p>
+          )}
+          {article.correctionNote && (
+            <p className="mb-8 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
+              <span className="font-semibold">Correction. </span>{article.correctionNote}
+            </p>
           )}
 
           <AdSlot className="mb-8" />

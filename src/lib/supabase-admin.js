@@ -6,7 +6,7 @@ import { isRoleId, readAccessRoles, roleHasCap } from './access-roles';
 
 export { ALLOWED_ROLES };
 
-const TRANSLATION_LANGS = new Set(['ml', 'hi', 'ta', 'te', 'kn', 'bn', 'en', 'ar']);
+const TRANSLATION_LANGS = new Set(['en', 'ml']);
 
 export async function verifyAdminRequest(request) {
   const authHeader = request.headers.get('authorization') || '';

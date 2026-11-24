@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { verifyEditorialRequest } from '@/lib/editorial-auth';
+import { capsAllow } from '@/lib/access-roles';
+import { getSupabaseAdmin } from '@/lib/supabase-server';
+import { readSiteSettings } from '@/lib/site-settings';
 import {
   assignArticle,
   getEditorialArticle,
@@ -8,6 +11,13 @@ import {
   validateEditorialInput,
   validatePublishInput,
 } from '@/lib/editorial-articles';
+import { listArticleRevisions } from '@/lib/audit-log';
+
+function isFullArticleWrite(body) {
+  if (body.action === 'update') return true;
+  if (body.action !== 'correct' || body.noteOnly === true) return false;
+  return body.title !== undefined || body.fullContent !== undefined || body.full_content !== undefined;
+}
 
 function jsonError(err) {
   return NextResponse.json(
@@ -23,7 +33,8 @@ export async function GET(request, { params }) {
   try {
     const article = await getEditorialArticle(id);
     if (!article) return NextResponse.json({ error: 'Article not found.' }, { status: 404 });
-    return NextResponse.json({ article, role: auth.role });
+    const revisions = await listArticleRevisions(id);
+    return NextResponse.json({ article, revisions, role: auth.role });
   } catch (err) {
     return jsonError(err);
   }
@@ -42,19 +53,36 @@ export async function PATCH(request, { params }) {
   }
 
   try {
-    if (body.action === 'update') {
-      const parsed = validateEditorialInput(body || {});
+    if (isFullArticleWrite(body)) {
+      const settings = await readSiteSettings(getSupabaseAdmin());
+      const parsed = validateEditorialInput(body || {}, {
+        languages: settings.newsroom.languages,
+        defaultCategory: settings.newsroom.defaultCategory,
+      });
       if (parsed.error) return NextResponse.json({ error: parsed.error }, { status: 400 });
-      const article = await updateEditorialArticle(id, parsed.value);
+      const correcting = body.action === 'correct';
+      if (correcting && !capsAllow(auth.caps, 'correct')) {
+        return NextResponse.json({ error: 'Corrections are limited to editors.' }, { status: 403 });
+      }
+      const article = await updateEditorialArticle(id, {
+        ...parsed.value,
+        correctionNote: body.correctionNote || body.notes || '',
+      }, { actorId: auth.uid, allowPublished: correcting });
       return NextResponse.json({ article });
     }
     if (body.action === 'assign') {
-      if (!auth.caps?.includes('admin')) {
-        return NextResponse.json({ error: 'Only an admin can assign drafts.' }, { status: 403 });
+      if (!capsAllow(auth.caps, 'assign')) {
+        return NextResponse.json({ error: 'Assignment is limited to editors.' }, { status: 403 });
       }
-      const article = await assignArticle(id, body.assignTo || null);
+      const article = await assignArticle(id, body.assignTo || null, { actorId: auth.uid });
       if (!article) return NextResponse.json({ error: 'Assignment columns not available. Run the migration.' }, { status: 500 });
       return NextResponse.json({ article });
+    }
+    if (['publish', 'reject', 'needs_revision'].includes(body.action) && !capsAllow(auth.caps, 'publish')) {
+      return NextResponse.json({ error: 'Publishing is limited to editors.' }, { status: 403 });
+    }
+    if ((body.action === 'unpublish' || body.action === 'correct') && !capsAllow(auth.caps, 'correct')) {
+      return NextResponse.json({ error: body.action === 'unpublish' ? 'Unpublishing is limited to editors.' : 'Corrections are limited to editors.' }, { status: 403 });
     }
     let publishing = null;
     if (body.action === 'publish') {
@@ -65,7 +93,9 @@ export async function PATCH(request, { params }) {
     const article = await reviewEditorialArticle(id, {
       action: body.action,
       notes: typeof body.notes === 'string' ? body.notes.slice(0, 1000) : '',
+      correctionNote: typeof body.correctionNote === 'string' ? body.correctionNote : '',
       publishing,
+      actorId: auth.uid,
     });
     return NextResponse.json({ article });
   } catch (err) {

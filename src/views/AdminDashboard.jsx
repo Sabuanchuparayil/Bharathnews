@@ -8,9 +8,14 @@ import {
   Newspaper, Clock, CheckCircle, XCircle, Copy, Bot,
 } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
+import { useSiteSettings } from '../context/SiteSettingsContext';
 import { adminFetch, getAdminStats } from '../services/admin';
 
-const CHART_COLORS = ['#0D7377', '#10b981', '#0ea5e9', '#f59e0b', '#f43f5e', '#8b5cf6', '#6366f1', '#ec4899', '#14b8a6', '#f97316', '#84cc16', '#a855f7', '#06b6d4'];
+function statusCount(stats, key, fallbackKey) {
+  if (stats?.[key] != null) return stats[key];
+  if (fallbackKey && stats?.[fallbackKey] != null) return stats[fallbackKey];
+  return 0;
+}
 
 function Skeleton({ className = '' }) {
   return <div className={`animate-pulse rounded-lg bg-gray-200 dark:bg-gray-700 ${className}`} />;
@@ -90,7 +95,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
-function CoworkCard({ cowork, ready }) {
+function CoworkCard({ cowork, ready, staleHours }) {
   if (!ready) return (
     <SectionCard title="Cowork Activity" icon={Bot} className="mb-6">
       <div className="flex items-center justify-center py-4"><Skeleton className="h-16 w-full" /></div>
@@ -100,7 +105,7 @@ function CoworkCard({ cowork, ready }) {
 
   const { lastReceived, today, week } = cowork;
   const sinceHours = lastReceived ? Math.round((Date.now() - new Date(lastReceived).getTime()) / 3600000) : null;
-  const stale = sinceHours !== null && sinceHours > 6;
+  const stale = sinceHours !== null && sinceHours > staleHours;
 
   return (
     <SectionCard
@@ -143,7 +148,11 @@ function CoworkCard({ cowork, ready }) {
 }
 
 const AdminDashboard = () => {
+  const { settings } = useSiteSettings();
+  const chartColors = settings.newsroom.chartColors;
+  const staleHours = settings.newsroom.coworkStaleHours;
   const [stats, setStats] = useState(null);
+  const [statsError, setStatsError] = useState('');
   const [pipeline, setPipeline] = useState(null);
   const [cowork, setCowork] = useState(null);
   const [statsReady, setStatsReady] = useState(false);
@@ -153,8 +162,8 @@ const AdminDashboard = () => {
   useEffect(() => {
     let cancelled = false;
     getAdminStats()
-      .then(data => { if (!cancelled) setStats(data); })
-      .catch(() => { if (!cancelled) setStats(null); })
+      .then(data => { if (!cancelled) { setStats(data); setStatsError(''); } })
+      .catch(err => { if (!cancelled) { setStats(null); setStatsError(err.message || 'Could not load the dashboard.'); } })
       .finally(() => { if (!cancelled) setStatsReady(true); });
 
     adminFetch('/api/admin/worker?action=pipeline-status')
@@ -178,11 +187,16 @@ const AdminDashboard = () => {
   return (
     <AdminLayout title="Dashboard" description="Overview of your newsroom and content pipeline">
       {/* KPI row */}
+      {statsError && (
+        <div className="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200/60 text-sm text-red-700 dark:text-red-300">
+          {statsError}
+        </div>
+      )}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <StatCard
           icon={Newspaper}
           label="Published Articles"
-          value={statsReady ? (stats?.totalArticles || 0).toLocaleString('en-IN') : '…'}
+          value={statsReady ? (statsError ? '—' : (stats?.totalArticles || 0).toLocaleString('en-IN')) : '…'}
           color="bg-brand-600"
           loading={!statsReady}
         />
@@ -234,11 +248,11 @@ const AdminDashboard = () => {
       <div className="grid lg:grid-cols-5 gap-4 mb-6">
         <SectionCard title="Pipeline Health" icon={Clock} className="lg:col-span-3">
           <div className="flex flex-wrap gap-3">
-            <PipelineChip label="Pending" value={pipelineKnown ? (pipelineStats.pending_ai || pipelineStats.pending || 0) : '…'} color="text-amber-600 dark:text-amber-400" loading={!pipelineKnown && !statsReady} />
-            <PipelineChip label="Classified" value={pipelineKnown ? (pipelineStats.classified || 0) : '…'} color="text-blue-600 dark:text-blue-400" loading={!pipelineKnown && !statsReady} />
-            <PipelineChip label="Published" value={pipelineKnown ? (pipelineStats.processed || pipelineStats.published_articles || 0) : '…'} color="text-green-600 dark:text-green-400" loading={!pipelineKnown && !statsReady} />
-            <PipelineChip label="Rejected" value={pipelineKnown ? (pipelineStats.rejected || 0) : '…'} color="text-red-500 dark:text-red-400" loading={!pipelineKnown && !statsReady} />
-            <PipelineChip label="Duplicate" value={pipelineKnown ? (pipelineStats.duplicate || 0) : '…'} color="text-gray-500 dark:text-gray-400" loading={!pipelineKnown && !statsReady} />
+            <PipelineChip label="Pending" value={pipelineKnown ? statusCount(pipelineStats, 'pending_ai', 'pending') : '…'} color="text-amber-600 dark:text-amber-400" loading={!pipelineKnown && !statsReady} />
+            <PipelineChip label="Classified" value={pipelineKnown ? statusCount(pipelineStats, 'classified') : '…'} color="text-blue-600 dark:text-blue-400" loading={!pipelineKnown && !statsReady} />
+            <PipelineChip label="Published" value={pipelineKnown ? statusCount(pipelineStats, 'processed', 'published_articles') : '…'} color="text-green-600 dark:text-green-400" loading={!pipelineKnown && !statsReady} />
+            <PipelineChip label="Rejected" value={pipelineKnown ? statusCount(pipelineStats, 'rejected') : '…'} color="text-red-500 dark:text-red-400" loading={!pipelineKnown && !statsReady} />
+            <PipelineChip label="Duplicate" value={pipelineKnown ? statusCount(pipelineStats, 'duplicate') : '…'} color="text-gray-500 dark:text-gray-400" loading={!pipelineKnown && !statsReady} />
           </div>
         </SectionCard>
 
@@ -260,7 +274,7 @@ const AdminDashboard = () => {
                   strokeWidth={0}
                 >
                   {(stats?.byCategory || []).slice(0, 8).map((_, i) => (
-                    <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                    <Cell key={i} fill={chartColors[i % chartColors.length]} />
                   ))}
                 </Pie>
                 <Tooltip content={<CustomTooltip />} />
@@ -271,7 +285,7 @@ const AdminDashboard = () => {
       </div>
 
       {/* Cowork activity */}
-      <CoworkCard cowork={cowork} ready={coworkReady} />
+      <CoworkCard cowork={cowork} ready={coworkReady} staleHours={staleHours} />
 
       {/* Recent articles + Language chart */}
       <div className="grid lg:grid-cols-5 gap-4">
@@ -329,9 +343,51 @@ const AdminDashboard = () => {
                 <XAxis type="number" tick={{ fontSize: 11, fill: '#9ca3af' }} tickFormatter={v => v.toLocaleString('en-IN')} />
                 <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#9ca3af', fontWeight: 600 }} width={28} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="count" fill="#0D7377" radius={[0, 6, 6, 0]} barSize={20} />
+                <Bar dataKey="count" fill={chartColors[0]} radius={[0, 6, 6, 0]} barSize={20} />
               </BarChart>
             </ResponsiveContainer>
+          )}
+        </SectionCard>
+      </div>
+
+      <div className="grid lg:grid-cols-5 gap-4 mt-4">
+        <SectionCard title="Most read" icon={Newspaper} className="lg:col-span-3">
+          {!statsReady ? (
+            <Skeleton className="h-24 w-full" />
+          ) : (stats?.mostViewed || []).length === 0 ? (
+            <p className="text-sm text-gray-400 dark:text-gray-500 py-4 text-center">No reads recorded yet</p>
+          ) : (
+            <div className="divide-y divide-gray-50 dark:divide-gray-800/60 -mx-5">
+              {(stats.mostViewed || []).map((article, index) => (
+                <div key={article.id || index} className="flex items-center gap-3 px-5 py-3">
+                  <span className="text-[10px] font-bold text-gray-300 dark:text-gray-600 w-5 text-right tabular-nums">{index + 1}</span>
+                  <div className="flex-1 min-w-0">
+                    {article.slug ? (
+                      <a href={`/article/${article.slug}`} target="_blank" rel="noopener noreferrer" className="block text-sm text-gray-900 dark:text-white truncate hover:text-brand-600">{article.title}</a>
+                    ) : (
+                      <p className="text-sm text-gray-900 dark:text-white truncate">{article.title}</p>
+                    )}
+                  </div>
+                  <span className="text-xs tabular-nums text-gray-500">{(article.views || 0).toLocaleString('en-IN')}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </SectionCard>
+        <SectionCard title="Referrers, 7 days" icon={TrendingUp} className="lg:col-span-2">
+          {!statsReady ? (
+            <Skeleton className="h-24 w-full" />
+          ) : (stats?.topReferrers || []).length === 0 ? (
+            <p className="text-sm text-gray-400 dark:text-gray-500 py-4 text-center">No referrers yet</p>
+          ) : (
+            <ul className="space-y-2">
+              {stats.topReferrers.map(item => (
+                <li key={item.name} className="flex items-center justify-between text-sm">
+                  <span className="truncate text-gray-700 dark:text-gray-300">{item.name}</span>
+                  <span className="tabular-nums text-gray-500">{item.count.toLocaleString('en-IN')}</span>
+                </li>
+              ))}
+            </ul>
           )}
         </SectionCard>
       </div>

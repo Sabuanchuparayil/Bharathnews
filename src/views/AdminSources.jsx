@@ -7,15 +7,22 @@ import AdminLayout from '../components/AdminLayout';
 import { useAuth } from '../context/AuthContext';
 import { getSources, updateSource, createSource, deleteSource } from '../services/admin';
 import { getCategoryLabel } from '../utils/categoryColors';
-
-const CATEGORIES = ['india', 'gcc', 'business', 'technology', 'sports', 'entertainment', 'health', 'education', 'jobs', 'realestate', 'world', 'lifestyle', 'opinion'];
-const LANGUAGES = ['en', 'ml'];
-const TYPES = ['rss', 'googlenews', 'youtube'];
-
-const emptyForm = { name: '', url: '', category: 'india', language: 'en', type: 'rss', enabled: true };
+import { SOURCE_CATEGORY_IDS } from '@/config/category-taxonomy';
+import { useSiteSettings } from '../context/SiteSettingsContext';
 
 const AdminSources = () => {
   const { isAdmin, loading, user } = useAuth();
+  const { settings } = useSiteSettings();
+  const languages = settings.newsroom.languages;
+  const types = settings.newsroom.sourceTypes;
+  const emptyForm = {
+    name: '',
+    url: '',
+    category: settings.newsroom.defaultCategory,
+    language: languages[0]?.code || 'en',
+    type: types[0] || 'rss',
+    enabled: true,
+  };
   const [sources, setSources] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [showForm, setShowForm] = useState(false);
@@ -125,13 +132,13 @@ const AdminSources = () => {
                 className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent"
               />
               <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent">
-                {CATEGORIES.map(c => <option key={c} value={c}>{getCategoryLabel(c)}</option>)}
+                {SOURCE_CATEGORY_IDS.map(c => <option key={c} value={c}>{getCategoryLabel(c)}</option>)}
               </select>
               <select value={form.language} onChange={e => setForm({ ...form, language: e.target.value })} className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent">
-                {LANGUAGES.map(l => <option key={l} value={l}>{l.toUpperCase()}</option>)}
+                {languages.map(item => <option key={item.code} value={item.code}>{item.label}</option>)}
               </select>
               <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value })} className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent">
-                {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                {types.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
             <div className="flex gap-2">

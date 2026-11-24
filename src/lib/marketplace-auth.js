@@ -1,6 +1,6 @@
 import { getSupabaseAdmin } from './supabase-server';
 import { blockedAccountError } from './account-status';
-import { readAccessRoles, roleHasCap } from './access-roles';
+import { capsForUser } from './access-roles';
 
 export async function verifyUserRequest(request) {
   const authHeader = request.headers.get('authorization') || '';
@@ -25,10 +25,12 @@ export async function verifyUserRequest(request) {
     const blocked = blockedAccountError(profile?.status);
     if (blocked) return blocked;
 
+    const { caps } = await capsForUser(supabase, profile, user.id);
     return {
       uid: user.id,
       email: user.email,
       role: profile?.role || 'reader',
+      caps,
       displayName: profile?.display_name || user.email?.split('@')[0] || 'User',
     };
   } catch (err) {
@@ -41,8 +43,8 @@ export async function verifyEmployerRequest(request) {
   if (auth.error) return auth;
 
   const supabase = getSupabaseAdmin();
-  const roles = await readAccessRoles(supabase);
-  if (!roleHasCap(roles, auth.role, 'employer') && !roleHasCap(roles, auth.role, 'admin')) {
+  const caps = new Set(auth.caps || []);
+  if (!caps.has('employer') && !caps.has('admin')) {
     return { error: 'Employer access required. Complete KYC verification first.', status: 403 };
   }
   const { data: app } = await supabase
@@ -52,7 +54,7 @@ export async function verifyEmployerRequest(request) {
     .eq('status', 'approved')
     .maybeSingle();
 
-  if (!roleHasCap(roles, auth.role, 'admin') && !app) {
+  if (!caps.has('admin') && !app) {
     return { error: 'Approved employer KYC required.', status: 403 };
   }
 

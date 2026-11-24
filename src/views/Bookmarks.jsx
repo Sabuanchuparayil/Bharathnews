@@ -7,9 +7,10 @@ import NewsCard from '../components/NewsCard';
 import EmptyState from '../components/EmptyState';
 import { useAuth } from '../context/AuthContext';
 import { getBookmarks, getArticlesByIds } from '../services/articles';
+import { sessionUserId } from '@/lib/session-user';
 
 const Bookmarks = () => {
-  const { user, loginWithGoogle } = useAuth();
+  const { user } = useAuth();
   const [bookmarkedArticles, setBookmarkedArticles] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -20,7 +21,7 @@ const Bookmarks = () => {
     }
     const fetchBookmarks = async () => {
       try {
-        const bookmarkIds = await getBookmarks(user.uid);
+        const bookmarkIds = await getBookmarks(sessionUserId(user));
         const articles = await getArticlesByIds(bookmarkIds);
         setBookmarkedArticles(articles);
       } catch (error) {
@@ -42,8 +43,8 @@ const Bookmarks = () => {
           icon={BookmarkIcon}
           title="Sign in to view bookmarks"
           description="Save articles to read later once you're signed in."
-          actionLabel="Sign in with Google"
-          onAction={loginWithGoogle}
+          actionLabel="Sign in"
+          actionTo="/login?next=/bookmarks"
         />
       ) : loading ? (
         <div className="space-y-4">

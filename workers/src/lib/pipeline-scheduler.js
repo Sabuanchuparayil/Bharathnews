@@ -7,13 +7,30 @@ import { getLimits, getCronPublishOpts } from './cf-limits.js';
 import { processDistributionJobs, backfillDistributionJobs } from './distribution-jobs.js';
 import { REGIONAL_LANGUAGES } from './regional-feeds.js';
 
+async function publishScheduledDesk(env) {
+  const site = String(env.MAIN_SITE_URL || '').replace(/\/$/, '');
+  const secret = env.WORKER_API_SECRET;
+  if (!site || !secret) return null;
+  const res = await fetch(`${site}/api/cron/publish-scheduled`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${secret}` },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    console.error('[cron] scheduled desk publish failed', res.status, text.slice(0, 180));
+    return null;
+  }
+  return res.json();
+}
+
 /** Phase 3 — publish only (no ingest, no social inline). */
 export async function runPublishOnlyTick(env) {
   console.log(`[cron] publish-only at ${new Date().toISOString()} tier=${getLimits(env).TIER}`);
   try {
     const published = await handleFastPublish(env, getCronPublishOpts(env));
-    console.log('[cron] publish-only done:', published);
-    return { stage: 'publish-only', result: published };
+    const desk = await publishScheduledDesk(env);
+    console.log('[cron] publish-only done:', published, desk ? { desk } : '');
+    return { stage: 'publish-only', result: published, desk };
   } catch (err) {
     console.error('[cron] publish-only failed:', err.message);
     throw err;

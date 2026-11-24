@@ -3,6 +3,18 @@ import { verifyAdminRequest } from '@/lib/supabase-admin';
 import { getSupabaseAdmin } from '@/lib/supabase-server';
 import { normalizeStats } from '@/lib/admin-content';
 
+function referrerTotals(rows) {
+  const totals = new Map();
+  for (const row of rows || []) {
+    const host = String(row.host || 'direct');
+    totals.set(host, (totals.get(host) || 0) + (Number(row.hits) || 0));
+  }
+  return [...totals.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([name, count]) => ({ name, count }));
+}
+
 async function exactCount(supabase, table, apply) {
   let query = supabase.from(table).select('id', { count: 'exact', head: true });
   if (apply) query = apply(query);
@@ -28,6 +40,8 @@ export async function GET(request) {
       distributionFailed,
       facetsResult,
       recentResult,
+      viewedResult,
+      referrerResult,
     ] = await Promise.all([
       exactCount(supabase, 'articles', query => query.or('editorial_status.eq.published,editorial_status.is.null')),
       exactCount(supabase, 'subscribers'),
@@ -43,6 +57,15 @@ export async function GET(request) {
         .or('editorial_status.eq.published,editorial_status.is.null')
         .order('published_at', { ascending: false })
         .limit(5),
+      supabase.from('articles')
+        .select('id, title, slug, views')
+        .or('editorial_status.eq.published,editorial_status.is.null')
+        .order('views', { ascending: false })
+        .limit(5),
+      supabase.from('article_referrers')
+        .select('host, hits')
+        .gte('day', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10))
+        .limit(500),
     ]);
 
     if (facetsResult.error) {
@@ -63,6 +86,8 @@ export async function GET(request) {
       distributionPending,
       distributionFailed,
       topArticles: recentResult.data,
+      mostViewed: viewedResult.error ? [] : viewedResult.data,
+      topReferrers: referrerTotals(referrerResult.error ? [] : referrerResult.data),
     });
 
     return NextResponse.json(stats);

@@ -60,9 +60,27 @@ export async function updateSource(sourceId, source) {
   await adminFetch(`/api/admin/sources/${encodeURIComponent(sourceId)}`, { method: 'PATCH', body: source });
 }
 
-export async function getSubscribers(limitCount = 200) {
-  const data = await adminFetch(`/api/admin/subscribers?limit=${encodeURIComponent(limitCount)}`);
-  return { subscribers: data.subscribers || [], total: data.total || 0 };
+export async function getSubscribers(limitCount = 100, offset = 0) {
+  const data = await adminFetch(`/api/admin/subscribers?limit=${encodeURIComponent(limitCount)}&offset=${encodeURIComponent(offset)}`);
+  return { subscribers: data.subscribers || [], total: data.total || 0, hasMore: Boolean(data.hasMore) };
+}
+
+export async function downloadSubscribers() {
+  const token = await getAdminAccessToken();
+  const res = await fetch('/api/admin/subscribers?format=csv', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Could not export subscribers.');
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'subscribers.csv';
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 export async function getVideos(limitCount = 50) {

@@ -1,10 +1,10 @@
 import { rowsToApp } from '@/lib/db-mapper';
 import { slugify } from '@/utils/slugify';
 import { CREATOR_ROLE_SET as CREATOR_ROLES } from '@/lib/roles';
+import { SOURCE_CATEGORY_IDS } from '@/config/category-taxonomy';
+import { DEFAULT_SITE_SETTINGS, readSiteSettings } from '@/lib/site-settings';
 
-const SOURCE_CATEGORIES = new Set(['india', 'gcc', 'business', 'technology', 'sports', 'entertainment', 'health', 'education', 'jobs', 'realestate', 'world', 'lifestyle', 'opinion']);
-const SOURCE_LANGUAGES = new Set(['en', 'ml']);
-const SOURCE_TYPES = new Set(['rss', 'googlenews', 'youtube']);
+const SOURCE_CATEGORIES = new Set(SOURCE_CATEGORY_IDS);
 export function sourceIdFromName(name) {
   const slug = String(name || 'source')
     .toLowerCase()
@@ -14,7 +14,9 @@ export function sourceIdFromName(name) {
   return slug || `source-${Date.now()}`;
 }
 
-export function sourceRowFromBody(body, { partial = false } = {}) {
+export function sourceRowFromBody(body, { partial = false, newsroom = DEFAULT_SITE_SETTINGS.newsroom } = {}) {
+  const languages = new Set((newsroom.languages || []).map(item => item.code));
+  const types = new Set(newsroom.sourceTypes || []);
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return { error: 'Invalid source.' };
   }
@@ -35,11 +37,11 @@ export function sourceRowFromBody(body, { partial = false } = {}) {
     row.category = body.category;
   }
   if (!partial || body.language !== undefined) {
-    if (!SOURCE_LANGUAGES.has(body.language)) return { error: 'Invalid language.' };
+    if (!languages.has(body.language)) return { error: 'Invalid language.' };
     row.language = body.language;
   }
   if (!partial || body.type !== undefined) {
-    if (!SOURCE_TYPES.has(body.type)) return { error: 'Invalid source type.' };
+    if (!types.has(body.type)) return { error: 'Invalid source type.' };
     row.type = body.type;
   }
   if (body.region !== undefined) {
@@ -57,11 +59,11 @@ export function sourceRowFromBody(body, { partial = false } = {}) {
   }
 
   if (!partial) {
-    row.category = row.category || 'india';
-    row.language = row.language || 'en';
-    row.type = row.type || 'rss';
+    row.category = row.category || newsroom.defaultCategory || 'india';
+    row.language = row.language || newsroom.languages?.[0]?.code || 'en';
+    row.type = row.type || newsroom.sourceTypes?.[0] || 'rss';
     row.enabled = row.enabled !== false;
-    if (row.trust_weight === undefined) row.trust_weight = 0.85;
+    if (row.trust_weight === undefined) row.trust_weight = newsroom.defaultTrustWeight;
     if (row.region === undefined) row.region = '';
     if (row.url === undefined) row.url = '';
   }
@@ -99,9 +101,17 @@ export function normalizeStats(raw) {
     byLanguage: mapFacet(raw?.byLanguage),
     topArticles: (Array.isArray(raw?.topArticles) ? raw.topArticles : []).map(article => ({
       id: article?.id,
+      slug: article?.slug || '',
       title: article?.title || 'Untitled',
       category: article?.category || '',
     })),
+    mostViewed: (Array.isArray(raw?.mostViewed) ? raw.mostViewed : []).map(article => ({
+      id: article?.id,
+      slug: article?.slug || '',
+      title: article?.title || 'Untitled',
+      views: asNumber(article?.views),
+    })),
+    topReferrers: mapFacet(raw?.topReferrers),
   };
 }
 
@@ -219,6 +229,13 @@ export async function moderatePost(supabase, { id, approved, feedback }) {
 
   const isPublic = !postRow.visibility || postRow.visibility === 'public';
   if (postRow.type === 'article' && isPublic) {
+    let communitySource = DEFAULT_SITE_SETTINGS.newsroom.communitySource;
+    try {
+      const settings = await readSiteSettings(supabase);
+      communitySource = settings.newsroom.communitySource || communitySource;
+    } catch {
+      communitySource = DEFAULT_SITE_SETTINGS.newsroom.communitySource;
+    }
     const { data: article, error: articleError } = await supabase.from('articles').insert({
       title: postRow.title,
       slug: `${postRow.author_slug}-${postRow.slug}`,
@@ -227,7 +244,7 @@ export async function moderatePost(supabase, { id, approved, feedback }) {
       image_url: postRow.cover_image || '',
       category: postRow.category,
       topics: postRow.tags,
-      source: 'Bharath News Community',
+      source: communitySource,
       author: postRow.author_name,
       author_slug: postRow.author_slug,
       creator_post_id: id,

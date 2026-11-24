@@ -8,9 +8,14 @@ const BATCH_SIZE = 8;
 
 export async function handleAIProcess(env) {
   const settings = await loadSiteSettings(env);
-  const targetLangs = Array.isArray(settings.targetLanguages)
+  const allowed = new Set(['en', 'ml']);
+  const rawLangs = Array.isArray(settings.targetLanguages)
     ? settings.targetLanguages
-    : (settings.targetLanguages || 'ml,hi,ar').split(',').map(s => s.trim());
+    : String(settings.targetLanguages || 'ml').split(',');
+  const targetLangs = [...new Set(
+    rawLangs.map(item => String(item || '').trim().toLowerCase()).filter(code => allowed.has(code)),
+  )];
+  const langs = targetLangs.length ? targetLangs : ['ml'];
   const processed = [];
 
   const stuck = await runQuery(env, {
@@ -48,7 +53,7 @@ export async function handleAIProcess(env) {
 
   for (const raw of docs) {
     try {
-      const result = await processOneArticle(env, raw, targetLangs, settings);
+      const result = await processOneArticle(env, raw, langs, settings);
       if (result) processed.push(result);
     } catch (err) {
       console.error('AI process error:', err.message);

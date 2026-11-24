@@ -9,6 +9,8 @@ import CoverImagePicker from '../components/CoverImagePicker';
 import StaffAuthorPicker from '../components/StaffAuthorPicker';
 import PublishDialog, { languageStatus } from '../components/PublishDialog';
 import { useAuth } from '../context/AuthContext';
+import { useSiteSettings } from '../context/SiteSettingsContext';
+import { capsAllow } from '@/lib/access-roles';
 import { CATEGORIES } from '../config/feeds.config';
 import { deskFetch } from '@/lib/desk-client';
 import { isStoredPlaceholderImage } from '@/utils/articleImages';
@@ -27,9 +29,7 @@ const EMPTY = {
   imageUrl: '',
   imageCredit: '',
   scheduledAt: '',
-  translationTitle: '',
-  translationSummary: '',
-  translationBody: '',
+  versions: {},
 };
 
 const contentCategories = CATEGORIES.filter(item => item.id !== 'all');
@@ -43,27 +43,46 @@ function toLocalInput(iso) {
 }
 
 const DeskCompose = () => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, caps } = useAuth();
+  const { settings } = useSiteSettings();
+  const canPublish = capsAllow(caps, 'publish');
+  const canCorrect = capsAllow(caps, 'correct');
+  const languages = settings.newsroom.languages;
   const searchParams = useSearchParams();
   const draftId = searchParams.get('id') || '';
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
+  const [status, setStatus] = useState('draft');
+  const [revisions, setRevisions] = useState([]);
+  const languageKey = languages.map(item => `${item.code}:${item.label}`).join('|');
 
   const set = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
 
   useEffect(() => {
     if (!draftId) return;
     deskFetch(`/api/desk/articles/${draftId}`)
-      .then(({ article }) => {
-        const otherCode = article.language === 'ml' ? 'en' : 'ml';
-        const other = article.translations?.[otherCode] || {};
+      .then(({ article, revisions: history }) => {
+        const codes = languages.map(item => item.code);
+        const language = codes.includes(article.language) ? article.language : (codes[0] || 'en');
+        const versions = {};
+        for (const item of languages) {
+          if (item.code === language) continue;
+          const version = article.translations?.[item.code] || {};
+          versions[item.code] = {
+            title: version.title || '',
+            summary: version.summary || '',
+            fullContent: version.fullContent || '',
+          };
+        }
+        setStatus(article.editorialStatus || 'draft');
+        setRevisions(history || []);
         setForm({
           title: article.title || '',
           summary: article.summary || '',
           fullContent: article.fullContent || '',
-          category: article.category || 'india',
-          language: article.language === 'ml' ? 'ml' : 'en',
+          category: article.category || settings.newsroom.defaultCategory || 'india',
+          language,
           author: article.author || 'Bharath News Desk',
           authorSlug: article.authorSlug || 'bharath-news-desk',
           authorPhotoUrl: article.authorPhotoUrl || '',
@@ -72,13 +91,11 @@ const DeskCompose = () => {
           imageUrl: article.imageUrl && !isStoredPlaceholderImage(article.imageUrl) ? article.imageUrl : '',
           imageCredit: article.imageCredit || '',
           scheduledAt: toLocalInput(article._scheduledAtIso),
-          translationTitle: other.title || '',
-          translationSummary: other.summary || '',
-          translationBody: other.fullContent || '',
+          versions,
         });
       })
       .catch(err => toast.error(err.message || 'Could not open this draft.'));
-  }, [draftId]);
+  }, [draftId, languageKey, languages, settings.newsroom.defaultCategory]);
 
   const payload = (publishNow = false, publishing = null) => ({
     title: form.title,
@@ -96,12 +113,7 @@ const DeskCompose = () => {
     imageCredit: form.imageCredit,
     scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).toISOString() : null,
     publishNow,
-    translation: {
-      lang: form.language === 'ml' ? 'en' : 'ml',
-      title: form.translationTitle,
-      summary: form.translationSummary,
-      fullContent: form.translationBody,
-    },
+    translations: form.versions,
   });
 
   const save = async (publishNow = false, publishing = null) => {
@@ -110,7 +122,11 @@ const DeskCompose = () => {
       const data = draftId
         ? await deskFetch(`/api/desk/articles/${draftId}`, {
           method: 'PATCH',
-          body: JSON.stringify({ action: 'update', ...payload(false) }),
+          body: JSON.stringify({
+            action: status === 'published' ? 'correct' : 'update',
+            correctionNote: 'Updated after publication.',
+            ...payload(false),
+          }),
         })
         : await deskFetch('/api/desk/articles', {
           method: 'POST',
@@ -130,7 +146,20 @@ const DeskCompose = () => {
     setSaving(false);
   };
 
-  const otherLabel = form.language === 'ml' ? 'English' : 'Malayalam';
+  const otherLanguages = languages.filter(item => item.code !== form.language);
+  const versionNames = languages.map(item => item.label);
+  const versionLabel = versionNames.length < 2
+    ? (versionNames[0] || 'this language')
+    : `${versionNames.slice(0, -1).join(', ')} and ${versionNames[versionNames.length - 1]}`;
+  const setVersion = (code, field, value) => {
+    setForm(prev => ({
+      ...prev,
+      versions: {
+        ...prev.versions,
+        [code]: { title: '', summary: '', fullContent: '', ...(prev.versions?.[code] || {}), [field]: value },
+      },
+    }));
+  };
 
   return (
     <DeskLayout
@@ -161,8 +190,7 @@ const DeskCompose = () => {
             <label className="block text-sm font-medium">
               Language of this draft
               <select value={form.language} onChange={e => set('language', e.target.value)} className="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm">
-                <option value="en">English</option>
-                <option value="ml">Malayalam</option>
+                {languages.map(item => <option key={item.code} value={item.code}>{item.label}</option>)}
               </select>
             </label>
             <label className="block text-sm font-medium">
@@ -198,16 +226,35 @@ const DeskCompose = () => {
             Schedule, optional
             <input type="datetime-local" value={form.scheduledAt} onChange={e => set('scheduledAt', e.target.value)} className="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
           </label>
-          <div className="rounded-2xl border border-stone-200 dark:border-white/10 p-4 space-y-3">
-            <h2 className="font-display font-bold">{otherLabel} version</h2>
-            <p className="text-xs text-gray-500">Required before publishing. Every story goes live in both English and Malayalam.</p>
-            <input value={form.translationTitle} onChange={e => set('translationTitle', e.target.value)} placeholder={`${otherLabel} title`} className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
-            <textarea value={form.translationSummary} onChange={e => set('translationSummary', e.target.value)} rows={2} placeholder={`${otherLabel} summary`} className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
-            <textarea value={form.translationBody} onChange={e => set('translationBody', e.target.value)} rows={8} placeholder={`${otherLabel} full content`} className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
-          </div>
+          {otherLanguages.map(item => {
+            const version = form.versions?.[item.code] || {};
+            return (
+              <div key={item.code} className="rounded-2xl border border-stone-200 dark:border-white/10 p-4 space-y-3">
+                <h2 className="font-display font-bold">{item.label} version</h2>
+                <p className="text-xs text-gray-500">Required before publishing. Every story goes live in {versionLabel}.</p>
+                <input value={version.title || ''} onChange={e => setVersion(item.code, 'title', e.target.value)} placeholder={`${item.label} title`} className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
+                <textarea value={version.summary || ''} onChange={e => setVersion(item.code, 'summary', e.target.value)} rows={2} placeholder={`${item.label} summary`} className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
+                <textarea value={version.fullContent || ''} onChange={e => setVersion(item.code, 'fullContent', e.target.value)} rows={8} placeholder={`${item.label} full content`} className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
+              </div>
+            );
+          })}
+          {revisions.length > 0 && (
+            <div className="rounded-2xl border border-stone-200 dark:border-white/10 p-4">
+              <h2 className="font-display font-bold mb-2">Earlier versions</h2>
+              <ul className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
+                {revisions.map(item => (
+                  <li key={item.id}>
+                    {item.reason || 'edit'} · {item.status || 'draft'} · {item.createdAt ? new Date(item.createdAt).toLocaleString() : ''}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <div className="flex flex-wrap gap-3">
-            <button type="submit" disabled={saving} className="btn-primary px-5 py-2.5 rounded-xl disabled:opacity-50">Save draft</button>
-            {isAdmin && !draftId && (
+            <button type="submit" disabled={saving || (status === 'published' && !canCorrect)} className="btn-primary px-5 py-2.5 rounded-xl disabled:opacity-50">
+              {status === 'published' ? 'Save correction' : 'Save draft'}
+            </button>
+            {canPublish && !draftId && (
               <button type="button" disabled={saving} onClick={() => setPublishOpen(true)} className="btn-secondary px-5 py-2.5 rounded-xl disabled:opacity-50">Publish now</button>
             )}
             <Link href="/desk/review" className="px-5 py-2.5 text-sm text-gray-500">Review queue</Link>
@@ -222,9 +269,8 @@ const DeskCompose = () => {
             language: form.language,
             title: form.title,
             fullContent: form.fullContent,
-            translations: {
-              [form.language === 'ml' ? 'en' : 'ml']: { title: form.translationTitle, fullContent: form.translationBody },
-            },
+            translations: form.versions,
+            catalog: languages,
           })}
           busy={saving}
           onCancel={() => setPublishOpen(false)}

@@ -448,7 +448,7 @@ export default {
       try { body = await request.json(); } catch {
         return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400, headers: cors });
       }
-      const targetLang = typeof body.targetLang === 'string' ? body.targetLang.trim() : '';
+      const targetLang = typeof body.targetLang === 'string' ? body.targetLang.trim().toLowerCase() : '';
       if (!targetLang) {
         return new Response(JSON.stringify({ error: 'targetLang required' }), { status: 400, headers: cors });
       }

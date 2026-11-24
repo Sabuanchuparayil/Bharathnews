@@ -9,6 +9,7 @@ import VideoLanguageFilter from '../components/VideoLanguageFilter';
 import EmptyState from '../components/EmptyState';
 import { useVideos } from '../hooks/useVideos';
 import { channelsForVideoLanguage, isVideoLanguageCode } from '../config/video-languages';
+import { useVideoCatalog } from '../hooks/useVideoCatalog';
 import { useLanguage } from '../context/LanguageContext';
 import { toFirestoreLanguageFilter } from '@/config/languages.config';
 
@@ -23,6 +24,7 @@ function VideosContent() {
   const { language: siteLanguage } = useLanguage();
   const siteLangFilter = toFirestoreLanguageFilter(siteLanguage);
 
+  const channels = useVideoCatalog();
   const urlLang = searchParams.get('lang');
   const initialLang = urlLang && isVideoLanguageCode(urlLang)
     ? urlLang
@@ -33,14 +35,14 @@ function VideosContent() {
   const { videos, loading } = useVideos(activeChannel, { videoLanguage: activeLanguage });
 
   useEffect(() => {
-    if (urlLang && isVideoLanguageCode(urlLang) && urlLang !== activeLanguage) {
+    if (urlLang && isVideoLanguageCode(urlLang, channels) && urlLang !== activeLanguage) {
       setActiveLanguage(urlLang);
     }
-  }, [urlLang, activeLanguage]);
+  }, [urlLang, activeLanguage, channels]);
 
   const visibleChannels = useMemo(
-    () => channelsForVideoLanguage(activeLanguage),
-    [activeLanguage]
+    () => channelsForVideoLanguage(activeLanguage, channels),
+    [activeLanguage, channels]
   );
 
   useEffect(() => {

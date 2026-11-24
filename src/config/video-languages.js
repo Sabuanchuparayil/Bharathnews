@@ -1,32 +1,35 @@
 import { YOUTUBE_CHANNELS } from './feeds.config';
 import { getLanguageByCode } from './languages.config';
 
-/** Languages that have at least one YouTube channel in our catalog. */
-export const VIDEO_CHANNEL_LANGUAGES = [...new Set(
-  YOUTUBE_CHANNELS.map(c => c.language).filter(Boolean)
-)].sort();
+export function videoLanguageCodes(channels = YOUTUBE_CHANNELS) {
+  return [...new Set(channels.map(item => item.language).filter(Boolean))].sort();
+}
+
+/** Languages that have at least one YouTube channel in the bootstrap seed. */
+export const VIDEO_CHANNEL_LANGUAGES = videoLanguageCodes();
 
 /** Pills shown on /videos — All + regional channel languages only. */
-export function getVideoLanguageOptions() {
+export function getVideoLanguageOptions(channels = YOUTUBE_CHANNELS) {
   const options = [
     { code: 'all', name: 'All Languages', nativeName: 'All Languages' },
   ];
-  for (const code of VIDEO_CHANNEL_LANGUAGES) {
+  for (const code of videoLanguageCodes(channels)) {
     const lang = getLanguageByCode(code);
+    const matched = lang?.code === code ? lang : null;
     options.push({
       code,
-      name: lang.name,
-      nativeName: lang.nativeName,
+      name: matched?.name || code,
+      nativeName: matched?.nativeName || code,
     });
   }
   return options;
 }
 
-export function isVideoLanguageCode(code) {
-  return code === 'all' || VIDEO_CHANNEL_LANGUAGES.includes(code);
+export function isVideoLanguageCode(code, channels = YOUTUBE_CHANNELS) {
+  return code === 'all' || videoLanguageCodes(channels).includes(code);
 }
 
-export function channelsForVideoLanguage(langCode) {
-  if (!langCode || langCode === 'all') return YOUTUBE_CHANNELS;
-  return YOUTUBE_CHANNELS.filter(c => c.language === langCode);
+export function channelsForVideoLanguage(langCode, channels = YOUTUBE_CHANNELS) {
+  if (!langCode || langCode === 'all') return channels;
+  return channels.filter(item => item.language === langCode);
 }

@@ -111,7 +111,7 @@ async function seedSiteSettings() {
       videoFetchEnabled: true,
       newsletterEnabled: false,
     },
-    targetLanguages: ['ml', 'hi', 'ar'],
+    targetLanguages: ['ml'],
     qualityThreshold: 6,
     telegram: { enabled: true, minScore: 6 },
     email: { enabled: false },

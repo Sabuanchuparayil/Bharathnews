@@ -5,6 +5,7 @@ import { RefreshCw, Send, AlertTriangle, CheckCircle, Clock } from 'lucide-react
 import { toast } from 'react-toastify';
 import AdminLayout from '../components/AdminLayout';
 import { useAuth } from '../context/AuthContext';
+import { useSiteSettings } from '../context/SiteSettingsContext';
 import { getSupabaseBrowser } from '@/lib/supabase-client';
 
 const STATUS_TABS = [
@@ -22,7 +23,10 @@ async function getAdminToken() {
 
 const AdminDistribution = () => {
   const { user, isAdmin, loading } = useAuth();
+  const { settings } = useSiteSettings();
+  const batches = settings.newsroom.distribution;
   const [tab, setTab] = useState('failed');
+  const [loadError, setLoadError] = useState('');
   const [jobs, setJobs] = useState([]);
   const [counts, setCounts] = useState(null);
   const [pipeline, setPipeline] = useState(null);
@@ -38,18 +42,18 @@ const AdminDistribution = () => {
         headers: { Authorization: `Bearer ${token}` },
       }).catch(() => null),
     ]);
-    const jobsData = await jobsRes.json();
-    if (jobsRes.ok) {
-      setJobs(jobsData.jobs || []);
-      setCounts(jobsData.counts || null);
-    }
+    const jobsData = await jobsRes.json().catch(() => ({}));
+    if (!jobsRes.ok) throw new Error(jobsData.error || 'Could not load distribution jobs.');
+    setJobs(jobsData.jobs || []);
+    setCounts(jobsData.counts || null);
+    setLoadError('');
     if (statusRes?.ok) {
       setPipeline(await statusRes.json());
     }
   }, [tab]);
 
   useEffect(() => {
-    if (isAdmin) load().catch(() => {});
+    if (isAdmin) load().catch(err => setLoadError(err.message || 'Could not load distribution jobs.'));
   }, [isAdmin, load]);
 
   const retryJob = async (jobId) => {
@@ -79,7 +83,7 @@ const AdminDistribution = () => {
       const res = await fetch('/api/admin/worker', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ action: 'backfill', limit: 40 }),
+        body: JSON.stringify({ action: 'backfill', limit: batches.backfillLimit }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Backfill failed');
@@ -87,7 +91,7 @@ const AdminDistribution = () => {
       const distribute = await fetch('/api/admin/worker', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ action: 'distribute', backfill: false, telegram: 3, facebook: 2 }),
+        body: JSON.stringify({ action: 'distribute', backfill: false, telegram: batches.telegram, facebook: batches.facebook }),
       });
       const distributeData = await distribute.json().catch(() => ({}));
       if (!distribute.ok) throw new Error(distributeData.error || 'Distribution run failed');
@@ -145,7 +149,9 @@ const AdminDistribution = () => {
         </div>
 
         <div className="glass-card-solid rounded-2xl overflow-hidden">
-          {jobs.length === 0 ? (
+          {loadError ? (
+            <p className="p-8 text-center text-red-600">{loadError}</p>
+          ) : jobs.length === 0 ? (
             <p className="p-8 text-center text-gray-500">No {tab === 'all' ? '' : tab} jobs.</p>
           ) : (
             <div className="divide-y divide-gray-100 dark:divide-gray-800">

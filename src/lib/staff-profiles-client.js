@@ -1,21 +1,7 @@
-export const ROLE_TITLES = [
-  'Newsroom',
-  'Reporter',
-  'Senior Reporter',
-  'Gulf Correspondent',
-  'India Correspondent',
-  'Editor',
-  'Editor-in-Chief',
-  'Columnist',
-  'Contributor',
-];
+import { SOURCE_CATEGORY_IDS } from '@/config/category-taxonomy';
 
 /** Content categories that can be assigned to editorial staff for routing cowork content. */
-export const ASSIGNABLE_TOPICS = [
-  'india', 'gcc', 'business', 'technology', 'sports', 'entertainment',
-  'health', 'education', 'jobs', 'realestate', 'lifestyle', 'opinion',
-  'world', 'breaking',
-];
+export const ASSIGNABLE_TOPICS = SOURCE_CATEGORY_IDS;
 
 export const ACCOUNT_ROLES = {
   content_writer: 'Content Writer',
@@ -37,3 +23,6 @@ export const EDITORIAL_BOARD_ROLES = [
   { id: 'editor_in_chief', title: 'Editor-in-Chief' },
   { id: 'columnist', title: 'Columnist' },
 ];
+
+/** Titles offered on the staff form. New titles can still be typed in. */
+export const ROLE_TITLES = [...new Set(['Newsroom', ...EDITORIAL_BOARD_ROLES.map(item => item.title), 'Contributor'])];

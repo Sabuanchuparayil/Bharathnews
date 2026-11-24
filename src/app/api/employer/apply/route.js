@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifyUserRequest } from '@/lib/marketplace-auth';
 import { getSupabaseAdmin } from '@/lib/supabase-server';
-import { readAccessRoles, roleHasCap } from '@/lib/access-roles';
 
 export async function GET(request) {
   const auth = await verifyUserRequest(request);
@@ -24,8 +23,8 @@ export async function POST(request) {
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   const supabase = getSupabaseAdmin();
-  const roles = await readAccessRoles(supabase);
-  if (roleHasCap(roles, auth.role, 'employer') && !roleHasCap(roles, auth.role, 'admin')) {
+  const caps = new Set(auth.caps || []);
+  if (caps.has('employer') && !caps.has('admin')) {
     return NextResponse.json({ error: 'Already an approved employer.' }, { status: 400 });
   }
 

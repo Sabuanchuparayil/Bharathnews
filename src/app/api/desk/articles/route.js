@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { verifyEditorialRequest } from '@/lib/editorial-auth';
+import { capsAllow } from '@/lib/access-roles';
+import { getSupabaseAdmin } from '@/lib/supabase-server';
+import { readSiteSettings } from '@/lib/site-settings';
 import {
   createEditorialArticle,
   editorialStats,
@@ -28,14 +31,19 @@ export async function GET(request) {
       const stats = await editorialStats();
       return NextResponse.json(stats);
     }
+    const settings = await readSiteSettings(getSupabaseAdmin());
+    const pageSize = settings.newsroom.reviewPageSize;
+    const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10) || 0, 0);
     const status = view === 'mine' ? 'all' : (searchParams.get('status') || 'queue');
     const articles = await listEditorialArticles({
       status: view === 'mine' ? 'all' : status,
       mine: view === 'mine' ? auth.uid : null,
       assignedTo: view === 'assigned' ? auth.uid : null,
       unassigned: view === 'unassigned',
+      limit: pageSize,
+      offset,
     });
-    return NextResponse.json({ articles, role: auth.role });
+    return NextResponse.json({ articles, hasMore: articles.length === pageSize, offset, role: auth.role });
   } catch (err) {
     return jsonError(err);
   }
@@ -53,6 +61,9 @@ export async function POST(request) {
   }
 
   if (body.action === 'publish_due') {
+    if (!capsAllow(auth.caps, 'publish')) {
+      return NextResponse.json({ error: 'Publishing is limited to editors.' }, { status: 403 });
+    }
     try {
       const { published, skipped } = await publishDueDrafts();
       return NextResponse.json({ articles: published, skipped });
@@ -61,12 +72,16 @@ export async function POST(request) {
     }
   }
 
-  const parsed = validateEditorialInput(body || {});
+  const settings = await readSiteSettings(getSupabaseAdmin());
+  const parsed = validateEditorialInput(body || {}, {
+    languages: settings.newsroom.languages,
+    defaultCategory: settings.newsroom.defaultCategory,
+  });
   if (parsed.error) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
   const publishNow = body.publishNow === true;
-  if (publishNow && !auth.caps?.includes('admin')) {
-    return NextResponse.json({ error: 'Only an editor-in-chief can publish without review.' }, { status: 403 });
+  if (publishNow && !capsAllow(auth.caps, 'publish')) {
+    return NextResponse.json({ error: 'Publishing is limited to editors.' }, { status: 403 });
   }
   let publishing = null;
   if (publishNow) {

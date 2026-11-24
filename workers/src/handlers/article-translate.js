@@ -1,9 +1,11 @@
 import { translateArticleFields } from '../lib/google-translate.js';
 
-const ALLOWED = new Set(['en', 'ml', 'hi', 'ta', 'te', 'kn', 'bn']);
+const ALLOWED = new Set(['en', 'ml']);
 
 export async function translateArticleContent(env, { title, summary, fullContent, targetLang, sourceLang = 'en' }) {
-  if (!ALLOWED.has(targetLang)) {
+  const target = String(targetLang || '').trim().toLowerCase();
+  const source = String(sourceLang || 'en').trim().toLowerCase();
+  if (!ALLOWED.has(target)) {
     throw new Error(`Unsupported language: ${targetLang}`);
   }
   if (!env.GOOGLE_TRANSLATE_API_KEY && !env.FIREBASE_SERVICE_ACCOUNT_JSON) {
@@ -14,7 +16,7 @@ export async function translateArticleContent(env, { title, summary, fullContent
     title,
     summary,
     fullContent,
-    sourceLang: sourceLang || 'en',
-    targetLang,
+    sourceLang: source,
+    targetLang: target,
   });
 }

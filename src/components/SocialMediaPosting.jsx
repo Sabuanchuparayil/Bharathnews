@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
+import { sessionUserId } from '@/lib/session-user';
 import { getSmartPostSuggestions, getOptimalPostingTimes, logSocialPost } from '../services/socialIntelligence';
 import { getCategoryLabel } from '../utils/categoryColors';
 
@@ -190,7 +191,7 @@ const SocialMediaPosting = () => {
   const handlePost = async (article, platforms) => {
     if (!user) return;
     try {
-      await logSocialPost(article.id, platforms, user.uid);
+      await logSocialPost(article.id, platforms, sessionUserId(user));
       toast.success(`Posted to ${platforms.map(p => PLATFORM_ICONS[p].label).join(', ')}!`);
     } catch (err) {
       console.error('Post logging failed:', err);

@@ -11,19 +11,20 @@ function hasVersion(title, body) {
   return String(title || '').trim().length >= 4 && String(body || '').trim().length >= 40;
 }
 
-/** Ready state for the English and Malayalam versions of a draft or saved article. */
-export function languageStatus({ language, title, fullContent, translations }) {
-  const primary = language === 'ml' ? 'ml' : 'en';
-  const other = primary === 'en' ? 'ml' : 'en';
-  const version = translations?.[other] || {};
-  const ready = {
-    [primary]: hasVersion(title, fullContent),
-    [other]: hasVersion(version.title, version.fullContent),
-  };
-  return [
-    { code: 'en', label: 'English', ready: ready.en },
-    { code: 'ml', label: 'Malayalam', ready: ready.ml },
+/** Ready state for each newsroom language on a draft or saved article. */
+export function languageStatus({ language, title, fullContent, translations, catalog }) {
+  const codes = catalog?.length ? catalog : [
+    { code: 'en', label: 'English' },
+    { code: 'ml', label: 'Malayalam' },
   ];
+  const primary = codes.some(item => item.code === language) ? language : codes[0].code;
+  return codes.map(item => {
+    if (item.code === primary) {
+      return { code: item.code, label: item.label, ready: hasVersion(title, fullContent) };
+    }
+    const version = translations?.[item.code] || {};
+    return { code: item.code, label: item.label, ready: hasVersion(version.title, version.fullContent) };
+  });
 }
 
 export default function PublishDialog({

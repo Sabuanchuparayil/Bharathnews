@@ -8,6 +8,7 @@ import ShareButton from '../components/ShareButton';
 import Layout from '../components/Layout';
 import CreatorPostCard from '../components/CreatorPostCard';
 import { useAuth } from '../context/AuthContext';
+import { sessionUserId } from '@/lib/session-user';
 import {
   getCreatorProfileBySlug, getCreatorPostsByAuthor,
   followCreator, unfollowCreator, isFollowing,
@@ -40,7 +41,7 @@ const CreatorProfile = ({ username: usernameProp, initialProfile = null }) => {
         const allPosts = await getCreatorPostsByAuthor(username);
         setPosts(allPosts.filter(post => post.visibility !== 'private' || post.authorId === user?.uid));
         if (user) {
-          const f = await isFollowing(user.uid, username);
+          const f = await isFollowing(sessionUserId(user), username);
           setFollowing(f);
         }
       }
@@ -60,9 +61,9 @@ const CreatorProfile = ({ username: usernameProp, initialProfile = null }) => {
     }));
     try {
       if (wasFollowing) {
-        await unfollowCreator(user.uid, username);
+        await unfollowCreator(sessionUserId(user), username);
       } else {
-        await followCreator(user.uid, username);
+        await followCreator(sessionUserId(user), username);
       }
     } catch {
       setFollowing(wasFollowing);

@@ -15,18 +15,19 @@ const TOPICS = [
 ];
 
 const EDITORIAL_EMAIL = 'bharathnewsweb@gmail.com';
+const EMPTY_FORM = {
+  name: '',
+  email: '',
+  topic: 'general',
+  subject: '',
+  message: '',
+  website: '',
+};
 
 const Contact = () => {
-  const [form, setForm] = useState({
-    name: '',
-    email: '',
-    topic: 'general',
-    subject: '',
-    message: '',
-    website: '',
-  });
+  const [form, setForm] = useState(EMPTY_FORM);
   const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [receipt, setReceipt] = useState(null);
 
   const update = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
 
@@ -41,10 +42,19 @@ const Contact = () => {
         body: JSON.stringify(form),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'Failed to send message');
-      setSent(true);
+      if (!res.ok) {
+        if (data.emailSent === true) {
+          const detail = data.error || 'Your email was sent, but the newsroom inbox did not record it.';
+          setReceipt({ emailOnly: true, detail });
+          setForm(EMPTY_FORM);
+          toast.warning(detail);
+          return;
+        }
+        throw new Error(data.error || 'Failed to send message');
+      }
+      setReceipt({ emailOnly: false, detail: '' });
       toast.success(data.message || 'Message sent!');
-      setForm({ name: '', email: '', topic: 'general', subject: '', message: '', website: '' });
+      setForm(EMPTY_FORM);
     } catch (err) {
       toast.error(err.message || 'Could not send message');
     } finally {
@@ -85,12 +95,26 @@ const Contact = () => {
         </aside>
 
         <div className="lg:col-span-3">
-          {sent ? (
-            <div className="glass-card-solid rounded-2xl p-8 text-center border border-green-200 dark:border-green-900/50">
-              <CheckCircle2 className="w-12 h-12 text-green-600 dark:text-green-400 mx-auto mb-4" />
-              <h2 className="font-display font-bold text-xl text-gray-900 dark:text-white mb-2">Message sent</h2>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">Thank you — we received your email and will reply soon.</p>
-              <button type="button" onClick={() => setSent(false)} className="btn-secondary px-5 py-2 rounded-xl text-sm">
+          {receipt ? (
+            <div className={`glass-card-solid rounded-2xl p-8 text-center border ${
+              receipt.emailOnly
+                ? 'border-amber-200 dark:border-amber-900/50'
+                : 'border-green-200 dark:border-green-900/50'
+            }`}>
+              <CheckCircle2 className={`w-12 h-12 mx-auto mb-4 ${
+                receipt.emailOnly
+                  ? 'text-amber-600 dark:text-amber-400'
+                  : 'text-green-600 dark:text-green-400'
+              }`} />
+              <h2 className="font-display font-bold text-xl text-gray-900 dark:text-white mb-2">
+                {receipt.emailOnly ? 'Email sent' : 'Message sent'}
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">
+                {receipt.emailOnly
+                  ? receipt.detail
+                  : 'Thank you — we received your email and will reply soon.'}
+              </p>
+              <button type="button" onClick={() => setReceipt(null)} className="btn-secondary px-5 py-2 rounded-xl text-sm">
                 Send another message
               </button>
             </div>

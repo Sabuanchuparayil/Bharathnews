@@ -50,7 +50,7 @@ const DeskHome = () => {
               {(stats.recent || []).length === 0 && <li className="text-sm text-gray-500">No desk articles yet.</li>}
               {(stats.recent || []).map(item => (
                 <li key={item.id} className="rounded-xl border border-stone-200 dark:border-white/10 px-4 py-3 flex items-center justify-between gap-3">
-                  <span className="font-medium">{item.title}</span>
+                  <Link href={item.slug ? `/article/${item.slug}` : `/desk/compose?id=${item.id}`} className="font-medium hover:text-brand-700">{item.title}</Link>
                   <span className="text-xs uppercase text-gray-500">{item.editorialStatus} · {item.language}</span>
                 </li>
               ))}

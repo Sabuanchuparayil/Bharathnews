@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifyAdminRequest } from '@/lib/supabase-admin';
 import { getSupabaseAdmin } from '@/lib/supabase-server';
 import { countOtherActiveAdmins, readAccessRoles, resolveRoleAssignment, roleHasCap } from '@/lib/access-roles';
+import { recordAudit } from '@/lib/audit-log';
 import { restoreEditorialSeat, syncUserEditorialSeat } from '@/lib/staff-profiles';
 
 export async function POST(request) {
@@ -89,6 +90,13 @@ export async function POST(request) {
         return NextResponse.json({ error: message }, { status: 500 });
       }
     }
+    await recordAudit({
+      actorId: auth.uid,
+      action: 'role',
+      entityType: 'user',
+      entityId: userId,
+      summary: `${assignment.accountRole}${editorialTitle ? ` · ${editorialTitle}` : ''}`,
+    }, supabase);
     return NextResponse.json({ success: true, role: assignment.accountRole, editorialTitle });
   } catch (err) {
     const message = err?.hint ? `${err.message} ${err.hint}` : (err?.message || 'Failed to update role.');

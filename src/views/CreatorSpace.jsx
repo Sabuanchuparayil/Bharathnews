@@ -6,6 +6,7 @@ import { Plus, PenLine, Clock, CheckCircle, XCircle } from 'lucide-react';
 import ShareButton from '../components/ShareButton';
 import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
+import { sessionUserId } from '@/lib/session-user';
 import { getMyCreatorPosts, getCreatorProfileByUserId, checkRevenueShareEligibility } from '../services/creator';
 import { getCategoryLabel } from '../utils/categoryColors';
 import { pravasiPublicPath } from '@/lib/pravasi';
@@ -25,8 +26,8 @@ const CreatorSpace = () => {
   useEffect(() => {
     if (user && isCreator) {
       Promise.all([
-        getMyCreatorPosts(user.uid),
-        getCreatorProfileByUserId(user.uid),
+        getMyCreatorPosts(sessionUserId(user)),
+        getCreatorProfileByUserId(sessionUserId(user)),
       ]).then(async ([myPosts, myProfile]) => {
         setPosts(myPosts);
         setProfile(myProfile);

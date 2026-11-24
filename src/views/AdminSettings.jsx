@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'react-toastify';
@@ -16,9 +16,9 @@ import {
   resetUserPassword, sendPasswordResetEmail, setUserStatus, getAccessRoles, saveAccessRoles,
 } from '../services/admin';
 import { STATUS_LABELS } from '@/lib/account-status';
-import { mergeSiteSettings } from '../lib/site-settings';
+import { mergeSiteSettings, parseTargetLanguages } from '../lib/site-settings';
 import {
-  CAPABILITY_OPTIONS, READER_BLOCKED_CAPS, defaultAccessRoles, slugifyRoleId,
+  CAPABILITY_OPTIONS, READER_BLOCKED_CAPS, defaultAccessRoles, isEditorialTitleRole, slugifyRoleId,
 } from '@/lib/access-roles';
 import { EDITORIAL_BOARD_ROLES } from '@/lib/staff-profiles-client';
 const LANG_OPTIONS = ['en', 'ml'];
@@ -31,7 +31,7 @@ function roleChoices(accessRoles) {
       label: item.title,
     })),
     ...accessRoles
-      .filter(role => !role.builtin && role.caps.includes('editorial') && !role.caps.includes('admin'))
+      .filter(role => !role.builtin && !editorialIds.has(role.id) && role.caps.includes('editorial') && !role.caps.includes('admin'))
       .map(role => ({ value: role.id, label: role.label })),
   ];
   const other = accessRoles
@@ -51,6 +51,51 @@ function selectedAssignment(user) {
     if (!match) return `seat:${user.editorialTitle}`;
   }
   return user.role || 'reader';
+}
+
+function AccessRoleCard({ role, onRename, onToggleCap, onRemove }) {
+  return (
+    <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        {isEditorialTitleRole(role.id) ? (
+          <p className="font-semibold text-sm text-gray-900 dark:text-gray-100">{role.label}</p>
+        ) : (
+          <input
+            value={role.label}
+            onChange={e => onRename(role.id, { label: e.target.value })}
+            className={`${inputClass} max-w-xs`}
+            aria-label={`${role.label} name`}
+          />
+        )}
+        {role.builtin ? (
+          <span className="text-[10px] uppercase tracking-wide text-gray-400">Built in</span>
+        ) : (
+          <button type="button" onClick={() => onRemove(role.id)} className="text-xs text-red-600">
+            Remove
+          </button>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {CAPABILITY_OPTIONS.map(cap => {
+          const locked = (role.id === 'admin' && cap.id === 'admin')
+            || (role.id === 'reader' && READER_BLOCKED_CAPS.has(cap.id))
+            || (isEditorialTitleRole(role.id) && cap.id === 'admin');
+          const checked = role.caps.includes(cap.id);
+          return (
+            <label key={cap.id} className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700" title={cap.detail}>
+              <input
+                type="checkbox"
+                checked={checked}
+                disabled={locked}
+                onChange={() => onToggleCap(role.id, cap.id)}
+              />
+              {cap.label}
+            </label>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function RoleSelect({ value, onChange, accessRoles, ariaLabel, className }) {
@@ -132,6 +177,9 @@ const AdminSettings = () => {
     router.replace(`${pathname}${query}`, { scroll: false });
   };
   const [settings, setSettings] = useState(() => mergeSiteSettings());
+  const [languageDraft, setLanguageDraft] = useState(null);
+  const languageDraftRef = useRef(null);
+  const targetLanguagesRef = useRef(null);
   const [settingsReady, setSettingsReady] = useState(false);
   const [users, setUsers] = useState([]);
   const [sourceStats, setSourceStats] = useState({ total: 0, enabled: 0 });
@@ -204,6 +252,7 @@ const AdminSettings = () => {
     if (!isAdmin) return;
     getSiteSettings()
       .then(value => {
+        targetLanguagesRef.current = value.targetLanguages;
         setSettings(value);
         setSettingsReady(true);
       })
@@ -229,8 +278,15 @@ const AdminSettings = () => {
       toast.error('Settings are still loading.');
       return;
     }
+    const draft = languageDraftRef.current;
+    const targetLanguages = parseTargetLanguages(
+      draft == null ? (targetLanguagesRef.current ?? settings.targetLanguages) : draft,
+    );
     try {
-      const savedSettings = await updateSiteSettings(settings);
+      const savedSettings = await updateSiteSettings({ ...settings, targetLanguages });
+      targetLanguagesRef.current = savedSettings.targetLanguages;
+      languageDraftRef.current = null;
+      setLanguageDraft(null);
       setSettings(savedSettings);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -373,6 +429,7 @@ const AdminSettings = () => {
       if (role.id !== id) return role;
       if (role.id === 'admin' && cap === 'admin') return role;
       if (role.id === 'reader' && READER_BLOCKED_CAPS.has(cap)) return role;
+      if (isEditorialTitleRole(role.id) && cap === 'admin') return role;
       const has = role.caps.includes(cap);
       return { ...role, caps: has ? role.caps.filter(item => item !== cap) : [...role.caps, cap] };
     }));
@@ -441,6 +498,36 @@ const AdminSettings = () => {
           <div className="space-y-6">
             <div className="glass-card-solid rounded-2xl p-6">
               <h2 className="font-display font-bold text-lg mb-4">Publishing</h2>
+              <Field label="Community source name" hint="Stored on stories published from the community queue.">
+                <input
+                  type="text"
+                  value={settings.newsroom?.communitySource || ''}
+                  onChange={e => setSettings({ ...settings, newsroom: { ...settings.newsroom, communitySource: e.target.value } })}
+                  className={inputClass}
+                />
+              </Field>
+              <Field label="Editorial source name" hint="Stored on desk stories. Change this only if older stories use the same name.">
+                <input
+                  type="text"
+                  value={settings.newsroom?.editorialSource || ''}
+                  onChange={e => setSettings({ ...settings, newsroom: { ...settings.newsroom, editorialSource: e.target.value } })}
+                  className={inputClass}
+                />
+              </Field>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <Field label="Cowork silence alarm (hours)">
+                  <input type="number" min={1} max={168} value={settings.newsroom?.coworkStaleHours ?? 6} onChange={e => setSettings({ ...settings, newsroom: { ...settings.newsroom, coworkStaleHours: Number(e.target.value) } })} className={inputClass} />
+                </Field>
+                <Field label="Review page size">
+                  <input type="number" min={10} max={100} value={settings.newsroom?.reviewPageSize ?? 40} onChange={e => setSettings({ ...settings, newsroom: { ...settings.newsroom, reviewPageSize: Number(e.target.value) } })} className={inputClass} />
+                </Field>
+                <Field label="Telegram batch">
+                  <input type="number" min={1} max={20} value={settings.newsroom?.distribution?.telegram ?? 3} onChange={e => setSettings({ ...settings, newsroom: { ...settings.newsroom, distribution: { ...settings.newsroom?.distribution, telegram: Number(e.target.value) } } })} className={inputClass} />
+                </Field>
+                <Field label="Facebook batch">
+                  <input type="number" min={1} max={20} value={settings.newsroom?.distribution?.facebook ?? 2} onChange={e => setSettings({ ...settings, newsroom: { ...settings.newsroom, distribution: { ...settings.newsroom?.distribution, facebook: Number(e.target.value) } } })} className={inputClass} />
+                </Field>
+              </div>
               <Field label="Quality threshold (0–10)" hint="Minimum AI quality score to publish articles">
                 <input
                   type="number"
@@ -451,14 +538,21 @@ const AdminSettings = () => {
                   className={`${inputClass} w-24`}
                 />
               </Field>
-              <Field label="Target languages" hint="Comma-separated language codes for AI content generation">
+              <Field label="Target languages" hint="Malayalam is always included. English can be added. Other codes are left out.">
                 <input
                   type="text"
-                  value={(settings.targetLanguages || []).join(', ')}
-                  onChange={e => setSettings({
-                    ...settings,
-                    targetLanguages: e.target.value.split(',').map(s => s.trim()).filter(Boolean),
-                  })}
+                  value={languageDraft ?? (settings.targetLanguages || []).join(', ')}
+                  onChange={e => {
+                    languageDraftRef.current = e.target.value;
+                    setLanguageDraft(e.target.value);
+                  }}
+                  onBlur={e => {
+                    const codes = parseTargetLanguages(e.target.value);
+                    targetLanguagesRef.current = codes;
+                    languageDraftRef.current = null;
+                    setLanguageDraft(null);
+                    setSettings(prev => ({ ...prev, targetLanguages: codes }));
+                  }}
                   className={inputClass}
                   placeholder="ml"
                 />
@@ -468,10 +562,22 @@ const AdminSettings = () => {
                   <button
                     key={code}
                     type="button"
+                    aria-pressed={(settings.targetLanguages || []).includes(code)}
                     onClick={() => {
-                      const langs = new Set(settings.targetLanguages || []);
-                      if (langs.has(code)) langs.delete(code); else langs.add(code);
-                      setSettings({ ...settings, targetLanguages: [...langs] });
+                      if (code === 'ml') return;
+                      const base = parseTargetLanguages(
+                        languageDraftRef.current == null
+                          ? (targetLanguagesRef.current ?? settings.targetLanguages)
+                          : languageDraftRef.current,
+                      );
+                      const langs = new Set(base);
+                      if (langs.has(code)) langs.delete(code);
+                      else langs.add(code);
+                      const next = parseTargetLanguages([...langs]);
+                      targetLanguagesRef.current = next;
+                      languageDraftRef.current = null;
+                      setLanguageDraft(null);
+                      setSettings(prev => ({ ...prev, targetLanguages: next }));
                     }}
                     className={`text-xs px-2 py-1 rounded-lg border ${
                       (settings.targetLanguages || []).includes(code)
@@ -717,48 +823,36 @@ const AdminSettings = () => {
               Rename a role, change what it can open, or add a new one. The Admin role always keeps the admin area.
               Reader is the role new sign-ups get, so it cannot open the newsroom or admin area.
             </p>
+            <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">Account access</h3>
             <div className="space-y-4">
-              {accessRoles.map(role => (
-                <div key={role.id} className="rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-                  <div className="flex flex-wrap items-center gap-2 mb-3">
-                    <input
-                      value={role.label}
-                      onChange={e => updateRoleDraft(role.id, { label: e.target.value })}
-                      className={`${inputClass} max-w-xs`}
-                      aria-label={`${role.label} name`}
-                    />
-                    {role.builtin ? (
-                      <span className="text-[10px] uppercase tracking-wide text-gray-400">Built in</span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setAccessRoles(prev => prev.filter(item => item.id !== role.id))}
-                        className="text-xs text-red-600"
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {CAPABILITY_OPTIONS.map(cap => {
-                      const locked = (role.id === 'admin' && cap.id === 'admin')
-                        || (role.id === 'reader' && READER_BLOCKED_CAPS.has(cap.id));
-                      const checked = role.caps.includes(cap.id);
-                      return (
-                        <label key={cap.id} className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700" title={cap.detail}>
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            disabled={locked}
-                            onChange={() => toggleRoleCap(role.id, cap.id)}
-                          />
-                          {cap.label}
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
+              {accessRoles.filter(role => !isEditorialTitleRole(role.id)).map(role => (
+                <AccessRoleCard
+                  key={role.id}
+                  role={role}
+                  onRename={updateRoleDraft}
+                  onToggleCap={toggleRoleCap}
+                  onRemove={id => setAccessRoles(prev => prev.filter(item => item.id !== id))}
+                />
               ))}
+            </div>
+            <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mt-6 mb-1">Editorial board</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+              Reporter, Editor, and the other board titles sign in as Content Writer. Permissions here apply to people assigned that title. Admin access stays on account roles.
+            </p>
+            <div className="space-y-4">
+              {EDITORIAL_BOARD_ROLES.filter(item => item.id !== 'content_writer').map(item => {
+                const role = accessRoles.find(entry => entry.id === item.id);
+                if (!role) return null;
+                return (
+                  <AccessRoleCard
+                    key={role.id}
+                    role={role}
+                    onRename={updateRoleDraft}
+                    onToggleCap={toggleRoleCap}
+                    onRemove={id => setAccessRoles(prev => prev.filter(entry => entry.id !== id))}
+                  />
+                );
+              })}
             </div>
             <div className="flex flex-wrap items-center gap-2 mt-4">
               <input

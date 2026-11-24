@@ -2,9 +2,11 @@
 
 import React from 'react';
 import { getVideoLanguageOptions } from '@/config/video-languages';
+import { useVideoCatalog } from '@/hooks/useVideoCatalog';
 
 const VideoLanguageFilter = ({ activeLanguage = 'all', onChange }) => {
-  const options = getVideoLanguageOptions();
+  const channels = useVideoCatalog();
+  const options = getVideoLanguageOptions(channels);
 
   return (
     <div className="relative min-w-0">

@@ -57,6 +57,8 @@ const FIELD_MAP = {
   assigned_topics: 'assignedTopics',
   assigned_to: 'assignedTo',
   assigned_at: 'assignedAt',
+  correction_note: 'correctionNote',
+  unpublished_at: 'unpublishedAt',
   received_at: 'receivedAt',
   email_verified: 'emailVerified',
   profile_complete: 'profileComplete',

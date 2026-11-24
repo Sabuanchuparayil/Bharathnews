@@ -21,13 +21,22 @@ export function parseJsonFromAI(text) {
   return JSON.parse(match[0]);
 }
 
-const LANG_NAMES = {
-  ml: 'Malayalam', ta: 'Tamil', te: 'Telugu', kn: 'Kannada', hi: 'Hindi', bn: 'Bengali', ar: 'Arabic',
-};
+const LANG_NAMES = { en: 'English', ml: 'Malayalam' };
 
-export async function generateMultilingualArticle(env, { title, description, source, category, topics, targetLangs = ['ml', 'hi', 'ar'] }) {
-  const langList = targetLangs.map(l => LANG_NAMES[l] || l).join(', ');
-  const translationTemplate = targetLangs
+function publicationTargets(targetLangs) {
+  const codes = [...new Set(
+    (Array.isArray(targetLangs) && targetLangs.length ? targetLangs : ['ml'])
+      .map(code => String(code || '').trim().toLowerCase())
+      .filter(code => code === 'en' || code === 'ml'),
+  )];
+  if (!codes.includes('ml')) codes.push('ml');
+  return codes;
+}
+
+export async function generateMultilingualArticle(env, { title, description, source, category, topics, targetLangs = ['ml'] }) {
+  const languages = publicationTargets(targetLangs);
+  const langList = languages.map(code => LANG_NAMES[code]).join(', ');
+  const translationTemplate = languages
     .reduce((o, l) => { o[l] = { title: '', summary: '', fullContent: '' }; return o; }, {});
 
   const prompt = `You are a news editor for The Bharath News (India-GCC focused).

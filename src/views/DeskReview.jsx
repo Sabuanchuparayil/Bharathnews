@@ -7,6 +7,8 @@ import { UserCircle } from 'lucide-react';
 import DeskLayout from '../components/DeskLayout';
 import PublishDialog, { languageStatus } from '../components/PublishDialog';
 import { useAuth } from '../context/AuthContext';
+import { useSiteSettings } from '../context/SiteSettingsContext';
+import { capsAllow } from '@/lib/access-roles';
 import { deskFetch } from '@/lib/desk-client';
 
 const TABS = [
@@ -19,35 +21,44 @@ const TABS = [
 ];
 
 const DeskReview = () => {
-  const { user, isAdmin } = useAuth();
+  const { user, caps } = useAuth();
+  const { settings } = useSiteSettings();
+  const canPublish = capsAllow(caps, 'publish');
+  const canAssign = capsAllow(caps, 'assign');
+  const canCorrect = capsAllow(caps, 'correct');
   const [tab, setTab] = useState('queue');
   const [articles, setArticles] = useState([]);
+  const [hasMore, setHasMore] = useState(false);
   const [notes, setNotes] = useState({});
+  const [corrections, setCorrections] = useState({});
   const [openId, setOpenId] = useState('');
   const [editors, setEditors] = useState([]);
   const [publishTarget, setPublishTarget] = useState(null);
   const [publishing, setPublishing] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (offset = 0) => {
     const view = ['queue', 'mine', 'assigned', 'unassigned'].includes(tab) ? tab : null;
     const path = view
-      ? `/api/desk/articles?view=${view}`
-      : `/api/desk/articles?status=${tab}`;
+      ? `/api/desk/articles?view=${view}&offset=${offset}`
+      : `/api/desk/articles?status=${tab}&offset=${offset}`;
     const data = await deskFetch(path);
-    const rows = data.articles || [];
-    setArticles(tab === 'mine' ? rows.filter(item => item.editorialStatus !== 'published') : rows);
+    const rows = tab === 'mine'
+      ? (data.articles || []).filter(item => item.editorialStatus !== 'published')
+      : (data.articles || []);
+    setArticles(prev => (offset ? [...prev, ...rows] : rows));
+    setHasMore(Boolean(data.hasMore));
+    setLoadError('');
   }, [tab]);
 
-  // Load editorial staff for assignment dropdown.
   useEffect(() => {
-    if (!isAdmin) return;
     deskFetch('/api/desk/staff?all=0')
       .then(data => setEditors((data.staff || []).filter(s => s.userId)))
-      .catch(() => {});
-  }, [isAdmin]);
+      .catch(() => setEditors([]));
+  }, []);
 
   useEffect(() => {
-    load().catch(err => toast.error(err.message || 'Could not load the queue.'));
+    load(0).catch(err => setLoadError(err.message || 'Could not load the queue.'));
   }, [load]);
 
   const act = async (id, action, extra = {}) => {
@@ -56,7 +67,7 @@ const DeskReview = () => {
         method: 'PATCH',
         body: JSON.stringify({ action, notes: notes[id] || '', ...extra }),
       });
-      toast.success(action === 'publish' ? 'Published.' : 'Updated.');
+      toast.success(action === 'publish' ? 'Published.' : action === 'correct' ? 'Correction saved.' : 'Updated.');
       load();
       return true;
     } catch (err) {
@@ -112,7 +123,7 @@ const DeskReview = () => {
     <DeskLayout
       title="Review queue"
       maxWidth="max-w-4xl"
-      actions={<button type="button" onClick={publishDue} className="btn-secondary px-4 py-2 rounded-xl text-sm">Publish scheduled</button>}
+      actions={canPublish ? <button type="button" onClick={publishDue} className="btn-secondary px-4 py-2 rounded-xl text-sm">Publish scheduled</button> : null}
     >
       <div className="flex flex-wrap gap-2 mb-6">
         {TABS.map(item => (
@@ -126,8 +137,9 @@ const DeskReview = () => {
           </button>
         ))}
       </div>
+      {loadError && <p className="mb-4 text-sm text-red-600">{loadError}</p>}
       <div className="space-y-4">
-        {articles.length === 0 && <p className="text-gray-500">Nothing in this list.</p>}
+        {articles.length === 0 && !loadError && <p className="text-gray-500">Nothing in this list.</p>}
         {articles.map(article => {
           const assignee = editorName(article.assignedTo);
           const isAssignedToMe = article.assignedTo === user?.id;
@@ -155,7 +167,7 @@ const DeskReview = () => {
               {article.editorialStatus !== 'published' && (
                 <>
                   {/* Assignment dropdown */}
-                  {isAdmin && editors.length > 0 && (
+                  {canAssign && editors.length > 0 && (
                     <div className="mt-3 flex items-center gap-2">
                       <label className="text-xs text-gray-500">Assign to:</label>
                       <select
@@ -178,26 +190,54 @@ const DeskReview = () => {
                     className="w-full mt-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-3 py-2 text-sm"
                   />
                   <div className="flex flex-wrap gap-2 mt-3">
-                    <button type="button" onClick={() => setPublishTarget(article)} className="px-4 py-2 bg-green-700 text-white rounded-xl text-sm">Approve and publish</button>
-                    <button type="button" onClick={() => act(article.id, 'needs_revision')} className="px-4 py-2 bg-amber-600 text-white rounded-xl text-sm">Request changes</button>
-                    <button type="button" onClick={() => act(article.id, 'reject')} className="px-4 py-2 bg-red-700 text-white rounded-xl text-sm">Reject</button>
+                    {canPublish && (
+                      <>
+                        <button type="button" onClick={() => setPublishTarget(article)} className="px-4 py-2 bg-green-700 text-white rounded-xl text-sm">Approve and publish</button>
+                        <button type="button" onClick={() => act(article.id, 'needs_revision')} className="px-4 py-2 bg-amber-600 text-white rounded-xl text-sm">Request changes</button>
+                        <button type="button" onClick={() => act(article.id, 'reject')} className="px-4 py-2 bg-red-700 text-white rounded-xl text-sm">Reject</button>
+                      </>
+                    )}
                     <Link href={`/desk/compose?id=${article.id}`} className="px-4 py-2 rounded-xl text-sm border border-stone-200 dark:border-white/10">Edit</Link>
                   </div>
                 </>
               )}
-              {article.editorialStatus === 'published' && article.slug && (
-                <Link href={`/article/${article.slug}`} className="inline-block mt-3 text-sm text-brand-700 dark:text-brand-300">Open live article</Link>
+              {article.editorialStatus === 'published' && (
+                <div className="mt-3 space-y-2">
+                  {article.slug && (
+                    <Link href={`/article/${article.slug}`} className="inline-block text-sm text-brand-700 dark:text-brand-300">Open live article</Link>
+                  )}
+                  {canCorrect && (
+                    <>
+                      <textarea
+                        value={corrections[article.id] ?? article.correctionNote ?? ''}
+                        onChange={e => setCorrections(prev => ({ ...prev, [article.id]: e.target.value }))}
+                        rows={2}
+                        placeholder="Correction readers will see"
+                        className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-3 py-2 text-sm"
+                      />
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" onClick={() => act(article.id, 'correct', { noteOnly: true, correctionNote: corrections[article.id] ?? article.correctionNote ?? '' })} className="px-4 py-2 rounded-xl text-sm border border-stone-200 dark:border-white/10">Save correction</button>
+                        <button type="button" onClick={() => act(article.id, 'unpublish')} className="px-4 py-2 bg-red-700 text-white rounded-xl text-sm">Unpublish</button>
+                      </div>
+                    </>
+                  )}
+                </div>
               )}
             </article>
           );
         })}
+        {hasMore && (
+          <button type="button" onClick={() => load(articles.length).catch(err => setLoadError(err.message || 'Could not load more.'))} className="btn-secondary px-4 py-2 rounded-xl text-sm">
+            Load more
+          </button>
+        )}
       </div>
       <PublishDialog
         open={Boolean(publishTarget)}
         title={publishTarget?.title}
         category={publishTarget?.category}
         authorSlug={publishTarget?.authorSlug}
-        languages={publishTarget ? languageStatus(publishTarget) : []}
+        languages={publishTarget ? languageStatus({ ...publishTarget, catalog: settings.newsroom.languages }) : []}
         fixHref={publishTarget ? `/desk/compose?id=${publishTarget.id}` : ''}
         busy={publishing}
         onCancel={() => setPublishTarget(null)}

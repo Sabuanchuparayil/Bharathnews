@@ -3,19 +3,31 @@ import { slugify } from '@/utils/slugify';
 import { rowToApp, rowsToApp } from '@/lib/db-mapper';
 import { onArticlePublished } from '@/lib/on-article-published';
 import { resolveStaffAuthor } from '@/lib/staff-profiles';
+import { SOURCE_CATEGORY_IDS } from '@/config/category-taxonomy';
+import { readSiteSettings } from '@/lib/site-settings';
+import { recordAudit, snapshotArticle } from '@/lib/audit-log';
 
 const OPTIONAL_COLUMNS = [
   'is_ai_assisted', 'editor_notes', 'revision_count', 'scheduled_at', 'submitted_by',
   'image_credit', 'author_photo_url', 'author_title',
-  'assigned_to', 'assigned_at',
+  'assigned_to', 'assigned_at', 'correction_note', 'unpublished_at',
 ];
 
-const CATEGORIES = new Set([
-  'india', 'gcc', 'business', 'technology', 'sports', 'entertainment', 'health',
-  'education', 'jobs', 'realestate', 'lifestyle', 'opinion', 'world', 'breaking',
-]);
+const CATEGORIES = new Set(SOURCE_CATEGORY_IDS);
 
-const LANGUAGE_NAMES = { en: 'English', ml: 'Malayalam' };
+async function newsroomContext() {
+  const supabase = getSupabaseAdmin();
+  const settings = await readSiteSettings(supabase);
+  const languages = settings.newsroom.languages;
+  return {
+    supabase,
+    source: settings.newsroom.editorialSource,
+    languages,
+    names: Object.fromEntries(languages.map(item => [item.code, item.label])),
+    pageSize: settings.newsroom.reviewPageSize,
+    defaultCategory: settings.newsroom.defaultCategory,
+  };
+}
 
 function cleanText(value, max) {
   return String(value || '').replace(/\s+/g, ' ').trim().slice(0, max);
@@ -55,31 +67,35 @@ async function resolveBoardMember(supabase, slug) {
 }
 
 /** Both English and Malayalam must be complete; returns the missing language names. */
-function missingLanguages({ language, title, fullContent, translations }) {
-  const primary = language === 'ml' ? 'ml' : 'en';
-  const other = primary === 'en' ? 'ml' : 'en';
+function missingLanguages({ language, title, fullContent, translations }, languages = []) {
+  const codes = languages.length ? languages : [{ code: 'en', label: 'English' }, { code: 'ml', label: 'Malayalam' }];
+  const primary = codes.some(item => item.code === language) ? language : codes[0].code;
   const missing = [];
-  if (cleanText(title, 200).length < 4 || String(fullContent || '').trim().length < 40) {
-    missing.push(LANGUAGE_NAMES[primary]);
-  }
-  const version = translations?.[other] || {};
-  if (cleanText(version.title, 200).length < 4 || String(version.fullContent || '').trim().length < 40) {
-    missing.push(LANGUAGE_NAMES[other]);
+  for (const item of codes) {
+    if (item.code === primary) {
+      if (cleanText(title, 200).length < 4 || String(fullContent || '').trim().length < 40) missing.push(item.label);
+      continue;
+    }
+    const version = translations?.[item.code] || {};
+    if (cleanText(version.title, 200).length < 4 || String(version.fullContent || '').trim().length < 40) {
+      missing.push(item.label);
+    }
   }
   return missing;
 }
 
-function assertBilingual(article) {
-  const missing = missingLanguages(article);
+function assertBilingual(article, languages) {
+  const missing = missingLanguages(article, languages);
   if (missing.length) {
     throw badRequest(`Add the ${missing.join(' and ')} version (title and full story) before publishing.`);
   }
 }
 
 /** Board sign-off means the translation was checked by a person. */
-function markTranslationsReviewed(translations) {
+function markTranslationsReviewed(translations, languages = []) {
   const out = { ...(translations || {}) };
-  for (const code of ['en', 'ml']) {
+  const codes = languages.length ? languages.map(item => item.code) : ['en', 'ml'];
+  for (const code of codes) {
     if (out[code]) out[code] = { ...out[code], machineAssisted: false, reviewedAt: new Date().toISOString() };
   }
   return out;
@@ -90,12 +106,14 @@ function asTags(value) {
   return list.map(tag => cleanText(tag, 32)).filter(Boolean).slice(0, 8);
 }
 
-export function validateEditorialInput(body, { partial = false } = {}) {
+export function validateEditorialInput(body, { partial = false, languages = null, defaultCategory = 'india' } = {}) {
+  const allowed = new Set((languages || [{ code: 'en' }, { code: 'ml' }]).map(item => item.code));
   const title = cleanText(body.title, 200);
   const summary = cleanText(body.summary, 500);
   const fullContent = String(body.fullContent || body.full_content || '').trim().slice(0, 50000);
-  const category = cleanText(body.category, 40) || 'india';
-  const language = body.language === 'ml' ? 'ml' : 'en';
+  const category = cleanText(body.category, 40) || defaultCategory;
+  const requested = cleanText(body.language, 8);
+  const language = allowed.has(requested) ? requested : (allowed.has('en') ? 'en' : [...allowed][0]);
   const author = cleanText(body.author, 80);
   const authorSlug = slugify(body.authorSlug || '') || null;
   const authorPhotoUrl = cleanText(body.authorPhotoUrl || body.author_photo_url, 500);
@@ -123,14 +141,27 @@ export function validateEditorialInput(body, { partial = false } = {}) {
     scheduledAt = when.toISOString();
   }
 
+  const otherCode = [...allowed].find(code => code !== language) || [...allowed][0];
+  const requestedOther = cleanText(other?.lang, 8);
   const translation = other && (other.title || other.fullContent)
     ? {
-      lang: other.lang === 'en' ? 'en' : 'ml',
+      lang: allowed.has(requestedOther) ? requestedOther : otherCode,
       title: cleanText(other.title, 200),
       summary: cleanText(other.summary, 500),
       fullContent: String(other.fullContent || '').trim().slice(0, 50000),
     }
     : null;
+  const translations = {};
+  if (body.translations && typeof body.translations === 'object' && !Array.isArray(body.translations)) {
+    for (const [code, version] of Object.entries(body.translations)) {
+      if (!allowed.has(code) || code === language || !version || typeof version !== 'object') continue;
+      translations[code] = {
+        title: cleanText(version.title, 200),
+        summary: cleanText(version.summary, 500),
+        fullContent: String(version.fullContent || '').trim().slice(0, 50000),
+      };
+    }
+  }
 
   return {
     value: {
@@ -148,6 +179,7 @@ export function validateEditorialInput(body, { partial = false } = {}) {
       tags: asTags(body.tags),
       scheduledAt,
       translation,
+      translations,
     },
   };
 }
@@ -177,21 +209,28 @@ async function uniqueSlug(supabase, title, ignoreId) {
   return `${base}-${Date.now()}`.slice(0, 70);
 }
 
-function translationMap(primaryLang, translation) {
-  if (!translation?.fullContent && !translation?.title) return {};
-  const lang = translation.lang && translation.lang !== primaryLang
-    ? translation.lang
-    : (primaryLang === 'en' ? 'ml' : 'en');
-  return {
-    [lang]: {
-      title: translation.title || '',
-      summary: translation.summary || '',
-      fullContent: translation.fullContent || '',
+function translationMap(primaryLang, translation, extras = null) {
+  const out = {};
+  const add = (lang, version) => {
+    if (!lang || lang === primaryLang || !version) return;
+    if (!version.fullContent && !version.title) return;
+    out[lang] = {
+      title: version.title || '',
+      summary: version.summary || '',
+      fullContent: version.fullContent || '',
       machineAssisted: true,
       provider: 'claude-cowork',
       updatedAt: new Date().toISOString(),
-    },
+    };
   };
+  if (translation?.fullContent || translation?.title) {
+    const lang = translation.lang && translation.lang !== primaryLang ? translation.lang : '';
+    if (lang) add(lang, translation);
+  }
+  if (extras && typeof extras === 'object') {
+    for (const [lang, version] of Object.entries(extras)) add(lang, version);
+  }
+  return out;
 }
 
 async function writeRow(supabase, mode, payload, id) {
@@ -218,9 +257,9 @@ async function writeRow(supabase, mode, payload, id) {
 }
 
 export async function createEditorialArticle(input, editor, { publishNow = false, autoAssign = false, publishing = null } = {}) {
-  const supabase = getSupabaseAdmin();
+  const { supabase, source, languages } = await newsroomContext();
   const resolved = await withResolvedStaffAuthor(input);
-  let translations = translationMap(resolved.language, resolved.translation);
+  let translations = translationMap(resolved.language, resolved.translation, resolved.translations);
   let byline = {
     author: resolved.author,
     author_slug: resolved.authorSlug,
@@ -230,10 +269,10 @@ export async function createEditorialArticle(input, editor, { publishNow = false
   let category = resolved.category;
   if (publishNow) {
     if (!publishing) throw badRequest('Choose the editorial board member and confirm the category before publishing.');
-    assertBilingual({ ...resolved, translations });
+    assertBilingual({ ...resolved, translations }, languages);
     byline = await resolveBoardMember(supabase, publishing.publisherSlug);
     category = publishing.category;
-    translations = markTranslationsReviewed(translations);
+    translations = markTranslationsReviewed(translations, languages);
   }
   const slug = await uniqueSlug(supabase, resolved.title);
   const now = new Date().toISOString();
@@ -258,7 +297,7 @@ export async function createEditorialArticle(input, editor, { publishNow = false
     image_url: resolved.imageUrl || '',
     image_credit: resolved.imageCredit || '',
     category,
-    source: 'Bharath News Editorial',
+    source,
     ...byline,
     language: resolved.language,
     topics: resolved.tags,
@@ -282,28 +321,36 @@ export async function createEditorialArticle(input, editor, { publishNow = false
 
   const article = rowToApp(data);
   if (publishNow) await onArticlePublished({ ...article, editorialStatus: 'published' });
+  await recordAudit({
+    actorId: editor.uid,
+    action: publishNow ? 'publish' : 'draft',
+    entityType: 'article',
+    entityId: article.id,
+    summary: article.title,
+  }, supabase);
   return article;
 }
 
-export async function updateEditorialArticle(id, input) {
-  const supabase = getSupabaseAdmin();
+export async function updateEditorialArticle(id, input, { actorId = null, allowPublished = false } = {}) {
+  const { supabase } = await newsroomContext();
   const { data: existing } = await supabase.from('articles').select('*').eq('id', id).maybeSingle();
   if (!existing) {
     const err = new Error('Article not found.');
     err.status = 404;
     throw err;
   }
-  if (existing.editorial_status === 'published') {
-    const err = new Error('Published articles stay as they are. Save a new draft to replace the wording.');
+  if (existing.editorial_status === 'published' && !allowPublished) {
+    const err = new Error('Published articles stay as they are. Save a correction instead.');
     err.status = 409;
     throw err;
   }
+  await snapshotArticle(existing, { actorId, reason: allowPublished ? 'correct' : 'edit' }, supabase);
 
   const resolved = await withResolvedStaffAuthor(input);
   const slug = resolved.title ? await uniqueSlug(supabase, resolved.title, id) : existing.slug;
   const translations = {
     ...(existing.translations || {}),
-    ...translationMap(resolved.language || existing.language, resolved.translation),
+    ...translationMap(resolved.language || existing.language, resolved.translation, resolved.translations),
   };
   const data = await writeRow(supabase, 'update', {
     title: resolved.title,
@@ -323,13 +370,26 @@ export async function updateEditorialArticle(id, input) {
     scheduled_at: resolved.scheduledAt,
     translations,
     revision_count: (existing.revision_count || 0) + 1,
+    ...(allowPublished ? { correction_note: cleanText(input.correctionNote, 500) || existing.correction_note || '' } : {}),
   }, id);
-  return rowToApp(data);
+  const article = rowToApp(data);
+  if (allowPublished) {
+    await recordAudit({
+      actorId,
+      action: 'correct',
+      entityType: 'article',
+      entityId: id,
+      summary: article.title,
+    }, supabase);
+  }
+  return article;
 }
 
-export async function listEditorialArticles({ status = 'draft', mine = null, assignedTo = null, unassigned = false, limit = 40 } = {}) {
-  const supabase = getSupabaseAdmin();
-  let query = supabase.from('articles').select('*').eq('source', 'Bharath News Editorial').order('created_at', { ascending: false }).limit(limit);
+export async function listEditorialArticles({ status = 'draft', mine = null, assignedTo = null, unassigned = false, limit = 40, offset = 0 } = {}) {
+  const { supabase, source, pageSize } = await newsroomContext();
+  const size = Math.min(Math.max(limit || pageSize, 1), 100);
+  const start = Math.max(offset || 0, 0);
+  let query = supabase.from('articles').select('*').eq('source', source).order('created_at', { ascending: false }).range(start, start + size - 1);
   if (status === 'queue') query = query.in('editorial_status', ['draft', 'needs_revision']);
   else if (status !== 'all') query = query.eq('editorial_status', status);
   if (mine) query = query.eq('submitted_by', mine);
@@ -347,8 +407,8 @@ export async function getEditorialArticle(id) {
   return data ? rowToApp(data) : null;
 }
 
-export async function reviewEditorialArticle(id, { action, notes, publishing = null }) {
-  const supabase = getSupabaseAdmin();
+export async function reviewEditorialArticle(id, { action, notes, publishing = null, actorId = null, correctionNote = '' }) {
+  const { supabase, languages } = await newsroomContext();
   const { data: existing, error } = await supabase.from('articles').select('*').eq('id', id).maybeSingle();
   if (error) throw error;
   if (!existing) {
@@ -367,14 +427,14 @@ export async function reviewEditorialArticle(id, { action, notes, publishing = n
       title: existing.title,
       fullContent: existing.full_content,
       translations: existing.translations,
-    });
+    }, languages);
     const byline = await resolveBoardMember(supabase, publishing.publisherSlug);
     patch = {
       ...patch,
       ...byline,
       category: publishing.category,
       is_ai_assisted: false,
-      translations: markTranslationsReviewed(existing.translations),
+      translations: markTranslationsReviewed(existing.translations, languages),
       editorial_status: 'published',
       published_at: existing.published_at || now,
     };
@@ -382,29 +442,50 @@ export async function reviewEditorialArticle(id, { action, notes, publishing = n
     patch = { ...patch, editorial_status: 'needs_revision', revision_count: (existing.revision_count || 0) + 1 };
   } else if (action === 'reject') {
     patch = { ...patch, editorial_status: 'rejected' };
+  } else if (action === 'unpublish') {
+    if (existing.editorial_status !== 'published') throw badRequest('Only a published story can be unpublished.');
+    patch = { ...patch, editorial_status: 'unpublished', unpublished_at: now };
+  } else if (action === 'correct') {
+    if (existing.editorial_status !== 'published') throw badRequest('Corrections are for published stories.');
+    const note = cleanText(correctionNote || notes, 500);
+    if (note.length < 8) throw badRequest('Add a correction note readers can see.');
+    patch = { ...patch, correction_note: note };
   } else {
     const err = new Error('Unknown review action.');
     err.status = 400;
     throw err;
   }
 
+  await snapshotArticle(existing, { actorId, reason: action }, supabase);
   const saved = await writeRow(supabase, 'update', patch, id);
   const article = rowToApp(saved);
   if (action === 'publish') await onArticlePublished({ ...article, editorialStatus: 'published' });
+  await recordAudit({
+    actorId,
+    action,
+    entityType: 'article',
+    entityId: id,
+    summary: article.title,
+  }, supabase);
   return article;
 }
 
 export async function publishDueDrafts() {
-  const supabase = getSupabaseAdmin();
+  const { supabase, source, languages } = await newsroomContext();
   const now = new Date().toISOString();
   const { data, error } = await supabase
     .from('articles')
     .select('*')
+    .eq('source', source)
     .eq('editorial_status', 'draft')
     .lte('scheduled_at', now)
     .limit(20);
   if (error) {
-    if (/scheduled_at/.test(error.message || '')) return [];
+    if (/scheduled_at/.test(error.message || '')) {
+      const missing = new Error('Scheduled publishing needs the scheduled_at column. Run supabase/migrations/20261124140000_newsroom_controls.sql.');
+      missing.status = 500;
+      throw missing;
+    }
     throw error;
   }
 
@@ -416,7 +497,7 @@ export async function publishDueDrafts() {
       title: row.title,
       fullContent: row.full_content,
       translations: row.translations,
-    });
+    }, languages);
     if (missing.length) {
       skipped.push({ id: row.id, title: row.title, reason: `Missing the ${missing.join(' and ')} version.` });
       continue;
@@ -434,12 +515,19 @@ export async function publishDueDrafts() {
     const saved = await writeRow(supabase, 'update', {
       ...byline,
       is_ai_assisted: false,
-      translations: markTranslationsReviewed(row.translations),
+      translations: markTranslationsReviewed(row.translations, languages),
       editorial_status: 'published',
       published_at: now,
     }, row.id);
     const article = rowToApp(saved);
     await onArticlePublished({ ...article, editorialStatus: 'published' });
+    await recordAudit({
+      action: 'publish',
+      entityType: 'article',
+      entityId: article.id,
+      summary: article.title,
+      detail: { scheduled: true },
+    }, supabase);
     published.push(article);
   }
   return { published, skipped };
@@ -488,7 +576,7 @@ export async function resolveAssignee(category) {
   return best;
 }
 
-export async function assignArticle(articleId, userId) {
+export async function assignArticle(articleId, userId, { actorId = null } = {}) {
   const supabase = getSupabaseAdmin();
   const now = userId ? new Date().toISOString() : null;
   const { data, error } = await supabase
@@ -501,16 +589,23 @@ export async function assignArticle(articleId, userId) {
     if (/assigned_to|assigned_at/.test(error.message || '')) return null;
     throw new Error(error.message || 'Could not assign article.');
   }
+  await recordAudit({
+    actorId,
+    action: 'assign',
+    entityType: 'article',
+    entityId: articleId,
+    summary: userId || 'unassigned',
+  }, supabase);
   return rowToApp(data);
 }
 
 export async function editorialStats() {
-  const supabase = getSupabaseAdmin();
+  const { supabase, source } = await newsroomContext();
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const [queue, publishedWeek, recent] = await Promise.all([
-    supabase.from('articles').select('id', { count: 'exact', head: true }).in('editorial_status', ['draft', 'needs_revision']),
-    supabase.from('articles').select('id', { count: 'exact', head: true }).eq('source', 'Bharath News Editorial').eq('editorial_status', 'published').gte('published_at', since),
-    supabase.from('articles').select('id, title, author, editorial_status, language, published_at, created_at').eq('source', 'Bharath News Editorial').order('created_at', { ascending: false }).limit(8),
+    supabase.from('articles').select('id', { count: 'exact', head: true }).eq('source', source).in('editorial_status', ['draft', 'needs_revision']),
+    supabase.from('articles').select('id', { count: 'exact', head: true }).eq('source', source).eq('editorial_status', 'published').gte('published_at', since),
+    supabase.from('articles').select('id, title, slug, author, editorial_status, language, published_at, created_at').eq('source', source).order('created_at', { ascending: false }).limit(8),
   ]);
   return {
     queue: queue.count || 0,

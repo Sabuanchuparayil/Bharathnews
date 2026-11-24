@@ -66,12 +66,17 @@ function deepMerge(base, patch) {
   return out;
 }
 
+const PUBLICATION_LANGUAGE_CODES = new Set(['en', 'ml']);
+
 export function parseTargetLanguages(value) {
-  if (Array.isArray(value)) return value.filter(Boolean);
-  if (typeof value === 'string') {
-    return value.split(',').map(s => s.trim()).filter(Boolean);
-  }
-  return DEFAULT_SITE_SETTINGS.targetLanguages;
+  const raw = Array.isArray(value)
+    ? value
+    : (typeof value === 'string' ? value.split(',') : DEFAULT_SITE_SETTINGS.targetLanguages);
+  const codes = [...new Set(
+    raw.map(item => String(item || '').trim().toLowerCase()).filter(code => PUBLICATION_LANGUAGE_CODES.has(code)),
+  )];
+  if (!codes.includes('ml')) codes.push('ml');
+  return codes;
 }
 
 export function mergeSiteSettings(partial = {}) {
