@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const staff = await listStaffProfiles({ activeOnly: true });
+    const staff = await listStaffProfiles({ activeOnly: true, forChoices: true });
     return NextResponse.json({ staff: staff.map(toPublicStaffProfile) });
   } catch (err) {
     return NextResponse.json(

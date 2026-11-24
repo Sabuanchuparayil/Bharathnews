@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { toast } from 'react-toastify';
@@ -54,6 +54,7 @@ const DeskCompose = () => {
   const searchParams = useSearchParams();
   const draftId = searchParams.get('id') || '';
   const [form, setForm] = useState(EMPTY);
+  const prepareGeneration = useRef(0);
   const [saving, setSaving] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
   const [status, setStatus] = useState('draft');
@@ -288,8 +289,8 @@ const DeskCompose = () => {
   };
 
   const prepareLanguages = async (choice = {}) => {
-    const skipEnglish = choice.skipEnglish === true && form.language !== 'en';
-    const skipMalayalam = choice.skipMalayalam === true && form.language !== 'ml';
+    const generation = prepareGeneration.current + 1;
+    prepareGeneration.current = generation;
     const data = await deskFetch('/api/desk/translate-draft', {
       method: 'POST',
       body: JSON.stringify({
@@ -298,18 +299,25 @@ const DeskCompose = () => {
         title: form.title,
         summary: form.summary,
         fullContent: form.fullContent,
-        skipEnglish,
-        skipMalayalam,
+        skipEnglish: choice.skipEnglish === true,
+        skipMalayalam: choice.skipMalayalam === true,
         translations: form.versions || {},
       }),
     });
+    if (generation !== prepareGeneration.current) return;
     const stored = data.translations || {};
     setForm(prev => {
+      const skipEnglish = data.skipEnglish === true && prev.language !== 'en';
+      const skipMalayalam = data.skipMalayalam === true && prev.language !== 'ml';
       const versions = { ...prev.versions };
       ['en', 'ml'].forEach(code => {
+        if (code === prev.language) return;
+        if ((code === 'en' && skipEnglish) || (code === 'ml' && skipMalayalam)) {
+          delete versions[code];
+          return;
+        }
         const version = stored[code];
-        if (!version || prev.language === code) return;
-        if ((code === 'en' && skipEnglish) || (code === 'ml' && skipMalayalam)) return;
+        if (!version) return;
         versions[code] = {
           title: version.title || '',
           summary: version.summary || '',

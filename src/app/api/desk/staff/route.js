@@ -20,7 +20,7 @@ export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const activeOnly = searchParams.get('all') !== '1';
   try {
-    const staff = await listStaffProfiles({ activeOnly });
+    const staff = await listStaffProfiles({ activeOnly, forChoices: true });
     return NextResponse.json({ staff, role: auth.role });
   } catch (err) {
     return jsonError(err);

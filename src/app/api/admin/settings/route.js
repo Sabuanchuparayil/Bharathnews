@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyAdminRequest } from '@/lib/supabase-admin';
 import { getSupabaseAdmin } from '@/lib/supabase-server';
-import { mergeSiteSettings } from '@/lib/site-settings';
+import { clearSiteSettingsCache, mergeSiteSettings } from '@/lib/site-settings';
 
 async function readSettings(supabase) {
   const { data, error } = await supabase.from('site_settings').select('value').eq('key', 'site').maybeSingle();
@@ -41,6 +41,7 @@ export async function PUT(request) {
     const settings = mergeSiteSettings({ ...current, ...body });
     const { error } = await supabase.from('site_settings').upsert({ key: 'site', value: settings });
     if (error) return NextResponse.json({ error: error.message || 'Could not save settings.' }, { status: 500 });
+    clearSiteSettingsCache();
     return NextResponse.json({ settings });
   } catch (err) {
     return NextResponse.json({ error: err.message || 'Could not save settings.' }, { status: 500 });

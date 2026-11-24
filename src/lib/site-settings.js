@@ -150,11 +150,22 @@ export function editorialSourceName(settings) {
   return mergeSiteSettings(settings).newsroom.editorialSource;
 }
 
+let settingsCache = null;
+let settingsCachedAt = 0;
+
+export function clearSiteSettingsCache() {
+  settingsCache = null;
+  settingsCachedAt = 0;
+}
+
 export async function readSiteSettings(supabase) {
   if (!supabase) return mergeSiteSettings();
+  if (settingsCache && Date.now() - settingsCachedAt < 15000) return settingsCache;
   const { data, error } = await supabase.from('site_settings').select('value').eq('key', 'site').maybeSingle();
-  if (error || !data?.value) return mergeSiteSettings();
-  return mergeSiteSettings(data.value);
+  const settings = error || !data?.value ? mergeSiteSettings() : mergeSiteSettings(data.value);
+  settingsCache = settings;
+  settingsCachedAt = Date.now();
+  return settings;
 }
 
 export function buildSocialChannels(settings) {

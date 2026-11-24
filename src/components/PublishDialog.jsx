@@ -60,23 +60,32 @@ export default function PublishDialog({
   const prepareRef = useRef(onPrepare);
   const languagesRef = useRef(languages);
   const preparingRef = useRef(false);
+  const prepareRun = useRef(0);
   const runPrepareRef = useRef(() => {});
   const openedFor = useRef('');
   prepareRef.current = onPrepare;
   languagesRef.current = languages;
-  runPrepareRef.current = () => {
+  runPrepareRef.current = ({ force = false, skipEnglish: nextSkipEnglish = skipEnglish, skipMalayalam: nextSkipMalayalam = skipMalayalam } = {}) => {
     const prepare = prepareRef.current;
-    if (!prepare || preparingRef.current) return;
+    if (!prepare || (preparingRef.current && !force)) return;
     const partner = storyLanguage === 'en' ? 'ml' : storyLanguage === 'ml' ? 'en' : '';
     if (!partner) return;
+    const waiveEnglish = nextSkipEnglish === true && storyLanguage !== 'en';
+    const waiveMalayalam = nextSkipMalayalam === true && storyLanguage !== 'ml';
+    if ((partner === 'ml' && waiveMalayalam) || (partner === 'en' && waiveEnglish)) return;
     const row = (languagesRef.current || []).find(item => item.code === partner);
-    if (row?.ready) return;
+    if (row?.ready && !force) return;
+    const run = prepareRun.current + 1;
+    prepareRun.current = run;
     preparingRef.current = true;
     setPreparing(true);
     setPrepareNote('');
-    prepare({ skipEnglish: false, skipMalayalam: false })
-      .catch(err => setPrepareNote(err.message || 'The other language could not be prepared.'))
+    prepare({ skipEnglish: waiveEnglish, skipMalayalam: waiveMalayalam })
+      .catch(err => {
+        if (prepareRun.current === run) setPrepareNote(err.message || 'The other language could not be prepared.');
+      })
       .finally(() => {
+        if (prepareRun.current !== run) return;
         preparingRef.current = false;
         setPreparing(false);
       });
@@ -168,7 +177,14 @@ export default function PublishDialog({
                 const checked = e.target.checked;
                 if (storyLanguage === 'en') setSkipMalayalam(checked);
                 else setSkipEnglish(checked);
-                if (!checked) runPrepareRef.current();
+                if (checked) {
+                  prepareRef.current?.({
+                    skipEnglish: storyLanguage !== 'en',
+                    skipMalayalam: storyLanguage === 'en',
+                  })?.catch(err => setPrepareNote(err.message || 'Could not update the language choice.'));
+                  return;
+                }
+                runPrepareRef.current({ force: true, skipEnglish: false, skipMalayalam: false });
               }}
               className="mt-1"
             />

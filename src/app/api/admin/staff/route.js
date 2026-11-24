@@ -6,6 +6,7 @@ import {
   listStaffProfiles,
   createStaffProfile,
   linkStaffToUser,
+  absorbStaffProfile,
   validateStaffInput,
 } from '@/lib/staff-profiles';
 
@@ -57,7 +58,20 @@ export async function POST(request) {
     const { staffId, userId } = body;
     if (!staffId) return NextResponse.json({ error: 'staffId is required.' }, { status: 400 });
     try {
-      const profile = await linkStaffToUser(staffId, userId || null);
+      const result = await linkStaffToUser(staffId, userId || null);
+      return NextResponse.json(result);
+    } catch (err) {
+      return jsonError(err);
+    }
+  }
+
+  if (action === 'absorb') {
+    const { keepId, dropId } = body;
+    if (!keepId || !dropId) {
+      return NextResponse.json({ error: 'Choose the byline to keep and the copy to remove.' }, { status: 400 });
+    }
+    try {
+      const profile = await absorbStaffProfile(keepId, dropId);
       return NextResponse.json({ profile });
     } catch (err) {
       return jsonError(err);

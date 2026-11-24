@@ -28,6 +28,15 @@ export function setAuthCookies(role = 'reader', flags = {}) {
     : 'bn_board=; path=/; max-age=0';
 }
 
+export function readAuthCaps() {
+  if (typeof document === 'undefined') return [];
+  const match = document.cookie.match(/(?:^|; )bn_caps=([^;]*)/);
+  if (!match) return [];
+  const value = decodeURIComponent(match[1]);
+  if (!value || value === '0') return [];
+  return value.split('.').filter(Boolean);
+}
+
 export function clearAuthCookies() {
   if (typeof document === 'undefined') return;
   document.cookie = 'bn_auth=; path=/; max-age=0';

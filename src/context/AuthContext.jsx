@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { getSupabaseBrowser } from '@/lib/supabase-client';
 import { rowToApp } from '@/lib/db-mapper';
 import { toggleBookmark, toggleLike } from '../services/articles';
-import { setAuthCookies, clearAuthCookies } from '../lib/auth-cookies';
+import { setAuthCookies, clearAuthCookies, readAuthCaps } from '../lib/auth-cookies';
 import { hasCompleteProfile } from '@/lib/profile-fields';
 import { boardRoleFromLabel, capsForProfile, defaultAccessRoles, readAccessRoles } from '@/lib/access-roles';
 import logger from '../utils/logger';
@@ -23,6 +23,7 @@ export const AuthProvider = ({ children }) => {
   const [userProfile, setUserProfile] = useState(null);
   const [accessRoles, setAccessRoles] = useState(() => defaultAccessRoles());
   const [accessReady, setAccessReady] = useState(false);
+  const [sessionCaps, setSessionCaps] = useState([]);
 
   const loadProfile = useCallback(async (supabase, userId) => {
     const { data, error } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
@@ -130,7 +131,14 @@ export const AuthProvider = ({ children }) => {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (cancelled) return;
-      if (!session) setLoading(false);
+      if (!session?.user) {
+        setLoading(false);
+        return;
+      }
+      setUser(session.user);
+      const known = readAuthCaps();
+      if (known.length) setSessionCaps(known);
+      if (known.includes('editorial') || known.includes('admin')) setLoading(false);
     });
 
     return () => {
@@ -297,7 +305,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const role = userProfile?.role || 'reader';
-  const caps = new Set(capsForProfile(accessRoles, userProfile));
+  const caps = new Set(userProfile ? capsForProfile(accessRoles, userProfile) : sessionCaps);
 
   const value = {
     user,

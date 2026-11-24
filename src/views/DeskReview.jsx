@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'react-toastify';
 import { UserCircle } from 'lucide-react';
@@ -35,8 +35,10 @@ const DeskReview = () => {
   const [notes, setNotes] = useState({});
   const [corrections, setCorrections] = useState({});
   const [openId, setOpenId] = useState('');
+  const [openingId, setOpeningId] = useState('');
   const [editors, setEditors] = useState([]);
   const [publishTarget, setPublishTarget] = useState(null);
+  const prepareGeneration = useRef(0);
   const [publishing, setPublishing] = useState(false);
   const [loadError, setLoadError] = useState('');
 
@@ -79,6 +81,41 @@ const DeskReview = () => {
     }
   };
 
+  const ensureArticle = async (article) => {
+    if (article.fullContent) return article;
+    const data = await deskFetch(`/api/desk/articles/${article.id}`);
+    const next = { ...article, ...(data.article || {}) };
+    setArticles(prev => prev.map(item => (item.id === article.id ? next : item)));
+    return next;
+  };
+
+  const openPreview = async (article) => {
+    if (openId === article.id) {
+      setOpenId('');
+      return;
+    }
+    setOpenId(article.id);
+    if (article.fullContent) return;
+    setOpeningId(article.id);
+    try {
+      await ensureArticle(article);
+    } catch (err) {
+      toast.error(err.message || 'Could not open this story.');
+    }
+    setOpeningId('');
+  };
+
+  const openPublish = async (article) => {
+    try {
+      setOpeningId(article.id);
+      const full = await ensureArticle(article);
+      setPublishTarget(full);
+    } catch (err) {
+      toast.error(err.message || 'Could not open this story.');
+    }
+    setOpeningId('');
+  };
+
   const confirmPublish = async (choice) => {
     if (!publishTarget) return;
     setPublishing(true);
@@ -89,25 +126,31 @@ const DeskReview = () => {
 
   const prepareLanguages = async (choice = {}) => {
     if (!publishTarget) return;
-    const skipEnglish = choice.skipEnglish === true && publishTarget.language !== 'en';
-    const skipMalayalam = choice.skipMalayalam === true && publishTarget.language !== 'ml';
+    const generation = prepareGeneration.current + 1;
+    prepareGeneration.current = generation;
+    const articleId = publishTarget.id;
     const data = await deskFetch('/api/desk/translate-draft', {
       method: 'POST',
       body: JSON.stringify({
-        id: publishTarget.id,
+        id: articleId,
         language: publishTarget.language,
         title: publishTarget.title,
         summary: publishTarget.summary,
         fullContent: publishTarget.fullContent,
-        skipEnglish,
-        skipMalayalam,
+        skipEnglish: choice.skipEnglish === true,
+        skipMalayalam: choice.skipMalayalam === true,
         translations: publishTarget.translations || {},
       }),
     });
-    const translations = { ...(publishTarget.translations || {}), ...(data.translations || {}) };
+    if (generation !== prepareGeneration.current) return;
+    const skipEnglish = data.skipEnglish === true && publishTarget.language !== 'en';
+    const skipMalayalam = data.skipMalayalam === true && publishTarget.language !== 'ml';
+    const translations = { ...(data.translations || {}) };
+    if (skipEnglish) delete translations.en;
+    if (skipMalayalam) delete translations.ml;
     const next = { translations, skipEnglish, skipMalayalam };
-    setPublishTarget(prev => (prev && prev.id === publishTarget.id ? { ...prev, ...next } : prev));
-    setArticles(prev => prev.map(item => (item.id === publishTarget.id ? { ...item, ...next } : item)));
+    setPublishTarget(prev => (prev && prev.id === articleId ? { ...prev, ...next } : prev));
+    setArticles(prev => prev.map(item => (item.id === articleId ? { ...item, ...next } : item)));
     if (!data.prepared) throw new Error(data.warning || 'The other language could not be prepared.');
   };
 
@@ -176,7 +219,7 @@ const DeskReview = () => {
                 <div>
                   <p className="text-xs uppercase text-brand-700 dark:text-brand-300">{article.language} · {articleCategoryIds(article).map(getCategoryLabel).join(', ')} · {article.editorialStatus}</p>
                   <h2 className="font-display font-bold text-xl mt-1"><ArticleText text={article.title} /></h2>
-                  {article.language === 'ml' && article.skipEnglish !== true && (
+                  {article.translations && article.language === 'ml' && article.skipEnglish !== true && (
                     <div className="mt-3 rounded-xl bg-stone-50 dark:bg-white/5 px-3 py-2">
                       <p className="text-xs uppercase text-gray-500">English draft</p>
                       {article.translations?.en?.title && String(article.translations.en.fullContent || '').trim().length >= 40 ? (
@@ -191,7 +234,7 @@ const DeskReview = () => {
                       )}
                     </div>
                   )}
-                  {article.language === 'en' && article.skipMalayalam !== true && (
+                  {article.translations && article.language === 'en' && article.skipMalayalam !== true && (
                     <div className="mt-3 rounded-xl bg-stone-50 dark:bg-white/5 px-3 py-2">
                       <p className="text-xs uppercase text-gray-500">Malayalam draft</p>
                       {article.translations?.ml?.title && String(article.translations.ml.fullContent || '').trim().length >= 40 ? (
@@ -215,12 +258,13 @@ const DeskReview = () => {
                 </div>
                 {article.imageUrl && <img src={article.imageUrl} alt="" className="w-24 h-16 object-cover rounded-lg" />}
               </div>
-              <button type="button" className="text-sm text-brand-700 dark:text-brand-300 mt-3" onClick={() => setOpenId(openId === article.id ? '' : article.id)}>
-                {openId === article.id ? 'Hide preview' : 'Preview'}
+              <button type="button" className="text-sm text-brand-700 dark:text-brand-300 mt-3" onClick={() => openPreview(article)}>
+                {openingId === article.id ? 'Opening…' : openId === article.id ? 'Hide preview' : 'Preview'}
               </button>
               {openId === article.id && (
                 <div className="mt-3 space-y-3">
-                  <p className="text-sm whitespace-pre-wrap text-gray-700 dark:text-gray-300 max-h-64 overflow-auto"><ArticleText text={article.fullContent} /></p>
+                  {!article.fullContent && <p className="text-sm text-gray-500">Opening the story…</p>}
+                  {article.fullContent && <p className="text-sm whitespace-pre-wrap text-gray-700 dark:text-gray-300 max-h-64 overflow-auto"><ArticleText text={article.fullContent} /></p>}
                   {article.language === 'ml' && article.skipEnglish !== true && article.translations?.en?.fullContent && (
                     <p className="text-sm whitespace-pre-wrap text-gray-700 dark:text-gray-300 max-h-64 overflow-auto border-t border-stone-200 dark:border-white/10 pt-3"><ArticleText text={article.translations.en.fullContent} /></p>
                   )}
@@ -257,7 +301,7 @@ const DeskReview = () => {
                   <div className="flex flex-wrap gap-2 mt-3">
                     {canPublish && article.editorialStatus !== 'rejected' && (
                       <>
-                        <button type="button" onClick={() => setPublishTarget(article)} className="px-4 py-2 bg-green-700 text-white rounded-xl text-sm">Approve and publish</button>
+                        <button type="button" onClick={() => openPublish(article)} disabled={openingId === article.id} className="px-4 py-2 bg-green-700 text-white rounded-xl text-sm disabled:opacity-50">Approve and publish</button>
                         <button type="button" onClick={() => act(article.id, 'needs_revision')} className="px-4 py-2 bg-amber-600 text-white rounded-xl text-sm">Request changes</button>
                       </>
                     )}
