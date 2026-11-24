@@ -297,19 +297,31 @@ function translationMap(primaryLang, translation, extras = null) {
   return out;
 }
 
-async function writeRow(supabase, mode, payload, id, matchUpdatedAt) {
+async function writeRow(supabase, mode, payload, id, matchRevision) {
   let row = { ...payload };
-  const compareStamp = matchUpdatedAt !== undefined;
-  for (let attempt = 0; attempt < OPTIONAL_COLUMNS.length + 1; attempt += 1) {
+  delete row.updated_at;
+  let compare = matchRevision;
+  for (let attempt = 0; attempt < OPTIONAL_COLUMNS.length + 2; attempt += 1) {
     let query = mode === 'insert'
       ? supabase.from('articles').insert(row).select('*').single()
       : supabase.from('articles').update(row).eq('id', id);
-    if (mode !== 'insert' && compareStamp) {
-      query = matchUpdatedAt ? query.eq('updated_at', matchUpdatedAt) : query.is('updated_at', null);
+    const comparing = mode !== 'insert' && compare !== undefined;
+    if (comparing) {
+      query = compare === null ? query.is('revision_count', null) : query.eq('revision_count', compare);
     }
-    if (mode !== 'insert') query = compareStamp ? query.select('*') : query.select('*').single();
+    if (mode !== 'insert') query = comparing ? query.select('*') : query.select('*').single();
     const { data, error } = await query;
-    if (!error) return compareStamp ? (data?.[0] || null) : data;
+    if (!error) return comparing ? (data?.[0] || null) : data;
+    const message = error.message || '';
+    if (/updated_at/i.test(message) && /schema cache|does not exist/i.test(message)) {
+      delete row.updated_at;
+      continue;
+    }
+    if (comparing && /revision_count/i.test(message) && /schema cache|does not exist/i.test(message)) {
+      compare = undefined;
+      delete row.revision_count;
+      continue;
+    }
     const missing = OPTIONAL_COLUMNS.find(col => error.message?.includes(col) && col in row);
     if (missing === 'skip_english' && row.skip_english === true) {
       const err = new Error('Skipping English needs the skip_english column.');
@@ -498,7 +510,6 @@ export async function updateEditorialArticle(id, input, { actorId = null, allowP
     is_ai_assisted: false,
     scheduled_at: resolved.scheduledAt,
     translations,
-    updated_at: new Date().toISOString(),
     revision_count: (existing.revision_count || 0) + 1,
     ...(allowPublished ? { correction_note: cleanText(input.correctionNote, 500) || existing.correction_note || '' } : {}),
   }, id);
@@ -631,7 +642,23 @@ export async function prepareEditorialTranslation(input, id = null) {
     const { data: fresh, error: freshError } = await supabase.from('articles').select('*').eq('id', id).maybeSingle();
     if (freshError) throw freshError;
     if (fresh && ['draft', 'needs_revision'].includes(fresh.editorial_status)) {
-      const changedDuringPrepare = Boolean(existing.updated_at && fresh.updated_at && existing.updated_at !== fresh.updated_at);
+      const changedDuringPrepare = [
+        existing.revision_count ?? '',
+        existing.title || '',
+        existing.summary || '',
+        existing.full_content || '',
+        existing.language || '',
+        existing.skip_english === true,
+        existing.skip_malayalam === true,
+      ].join('\u0001') !== [
+        fresh.revision_count ?? '',
+        fresh.title || '',
+        fresh.summary || '',
+        fresh.full_content || '',
+        fresh.language || '',
+        fresh.skip_english === true,
+        fresh.skip_malayalam === true,
+      ].join('\u0001');
       const storyChanged = changedDuringPrepare && (
         fresh.title !== existing.title
         || (fresh.summary || '') !== (existing.summary || '')
@@ -670,24 +697,28 @@ export async function prepareEditorialTranslation(input, id = null) {
         const sourceRow = changedDuringPrepare ? fresh : null;
         storedFlags = flagsFrom(sourceRow, flags);
         storedTranslations = keepHandwritten(sourceRow?.translations, translations, storedFlags);
-        let written = await writeRow(supabase, 'update', {
-          translations: storedTranslations,
-          skip_english: storedFlags.skipEnglish,
-          skip_malayalam: storedFlags.skipMalayalam,
-          updated_at: new Date().toISOString(),
-        }, id, fresh.updated_at || null);
+        const revisionToken = (row) => (row && Object.prototype.hasOwnProperty.call(row, 'revision_count')
+          ? (row.revision_count ?? null)
+          : undefined);
+        const preparedPatch = (token) => {
+          const patch = {
+            translations: storedTranslations,
+            skip_english: storedFlags.skipEnglish,
+            skip_malayalam: storedFlags.skipMalayalam,
+          };
+          if (token !== undefined) patch.revision_count = (token || 0) + 1;
+          return patch;
+        };
+        const freshToken = revisionToken(fresh);
+        let written = await writeRow(supabase, 'update', preparedPatch(freshToken), id, freshToken);
         if (!written) {
           const { data: latest, error: latestError } = await supabase.from('articles').select('*').eq('id', id).maybeSingle();
           if (latestError) throw latestError;
           if (latest && ['draft', 'needs_revision'].includes(latest.editorial_status) && !storyMoved(latest)) {
             storedFlags = flagsFrom(latest, flags);
             storedTranslations = keepHandwritten(latest.translations, translations, storedFlags);
-            written = await writeRow(supabase, 'update', {
-              translations: storedTranslations,
-              skip_english: storedFlags.skipEnglish,
-              skip_malayalam: storedFlags.skipMalayalam,
-              updated_at: new Date().toISOString(),
-            }, id, latest.updated_at || null);
+            const latestToken = revisionToken(latest);
+            written = await writeRow(supabase, 'update', preparedPatch(latestToken), id, latestToken);
           }
           if (!written && latest) {
             storedFlags = flagsFrom(latest, flags);

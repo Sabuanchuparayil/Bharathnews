@@ -40,7 +40,7 @@ export async function GET(_request, { params }) {
   if (fetched.length > existing.length) {
     await supabase
       .from('articles')
-      .update({ full_content: content, updated_at: new Date().toISOString() })
+      .update({ full_content: content })
       .eq('id', article.id);
   }
 
