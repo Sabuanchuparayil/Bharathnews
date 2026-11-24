@@ -4,6 +4,7 @@ import {
   saveArticleTranslation,
 } from '@/lib/supabase-admin';
 import { getStoredTranslation } from '@/lib/article-translations';
+import { detectPublicationLang, translationMatchesTarget } from '../../../../../../shared/publication-lang.mjs';
 
 const WORKER_URL = (process.env.NEXT_PUBLIC_WORKER_URL || '').replace(/\/$/, '');
 const ALLOWED = new Set(['en', 'ml']);
@@ -40,7 +41,12 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Article not found.' }, { status: 404 });
     }
 
-    const sourceLang = String(article.language || 'en').trim().toLowerCase();
+    const declared = String(article.language || 'en').trim().toLowerCase();
+    const detected = detectPublicationLang(`${article.title || ''}\n${article.summary || ''}\n${article.fullContent || ''}`);
+    const sourceLang = detected || declared;
+    if (!ALLOWED.has(sourceLang)) {
+      return NextResponse.json({ error: 'Unsupported source language.' }, { status: 400 });
+    }
     if (targetLang === sourceLang) {
       return NextResponse.json({
         translation: {
@@ -92,6 +98,12 @@ export async function POST(request, { params }) {
       machineAssisted: true,
       provider: workerData.translation?.provider || 'google-nmt',
     };
+    if (!translationMatchesTarget(translation.title, translation.fullContent, targetLang)) {
+      return NextResponse.json(
+        { error: 'Translation did not come back in the requested language.' },
+        { status: 502 },
+      );
+    }
 
     if (article.id) {
       await saveArticleTranslation(article.id, targetLang, translation).catch(() => {});

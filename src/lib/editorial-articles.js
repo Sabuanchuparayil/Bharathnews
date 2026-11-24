@@ -7,7 +7,8 @@ import { SOURCE_CATEGORY_IDS } from '@/config/category-taxonomy';
 import { readSiteSettings } from '@/lib/site-settings';
 import { recordAudit, snapshotArticle } from '@/lib/audit-log';
 import { findOpenImage } from '@/lib/open-images';
-import { withAutomaticPartner } from '@/lib/english-draft';
+import { publicationLanguage, withAutomaticPartner } from '@/lib/english-draft';
+import { translationMatchesTarget } from '../../shared/publication-lang.mjs';
 
 const OPTIONAL_COLUMNS = [
   'is_ai_assisted', 'editor_notes', 'revision_count', 'scheduled_at', 'submitted_by',
@@ -84,22 +85,28 @@ async function resolveBoardMember(supabase, slug) {
   };
 }
 
-/** Required languages must be complete. Either language can be waived when it is not the story's own language. */
-function missingLanguages({ language, title, fullContent, translations, skipEnglish = false, skipMalayalam = false }, languages = []) {
+/** Required languages must be complete and in the right script. Either language can be waived when it is not the story's own language. */
+function missingLanguages(article, languages = []) {
   const codes = languages.length ? languages : [{ code: 'en', label: 'English' }, { code: 'ml', label: 'Malayalam' }];
-  const primary = codes.some(item => item.code === language) ? language : codes[0].code;
-  const waiveEnglish = skipEnglish === true && primary !== 'en';
-  const waiveMalayalam = skipMalayalam === true && primary !== 'ml';
+  const tagged = String(article.language || '').trim().toLowerCase();
+  const detected = publicationLanguage(article);
+  const primary = codes.some(item => item.code === detected)
+    ? detected
+    : (codes.some(item => item.code === tagged) ? tagged : codes[0].code);
+  const waiveEnglish = article.skipEnglish === true && primary !== 'en';
+  const waiveMalayalam = article.skipMalayalam === true && primary !== 'ml';
   const missing = [];
   for (const item of codes) {
     if (item.code === 'en' && waiveEnglish) continue;
     if (item.code === 'ml' && waiveMalayalam) continue;
     if (item.code === primary) {
-      if (cleanText(title, 200).length < 4 || String(fullContent || '').trim().length < 40) missing.push(item.label);
+      if (cleanText(article.title, 200).length < 4 || String(article.fullContent || '').trim().length < 40) missing.push(item.label);
       continue;
     }
-    const version = translations?.[item.code] || {};
-    if (cleanText(version.title, 200).length < 4 || String(version.fullContent || '').trim().length < 40) {
+    const version = article.translations?.[item.code] || {};
+    const title = cleanText(version.title, 200);
+    const body = String(version.fullContent || '').trim();
+    if (title.length < 4 || body.length < 40 || !translationMatchesTarget(version.title, version.fullContent, item.code)) {
       missing.push(item.label);
     }
   }
@@ -109,7 +116,7 @@ function missingLanguages({ language, title, fullContent, translations, skipEngl
 function assertBilingual(article, languages) {
   const missing = missingLanguages(article, languages);
   if (!missing.length) return;
-  const primary = String(article.language || '').trim().toLowerCase();
+  const primary = publicationLanguage(article);
   const waitingForDraft = missing.length === 1 && (
     (missing[0] === 'English' && primary === 'ml' && article.skipEnglish !== true)
     || (missing[0] === 'Malayalam' && primary === 'en' && article.skipMalayalam !== true)
@@ -127,8 +134,13 @@ function dropWaived(translations, { skipEnglish = false, skipMalayalam = false }
   return out;
 }
 
-function resolveSkipFlags(language, requested, existing = {}) {
-  const primary = String(language || 'en').trim().toLowerCase();
+function resolveSkipFlags(story, requested, existing = {}) {
+  const primary = publicationLanguage({
+    language: story?.language ?? existing.language,
+    title: story?.title ?? existing.title,
+    summary: story?.summary ?? existing.summary,
+    fullContent: story?.fullContent || story?.full_content || existing.fullContent || existing.full_content,
+  });
   const skipEnglish = (requested.skipEnglish === null || requested.skipEnglish === undefined
     ? existing.skip_english === true
     : requested.skipEnglish === true) && primary !== 'en';
@@ -358,10 +370,7 @@ async function writeRow(supabase, mode, payload, id, matchRevision) {
 export async function createEditorialArticle(input, editor, { publishNow = false, autoAssign = false, publishing = null } = {}) {
   const { supabase, source, languages } = await newsroomContext();
   const resolved = await withResolvedStaffAuthor(input);
-  const flags = {
-    skipEnglish: resolved.skipEnglish === true,
-    skipMalayalam: resolved.skipMalayalam === true,
-  };
+  const flags = resolveSkipFlags(resolved, resolved, {});
   let translations = await withAutomaticPartner({
     language: resolved.language,
     title: resolved.title,
@@ -478,7 +487,7 @@ export async function updateEditorialArticle(id, input, { actorId = null, allowP
   const resolved = await withResolvedStaffAuthor(input);
   const slug = resolved.title ? await uniqueSlug(supabase, resolved.title, id) : existing.slug;
   const language = resolved.language || existing.language;
-  const flags = resolveSkipFlags(language, resolved, existing);
+  const flags = resolveSkipFlags({ ...resolved, language }, resolved, existing);
   const translations = await withAutomaticPartner({
     language,
     title: resolved.title,
@@ -589,15 +598,17 @@ function partnerIsReady(language, translations, flags) {
   if (!code) return true;
   if ((code === 'en' && flags.skipEnglish) || (code === 'ml' && flags.skipMalayalam)) return true;
   const version = translations?.[code] || {};
-  return cleanText(version.title, 200).length >= 4 && String(version.fullContent || '').trim().length >= 40;
+  return cleanText(version.title, 200).length >= 4
+    && String(version.fullContent || '').trim().length >= 40
+    && translationMatchesTarget(version.title, version.fullContent, code);
 }
 
 /** Fill the missing partner language for a draft. Saves it when the draft already exists. */
 export async function prepareEditorialTranslation(input, id = null) {
-  const language = String(input.language || 'en').trim().toLowerCase();
   const title = cleanText(input.title, 200);
   const summary = cleanText(input.summary, 500);
   const fullContent = String(input.fullContent || '').trim().slice(0, 50000);
+  const language = publicationLanguage({ language: input.language, title, summary, fullContent });
   const flags = {
     skipEnglish: input.skipEnglish === true && language !== 'en',
     skipMalayalam: input.skipMalayalam === true && language !== 'ml',
@@ -666,9 +677,15 @@ export async function prepareEditorialTranslation(input, id = null) {
         || fresh.language !== existing.language
       );
       if (storyChanged) {
+        const freshLanguage = publicationLanguage({
+          language: fresh.language,
+          title: fresh.title,
+          summary: fresh.summary,
+          fullContent: fresh.full_content,
+        });
         storedFlags = {
-          skipEnglish: fresh.skip_english === true && fresh.language !== 'en',
-          skipMalayalam: fresh.skip_malayalam === true && fresh.language !== 'ml',
+          skipEnglish: fresh.skip_english === true && freshLanguage !== 'en',
+          skipMalayalam: fresh.skip_malayalam === true && freshLanguage !== 'ml',
         };
         storedTranslations = fresh.translations || {};
       } else {
@@ -681,15 +698,26 @@ export async function prepareEditorialTranslation(input, id = null) {
             const handwritten = previous
               && !machine
               && cleanText(previous.title, 200).length >= 4
-              && String(previous.fullContent || '').trim().length >= 40;
+              && String(previous.fullContent || '').trim().length >= 40
+              && translationMatchesTarget(previous.title, previous.fullContent, code);
             if (handwritten) merged[code] = previous;
           }
           return dropWaived(merged, activeFlags);
         };
-        const flagsFrom = (row, fallback) => ({
-          skipEnglish: (row ? row.skip_english === true : fallback.skipEnglish) && language !== 'en',
-          skipMalayalam: (row ? row.skip_malayalam === true : fallback.skipMalayalam) && language !== 'ml',
-        });
+        const flagsFrom = (row, fallback) => {
+          const rowLanguage = row
+            ? publicationLanguage({
+              language: row.language,
+              title: row.title,
+              summary: row.summary,
+              fullContent: row.full_content,
+            })
+            : language;
+          return {
+            skipEnglish: (row ? row.skip_english === true : fallback.skipEnglish) && rowLanguage !== 'en',
+            skipMalayalam: (row ? row.skip_malayalam === true : fallback.skipMalayalam) && rowLanguage !== 'ml',
+          };
+        };
         const storyMoved = (row) => row.title !== existing.title
           || (row.summary || '') !== (existing.summary || '')
           || (row.full_content || '') !== (existing.full_content || '')
@@ -754,7 +782,7 @@ export async function reviewEditorialArticle(id, { action, notes, publishing = n
 
   if (action === 'publish') {
     if (!publishing) throw badRequest('Choose the editorial board member and confirm the category before publishing.');
-    const flags = resolveSkipFlags(existing.language, publishing, existing);
+    const flags = resolveSkipFlags(existing, publishing, existing);
     const translations = await withAutomaticPartner({
       language: existing.language,
       title: existing.title,
@@ -840,7 +868,7 @@ export async function publishDueDrafts() {
   const published = [];
   const skipped = [];
   for (const row of data || []) {
-    const flags = resolveSkipFlags(row.language, {}, row);
+    const flags = resolveSkipFlags(row, {}, row);
     const translations = await withAutomaticPartner({
       language: row.language,
       title: row.title,

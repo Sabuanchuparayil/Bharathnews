@@ -22,7 +22,7 @@ export const SELECTABLE_LANGUAGES = SUPPORTED_LANGUAGES.filter(l => l.code !== '
 /** Labels for articles and stored translations, including languages we no longer publish. */
 export const READABLE_LANGUAGE_CATALOG = [...SELECTABLE_LANGUAGES, ...ARCHIVE_LANGUAGES];
 
-export const TARGET_TRANSLATION_LANGS = ['ml'];
+export const TARGET_TRANSLATION_LANGS = ['en', 'ml'];
 
 export const REGIONS = {
   india: 'India',

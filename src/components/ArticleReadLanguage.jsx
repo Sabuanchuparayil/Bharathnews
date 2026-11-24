@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Languages, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'react-toastify';
 import {
@@ -19,6 +19,8 @@ export default function ArticleReadLanguage({
 }) {
   const [translating, setTranslating] = useState(null);
   const [pendingLang, setPendingLang] = useState(null);
+  const failedKey = useRef('');
+  const seenKey = useRef('');
 
   const sourceLang = getArticleSourceLang(article);
   const available = listAvailableReadLangs(article);
@@ -27,7 +29,7 @@ export default function ArticleReadLanguage({
   const display = resolveArticleDisplay(article, activeLang);
   const showMachineBadge = display?.isTranslation && display?.machineAssisted;
 
-  const requestTranslation = useCallback(async (langCode) => {
+  const requestTranslation = useCallback(async (langCode, { quiet = false } = {}) => {
     if (!article?.slug || translating) return;
     setTranslating(langCode);
     setPendingLang(langCode);
@@ -41,16 +43,35 @@ export default function ArticleReadLanguage({
       if (!res.ok) throw new Error(data.error || 'Translation failed');
       onTranslationLoaded?.(langCode, data.translation);
       onReadLangChange(langCode);
-      toast.success(`Article loaded in ${getLanguageByCode(langCode).nativeName}`);
+      if (!quiet) toast.success(`Article loaded in ${getLanguageByCode(langCode).nativeName}`);
+      return true;
     } catch (err) {
+      failedKey.current = `${article.slug}:${langCode}`;
       toast.error(err.message || 'Could not translate this article');
+      return false;
     } finally {
       setTranslating(null);
       setPendingLang(null);
     }
   }, [article?.slug, translating, onTranslationLoaded, onReadLangChange]);
 
+  useEffect(() => {
+    const code = readLang === 'all' ? sourceLang : readLang;
+    const key = article?.slug ? `${article.slug}:${code}` : '';
+    if (seenKey.current !== key) {
+      seenKey.current = key;
+      failedKey.current = '';
+    }
+    if (!key || translating) return;
+    if (code !== 'en' && code !== 'ml') return;
+    if (code === sourceLang) return;
+    if (resolveArticleDisplay(article, code)) return;
+    if (failedKey.current === key) return;
+    requestTranslation(code, { quiet: true });
+  }, [article, readLang, sourceLang, translating, requestTranslation]);
+
   const selectLang = (code) => {
+    failedKey.current = '';
     if (code === sourceLang) {
       onReadLangChange(sourceLang);
       return;
@@ -103,6 +124,11 @@ export default function ArticleReadLanguage({
           </button>
         ))}
       </div>
+      {translating && (
+        <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+          Translating into {getLanguageByCode(translating).nativeName}…
+        </p>
+      )}
       {showMachineBadge && (
         <p className="flex items-start gap-2 mt-3 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg px-3 py-2">
           <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />

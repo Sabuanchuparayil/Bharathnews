@@ -1,11 +1,14 @@
 import { READABLE_LANGUAGE_CATALOG, SELECTABLE_LANGUAGES } from '@/config/languages.config';
 import { decodeHtmlEntities } from '@/utils/formatters';
+import { detectPublicationLang, translationMatchesTarget } from '../../shared/publication-lang.mjs';
 
 /** Labels for a story's source language and any stored translation. */
 export const READABLE_LANGS = READABLE_LANGUAGE_CATALOG;
 
 export function getArticleSourceLang(article) {
-  return article?.language || 'en';
+  const tagged = article?.language || 'en';
+  const detected = detectPublicationLang(`${article?.title || ''}\n${article?.summary || ''}\n${article?.fullContent || ''}`);
+  return detected || tagged;
 }
 
 function isCompleteStoredTranslation(tr) {
@@ -17,6 +20,7 @@ export function getStoredTranslation(article, langCode) {
   if (!article?.translations || !langCode) return null;
   const tr = article.translations[langCode];
   if (!isCompleteStoredTranslation(tr)) return null;
+  if (!translationMatchesTarget(tr.title, tr.fullContent, langCode)) return null;
   return tr;
 }
 
@@ -58,8 +62,8 @@ export function listAvailableReadLangs(article) {
   const sourceLang = getArticleSourceLang(article);
   const codes = new Set([sourceLang]);
   if (article?.translations && typeof article.translations === 'object') {
-    for (const [code, tr] of Object.entries(article.translations)) {
-      if (isCompleteStoredTranslation(tr)) codes.add(code);
+    for (const code of Object.keys(article.translations)) {
+      if (getStoredTranslation(article, code)) codes.add(code);
     }
   }
   return READABLE_LANGS.filter(l => codes.has(l.code));

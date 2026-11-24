@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { decodeHtmlEntities } from '../utils/formatters';
+import { detectPublicationLang, translationMatchesTarget } from '../../shared/publication-lang.mjs';
 
 const WORKER_URL = (process.env.NEXT_PUBLIC_WORKER_URL || '').replace(/\/$/, '');
 
@@ -60,8 +61,14 @@ async function translateMarked(text, translate) {
   return result;
 }
 
-function hasMalayalam(text) {
-  return /[\u0D00-\u0D7F]/.test(String(text || ''));
+function resolvedSourceLang(title, summary, fullContent, declared) {
+  return detectPublicationLang(`${title || ''}\n${summary || ''}\n${fullContent || ''}`) || declared;
+}
+
+/** Language the story is actually written in. The stored tag is only a fallback. */
+export function publicationLanguage({ language, title, summary, fullContent } = {}) {
+  const tagged = String(language || '').trim().toLowerCase();
+  return resolvedSourceLang(title, summary, fullContent, tagged);
 }
 
 async function translateWithMemory(text, langpair) {
@@ -132,14 +139,15 @@ function acceptable(draft, targetLang) {
   const translatedTitle = draft.title.trim();
   const translatedBody = draft.fullContent.trim();
   if (translatedTitle.length < 4 || translatedBody.length < 40) return false;
-  if (targetLang === 'ml' && (!hasMalayalam(translatedTitle) || !hasMalayalam(translatedBody))) return false;
-  return true;
+  return translationMatchesTarget(translatedTitle, translatedBody, targetLang);
 }
 
 async function translatePair({ title, summary, fullContent, sourceLang, targetLang }) {
-  const google = await translateWithWorker({ title, summary, fullContent, sourceLang, targetLang });
+  const source = resolvedSourceLang(title, summary, fullContent, sourceLang);
+  if (source === targetLang) return null;
+  const google = await translateWithWorker({ title, summary, fullContent, sourceLang: source, targetLang });
   const draft = (acceptable(google, targetLang) ? google : null) || await (async () => {
-    const translate = (text) => translateWithMemory(text, `${sourceLang}|${targetLang}`);
+    const translate = (text) => translateWithMemory(text, `${source}|${targetLang}`);
     const translatedTitle = await translateMarked(title, translate);
     const translatedSummary = summary ? await translateMarked(summary, translate) : '';
     const translatedBody = await translateMarked(fullContent, translate);
@@ -167,16 +175,16 @@ async function translatePair({ title, summary, fullContent, sourceLang, targetLa
 
 async function fillPartner(article, { sourceLang, targetLang, skip }) {
   const translations = { ...(article.translations || {}) };
-  const language = String(article.language || '').trim().toLowerCase();
-  if (skip || language !== sourceLang) return translations;
+  if (skip) return translations;
   const current = translations[targetLang];
   const hash = sourceHash(article.title, article.fullContent);
   const machine = current?.provider === 'google-nmt' || current?.provider === 'mymemory';
-  if (isComplete(current) && !current.sourceHash && !machine) {
+  const matchesTarget = translationMatchesTarget(current?.title, current?.fullContent, targetLang);
+  if (isComplete(current) && matchesTarget && !current.sourceHash && !machine) {
     translations[targetLang] = { ...current, sourceHash: hash };
     return translations;
   }
-  if (isComplete(current) && current.sourceHash === hash) return translations;
+  if (isComplete(current) && matchesTarget && current.sourceHash === hash) return translations;
   const draft = await translatePair({
     title: article.title,
     summary: article.summary,
@@ -184,7 +192,10 @@ async function fillPartner(article, { sourceLang, targetLang, skip }) {
     sourceLang,
     targetLang,
   });
-  if (!draft) return translations;
+  if (!draft) {
+    if (current && !matchesTarget) delete translations[targetLang];
+    return translations;
+  }
   translations[targetLang] = draft;
   return translations;
 }
@@ -196,7 +207,7 @@ async function fillPartner(article, { sourceLang, targetLang, skip }) {
  * version is kept until the source text changes.
  */
 export async function withAutomaticPartner(article) {
-  const language = String(article.language || '').trim().toLowerCase();
+  const language = publicationLanguage(article);
   if (language === 'ml') {
     return fillPartner(article, { sourceLang: 'ml', targetLang: 'en', skip: article.skipEnglish === true });
   }

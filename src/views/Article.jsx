@@ -93,10 +93,9 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
   }, [slug]);
 
   useEffect(() => {
-    if (!article || !siteLanguage || siteLanguage === 'all') return;
-    const src = getArticleSourceLang(article);
-    if (siteLanguage !== src) setReadLang(siteLanguage);
-  }, [article, siteLanguage]);
+    if (!article?.slug || (siteLanguage !== 'en' && siteLanguage !== 'ml')) return;
+    setReadLang(siteLanguage);
+  }, [article?.slug, siteLanguage]);
 
   useEffect(() => {
     if (!article?.slug) return undefined;
@@ -185,7 +184,9 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
   const resolved = resolveArticleDisplay(mergedArticle || article, readLang);
   const displayTitle = resolved?.title || article.title;
   const displaySummary = resolved?.summary || article.summary;
-  const displayContent = enrichedContent || resolved?.fullContent || article.fullContent;
+  const displayContent = resolved?.isTranslation
+    ? resolved.fullContent
+    : (enrichedContent || resolved?.fullContent || article.fullContent);
   const sourceUrl = article.sourceUrl || article.source_url;
   const showSourceLink = isExcerptOnly(displayContent, displaySummary) && sourceUrl;
 
