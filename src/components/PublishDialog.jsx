@@ -85,7 +85,7 @@ export default function PublishDialog({
           {missing.length > 0 && (
             <p className="mt-2 text-xs text-red-600">
               Both English and Malayalam are required.{' '}
-              {fixHref && <a href={fixHref} className="underline">Edit the draft</a>}
+              {fixHref && <a href={`${fixHref}#version-${missing[0].code}`} className="underline">Edit the draft</a>}
             </p>
           )}
         </section>

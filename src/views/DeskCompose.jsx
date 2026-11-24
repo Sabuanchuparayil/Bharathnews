@@ -146,11 +146,50 @@ const DeskCompose = () => {
     setSaving(false);
   };
 
+  useEffect(() => {
+    const id = window.location.hash.slice(1);
+    if (!id.startsWith('version-')) return;
+    const timer = setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({ block: 'start' });
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [draftId, form.title, form.language]);
+
   const otherLanguages = languages.filter(item => item.code !== form.language);
+  const primaryLanguage = languages.find(item => item.code === form.language) || { code: form.language, label: 'This language' };
+  const versionState = languageStatus({
+    language: form.language,
+    title: form.title,
+    fullContent: form.fullContent,
+    translations: form.versions,
+    catalog: languages,
+  });
   const versionNames = languages.map(item => item.label);
   const versionLabel = versionNames.length < 2
     ? (versionNames[0] || 'this language')
     : `${versionNames.slice(0, -1).join(', ')} and ${versionNames[versionNames.length - 1]}`;
+  const changeLanguage = (nextCode) => {
+    setForm(prev => {
+      if (nextCode === prev.language) return prev;
+      const versions = { ...(prev.versions || {}) };
+      versions[prev.language] = {
+        title: prev.title,
+        summary: prev.summary,
+        fullContent: prev.fullContent,
+      };
+      const next = versions[nextCode] || { title: '', summary: '', fullContent: '' };
+      delete versions[nextCode];
+      return {
+        ...prev,
+        language: nextCode,
+        title: next.title || '',
+        summary: next.summary || '',
+        fullContent: next.fullContent || '',
+        versions,
+      };
+    });
+  };
+
   const setVersion = (code, field, value) => {
     setForm(prev => ({
       ...prev,
@@ -174,32 +213,53 @@ const DeskCompose = () => {
             save(false);
           }}
         >
-          <label className="block text-sm font-medium">
-            Title
-            <input required value={form.title} onChange={e => set('title', e.target.value)} className="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
-          </label>
-          <label className="block text-sm font-medium">
-            Summary
-            <textarea value={form.summary} onChange={e => set('summary', e.target.value)} rows={3} className="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
-          </label>
-          <label className="block text-sm font-medium">
-            Full content
-            <textarea required value={form.fullContent} onChange={e => set('fullContent', e.target.value)} rows={14} className="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div id={`version-${primaryLanguage.code}`} className="rounded-2xl border border-stone-200 dark:border-white/10 p-4 space-y-3 scroll-mt-24">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="font-display font-bold">{primaryLanguage.label} version</h2>
+              <p className="text-xs text-gray-500">
+                {versionState.map(item => `${item.label} ${item.ready ? 'ready' : 'missing a title or full story'}`).join(' · ')}
+              </p>
+            </div>
             <label className="block text-sm font-medium">
-              Language of this draft
-              <select value={form.language} onChange={e => set('language', e.target.value)} className="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm">
+              Language of this version
+              <select value={form.language} onChange={e => changeLanguage(e.target.value)} className="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm">
                 {languages.map(item => <option key={item.code} value={item.code}>{item.label}</option>)}
               </select>
             </label>
             <label className="block text-sm font-medium">
-              Category
-              <select value={form.category} onChange={e => set('category', e.target.value)} className="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm">
-                {contentCategories.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
-              </select>
+              {primaryLanguage.label} title
+              <input required value={form.title} onChange={e => set('title', e.target.value)} className="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
+            </label>
+            <label className="block text-sm font-medium">
+              {primaryLanguage.label} summary
+              <textarea value={form.summary} onChange={e => set('summary', e.target.value)} rows={3} className="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
+            </label>
+            <label className="block text-sm font-medium">
+              {primaryLanguage.label} full story
+              <textarea required value={form.fullContent} onChange={e => set('fullContent', e.target.value)} rows={14} className="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
             </label>
           </div>
+          {otherLanguages.map(item => {
+            const version = form.versions?.[item.code] || {};
+            const ready = versionState.find(entry => entry.code === item.code)?.ready;
+            return (
+              <div key={item.code} id={`version-${item.code}`} className={`rounded-2xl border p-4 space-y-3 scroll-mt-24 ${ready ? 'border-stone-200 dark:border-white/10' : 'border-red-300 dark:border-red-800'}`}>
+                <h2 className="font-display font-bold">{item.label} version</h2>
+                <p className="text-xs text-gray-500">
+                  {ready ? 'Ready.' : 'Missing a title or full story.'} Every story goes live in {versionLabel}.
+                </p>
+                <input value={version.title || ''} onChange={e => setVersion(item.code, 'title', e.target.value)} placeholder={`${item.label} title`} className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
+                <textarea value={version.summary || ''} onChange={e => setVersion(item.code, 'summary', e.target.value)} rows={2} placeholder={`${item.label} summary`} className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
+                <textarea value={version.fullContent || ''} onChange={e => setVersion(item.code, 'fullContent', e.target.value)} rows={8} placeholder={`${item.label} full story`} className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
+              </div>
+            );
+          })}
+          <label className="block text-sm font-medium">
+            Category
+            <select value={form.category} onChange={e => set('category', e.target.value)} className="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm">
+              {contentCategories.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </select>
+          </label>
           <div className="rounded-2xl border border-stone-200 dark:border-white/10 p-4 space-y-3">
             <StaffAuthorPicker
               value={form}
@@ -226,18 +286,6 @@ const DeskCompose = () => {
             Schedule, optional
             <input type="datetime-local" value={form.scheduledAt} onChange={e => set('scheduledAt', e.target.value)} className="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
           </label>
-          {otherLanguages.map(item => {
-            const version = form.versions?.[item.code] || {};
-            return (
-              <div key={item.code} className="rounded-2xl border border-stone-200 dark:border-white/10 p-4 space-y-3">
-                <h2 className="font-display font-bold">{item.label} version</h2>
-                <p className="text-xs text-gray-500">Required before publishing. Every story goes live in {versionLabel}.</p>
-                <input value={version.title || ''} onChange={e => setVersion(item.code, 'title', e.target.value)} placeholder={`${item.label} title`} className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
-                <textarea value={version.summary || ''} onChange={e => setVersion(item.code, 'summary', e.target.value)} rows={2} placeholder={`${item.label} summary`} className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
-                <textarea value={version.fullContent || ''} onChange={e => setVersion(item.code, 'fullContent', e.target.value)} rows={8} placeholder={`${item.label} full content`} className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
-              </div>
-            );
-          })}
           {revisions.length > 0 && (
             <div className="rounded-2xl border border-stone-200 dark:border-white/10 p-4">
               <h2 className="font-display font-bold mb-2">Earlier versions</h2>
