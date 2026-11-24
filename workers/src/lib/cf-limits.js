@@ -101,6 +101,12 @@ export const CRON_PUBLISH_OPTS = {
   maxRounds: FREE_LIMITS.PUBLISH_MAX_ROUNDS,
 };
 
+/** One open-image lookup per story, capped so a batch stays inside the worker subrequest limit. */
+export function getOpenImageBudget(env) {
+  const limits = getLimits(env);
+  return { remaining: limits.TIER === 'paid' ? 24 : 6 };
+}
+
 export function pickLangSlice(allLangs, tick, count) {
   if (!allLangs?.length) return [];
   const n = count ?? FREE_LIMITS.REGIONAL_LANGS_PER_TICK;

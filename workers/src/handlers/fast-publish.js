@@ -10,7 +10,7 @@ import { postToFacebook } from '../lib/facebook.js';
 import { loadSiteSettings } from '../lib/sources-loader.js';
 import { enqueueDistributionJobs } from '../lib/distribution-jobs.js';
 
-import { getLimits, getCronPublishOpts } from '../lib/cf-limits.js';
+import { getLimits, getCronPublishOpts, getOpenImageBudget } from '../lib/cf-limits.js';
 import { isBlockedPublisher } from '../lib/blocked-sources.js';
 
 async function fetchPending(env, status, limit) {
@@ -28,7 +28,7 @@ async function fetchPending(env, status, limit) {
   }, null);
 }
 
-async function publishOne(env, raw, { skipImageResolve = false, skipSourceFetch = false, requireRealImage = false } = {}) {
+async function publishOne(env, raw, { skipImageResolve = false, skipSourceFetch = false, requireRealImage = false, openBudget = null } = {}) {
   const slug = raw.slug || raw.id;
   if (!slug || !raw.title?.trim()) return 'skipped';
 
@@ -55,9 +55,11 @@ async function publishOne(env, raw, { skipImageResolve = false, skipSourceFetch 
       category,
       title: raw.title,
       ogTimeoutMs: needsRealImage ? 4000 : 2500,
+      openBudget,
     });
     imageUrl = picture.url;
     imageCredit = picture.credit;
+    if (picture.deferred) return 'deferred';
   } else if (!imageUrl || isCategoryFallbackImage(imageUrl)) {
     imageUrl = raw.imageUrl || raw.image_url || '';
   }
@@ -152,6 +154,7 @@ export async function handleFastPublish(env, options = {}) {
   const skipDistribution = options.skipDistribution === true;
   const skipImageResolve = options.skipImageResolve === true;
   const totals = { published: 0, failed: 0, skipped: 0, queue: 0, distributed: 0 };
+  const openBudget = getOpenImageBudget(env);
 
   for (let round = 0; round < maxRounds; round++) {
     const pending = await fetchPending(env, 'pending_ai', batchSize);
@@ -167,11 +170,17 @@ export async function handleFastPublish(env, options = {}) {
     totals.queue += queue.length;
     const publishedSlugs = [];
 
+    let deferred = false;
     for (const raw of queue) {
-      const outcome = await publishOne(env, raw, { skipImageResolve });
+      const outcome = await publishOne(env, raw, { skipImageResolve, openBudget });
+      if (outcome === 'deferred') {
+        deferred = true;
+        break;
+      }
       totals[outcome === 'no-image' ? 'skipped' : outcome]++;
       if (outcome === 'published') publishedSlugs.push(raw.slug || raw.id);
     }
+    if (deferred) break;
 
     if (!skipDistribution && publishedSlugs.length > 0) {
       try {
@@ -210,6 +219,7 @@ export async function handlePublishMalayalam(env, options = {}) {
   const batchSize = options.batchSize ?? 8;
   const maxRounds = options.maxRounds ?? 3;
   const totals = { published: 0, failed: 0, skipped: 0, queue: 0, noImage: 0 };
+  const openBudget = getOpenImageBudget(env);
 
   for (let round = 0; round < maxRounds; round++) {
     let queue = [];
@@ -228,11 +238,17 @@ export async function handlePublishMalayalam(env, options = {}) {
     if (!queue.length) break;
     totals.queue += queue.length;
 
+    let deferred = false;
     for (const raw of queue) {
       const outcome = await publishOne(env, raw, {
         skipImageResolve: false,
         requireRealImage: true,
+        openBudget,
       });
+      if (outcome === 'deferred') {
+        deferred = true;
+        break;
+      }
       if (outcome === 'published') totals.published++;
       else if (outcome === 'failed') totals.failed++;
       else if (outcome === 'no-image') {
@@ -240,6 +256,7 @@ export async function handlePublishMalayalam(env, options = {}) {
         totals.noImage++;
       } else totals.skipped++;
     }
+    if (deferred) break;
 
     if (queue.length < batchSize) break;
   }

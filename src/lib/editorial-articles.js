@@ -278,7 +278,7 @@ export async function createEditorialArticle(input, editor, { publishNow = false
   let imageUrl = resolved.imageUrl || '';
   let imageCredit = resolved.imageCredit || '';
   if (!imageUrl) {
-    const open = await findOpenImage({ title: resolved.title, category, timeoutMs: 3500, fallback: false });
+    const open = await findOpenImage({ title: resolved.title, category, timeoutMs: 2500, fallback: false });
     if (open?.url) {
       imageUrl = open.url;
       imageCredit = imageCredit || open.credit;

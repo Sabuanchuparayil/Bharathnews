@@ -144,12 +144,14 @@ async function fetchOgImage(url, timeoutMs = 4000) {
 }
 
 /** Resolve a publishable image. A missing publisher photo falls back to an openly licensed reference. */
-export async function resolveArticlePicture({ imageUrl, sourceUrl, category, title, ogTimeoutMs = 4000 }) {
+export async function resolveArticlePicture({ imageUrl, sourceUrl, category, title, ogTimeoutMs = 4000, openBudget = null }) {
   if (imageUrl && isRealArticleImage(imageUrl)) return { url: imageUrl, credit: '' };
   if (sourceUrl) {
     const og = await fetchOgImage(sourceUrl, ogTimeoutMs);
     if (og && isRealArticleImage(og)) return { url: og, credit: '' };
   }
+  if (openBudget && openBudget.remaining <= 0) return { url: '', credit: '', deferred: true };
+  if (openBudget) openBudget.remaining -= 1;
   const open = await findOpenImage({ title, category, timeoutMs: 3500, fallback: false });
   if (open?.url && isRealArticleImage(open.url)) return { url: open.url, credit: open.credit || '' };
   return { url: '', credit: '' };

@@ -3,6 +3,7 @@ import { resolveArticlePicture, isCategoryFallbackImage } from '../lib/image-res
 import { runQuery, insertRow, patchRawArticle } from '../lib/supabase-rest.js';
 import { loadSiteSettings } from '../lib/sources-loader.js';
 import { onArticlePublished } from '../lib/on-article-published.js';
+import { getOpenImageBudget } from '../lib/cf-limits.js';
 
 const BATCH_SIZE = 8;
 
@@ -50,10 +51,12 @@ export async function handleAIProcess(env) {
   }, null);
 
   console.log(`AI process: found ${docs.length} classified articles`);
+  const openBudget = getOpenImageBudget(env);
 
   for (const raw of docs) {
     try {
-      const result = await processOneArticle(env, raw, langs, settings);
+      const result = await processOneArticle(env, raw, langs, settings, openBudget);
+      if (result?.deferred) break;
       if (result) processed.push(result);
     } catch (err) {
       console.error('AI process error:', err.message);
@@ -66,7 +69,7 @@ export async function handleAIProcess(env) {
   return { processed: processed.length, remaining: Math.max(0, docs.length - processed.length) };
 }
 
-async function processOneArticle(env, raw, targetLangs, settings) {
+async function processOneArticle(env, raw, targetLangs, settings, openBudget = null) {
   const slug = raw.slug || raw.id;
 
   await patchRawArticle(env, slug, { status: 'processing' });
@@ -84,7 +87,12 @@ async function processOneArticle(env, raw, targetLangs, settings) {
       sourceUrl: raw.sourceUrl || raw.link || '',
       category,
       title,
+      openBudget,
     });
+    if (picture.deferred) {
+      await patchRawArticle(env, slug, { status: 'classified' });
+      return { deferred: true };
+    }
     imageUrl = picture.url;
     imageCredit = picture.credit;
   }
