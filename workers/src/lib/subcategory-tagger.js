@@ -100,6 +100,15 @@ const SOURCE_SUBCATEGORY_HINTS = {
   'TOI Lifestyle': 'food-travel',
   'The Hindu Sports': 'other',
   'TOI Sports': 'other',
+  'BBC Football': 'football',
+  'ESPN Soccer': 'football',
+  'BBC Formula 1': 'motorsport',
+  'BBC Olympics': 'olympics',
+  'ET Tax': 'personal-finance',
+  'ET Insurance': 'personal-finance',
+  'ET Mutual Funds': 'personal-finance',
+  'The Hindu Science': 'space-science',
+  'TOI Health': 'health',
 };
 
 function sectionForCategory(category) {

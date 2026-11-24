@@ -6,7 +6,7 @@ import { rowToApp } from '@/lib/db-mapper';
 import { toggleBookmark, toggleLike } from '../services/articles';
 import { setAuthCookies, clearAuthCookies } from '../lib/auth-cookies';
 import { hasCompleteProfile } from '@/lib/profile-fields';
-import { capsForRole, defaultAccessRoles, readAccessRoles } from '@/lib/access-roles';
+import { boardRoleFromLabel, capsForProfile, defaultAccessRoles, readAccessRoles } from '@/lib/access-roles';
 import logger from '../utils/logger';
 
 const AuthContext = createContext(null);
@@ -30,8 +30,15 @@ export const AuthProvider = ({ children }) => {
       logger.error('Failed to load user profile:', error);
       return null;
     }
-    if (data) return rowToApp(data);
-    return null;
+    if (!data) return null;
+    const profile = rowToApp(data);
+    const { data: seat } = await supabase
+      .from('staff_profiles')
+      .select('title, is_active')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (seat?.is_active && seat.title) profile.editorialTitle = seat.title;
+    return profile;
   }, []);
 
   useEffect(() => {
@@ -99,7 +106,8 @@ export const AuthProvider = ({ children }) => {
         setAuthCookies(profile?.role || 'reader', {
           emailVerified: profile?.emailVerified,
           profileComplete: hasCompleteProfile(profile),
-          caps: capsForRole(catalog, profile?.role || 'reader'),
+          caps: capsForProfile(catalog, profile),
+          boardId: boardRoleFromLabel(profile?.editorialTitle)?.id || '',
         });
         setAccessReady(true);
       } catch (err) {
@@ -153,7 +161,8 @@ export const AuthProvider = ({ children }) => {
       setAuthCookies(profile.role || 'reader', {
         emailVerified: profile.emailVerified,
         profileComplete: hasCompleteProfile(profile),
-        caps: capsForRole(catalog, profile.role || 'reader'),
+        caps: capsForProfile(catalog, profile),
+        boardId: boardRoleFromLabel(profile?.editorialTitle)?.id || '',
       });
     }
     return profile;
@@ -288,7 +297,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const role = userProfile?.role || 'reader';
-  const caps = new Set(capsForRole(accessRoles, role));
+  const caps = new Set(capsForProfile(accessRoles, userProfile));
 
   const value = {
     user,

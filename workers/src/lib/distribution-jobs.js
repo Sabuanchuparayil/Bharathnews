@@ -29,7 +29,7 @@ function nextRetryAt(attempts) {
 
 function buildJobRowsForArticle(article, settings, env) {
   if (!article?.id) return [];
-  if (isBlockedPublisher({ name: article.source, sourceUrl: article.source_url || article.sourceUrl })) {
+  if (isBlockedPublisher({ name: article.source, sourceUrl: article.source_url || article.sourceUrl, title: article.title })) {
     return [];
   }
 
@@ -218,7 +218,7 @@ async function processOneJob(env, job, settings, siteUrl) {
     return { outcome: 'skipped' };
   }
 
-  if (isBlockedPublisher({ name: article.source, sourceUrl: article.source_url })) {
+  if (isBlockedPublisher({ name: article.source, sourceUrl: article.source_url, title: article.title })) {
     await markJobSkipped(env, job, 'blocked_publisher');
     return { outcome: 'skipped' };
   }

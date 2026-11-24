@@ -74,13 +74,9 @@ Articles are published continuously throughout the day (every 15 minutes), sourc
 
 ## RSS Feeds for Programmatic Access
 
-- All languages: https://www.thebharathnews.com/feed.xml
+- English and Malayalam: https://www.thebharathnews.com/feed.xml
+- English only: https://www.thebharathnews.com/feed.xml?lang=en
 - Malayalam only: https://www.thebharathnews.com/feed.xml?lang=ml
-- Hindi only: https://www.thebharathnews.com/feed.xml?lang=hi
-- Tamil only: https://www.thebharathnews.com/feed.xml?lang=ta
-- Telugu only: https://www.thebharathnews.com/feed.xml?lang=te
-- Kannada only: https://www.thebharathnews.com/feed.xml?lang=kn
-- Bengali only: https://www.thebharathnews.com/feed.xml?lang=bn
 
 ## Social Distribution
 

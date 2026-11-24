@@ -15,11 +15,17 @@ export function setAuthCookies(role = 'reader', flags = {}) {
   const profile = flags.profileComplete === true ? '1' : '0';
   const caps = Array.isArray(flags.caps) ? flags.caps : fallbackCaps(safeRole);
   const capValue = caps.length ? caps.join('.') : '0';
+  const boardId = typeof flags.boardId === 'string' && /^[a-z][a-z0-9_]{0,31}$/.test(flags.boardId)
+    ? flags.boardId
+    : '';
   document.cookie = `bn_auth=1; ${cookieFlags()}`;
   document.cookie = `bn_role=${safeRole}; ${cookieFlags()}`;
   document.cookie = `bn_caps=${capValue}; ${cookieFlags()}`;
   document.cookie = `bn_verified=${verified}; ${cookieFlags()}`;
   document.cookie = `bn_profile=${profile}; ${cookieFlags()}`;
+  document.cookie = boardId
+    ? `bn_board=${boardId}; ${cookieFlags()}`
+    : 'bn_board=; path=/; max-age=0';
 }
 
 export function clearAuthCookies() {
@@ -29,6 +35,7 @@ export function clearAuthCookies() {
   document.cookie = 'bn_caps=; path=/; max-age=0';
   document.cookie = 'bn_verified=; path=/; max-age=0';
   document.cookie = 'bn_profile=; path=/; max-age=0';
+  document.cookie = 'bn_board=; path=/; max-age=0';
 }
 
 export { ADMIN_ROLES, VALID_ROLES as VALID_ROLE_SET };

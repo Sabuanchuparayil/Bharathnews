@@ -18,22 +18,16 @@ function getProxiedImageUrl(imageUrl) {
   return `${SITE_URL}/_next/image?url=${encodeURIComponent(imageUrl)}&w=1200&q=80`;
 }
 
-const SUPPORTED_FEED_LANGS = ['en', 'hi', 'ml', 'ta', 'te', 'kn', 'bn', 'ur'];
+const SUPPORTED_FEED_LANGS = ['en', 'ml'];
 
 const LANG_TITLE = {
   en: 'The Bharath News',
-  hi: 'The Bharath News — हिन्दी',
   ml: 'The Bharath News — മലയാളം',
-  ta: 'The Bharath News — தமிழ்',
-  te: 'The Bharath News — తెలుగు',
-  kn: 'The Bharath News — ಕನ್ನಡ',
-  bn: 'The Bharath News — বাংলা',
-  ur: 'The Bharath News — اردو',
 };
 
 const LANG_RSS_CODE = {
-  en: 'en-in', hi: 'hi-in', ml: 'ml-in', ta: 'ta-in',
-  te: 'te-in', kn: 'kn-in', bn: 'bn-in', ur: 'ur-in',
+  en: 'en-in',
+  ml: 'ml-in',
 };
 
 // Native-script discovery hashtag per language (kept to one for cleanliness)
@@ -80,10 +74,30 @@ function buildHashtags(category, lang) {
   return Array.from(tags).slice(0, 4).join(' ');
 }
 
+function unsupportedLanguageFeed() {
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>The Bharath News</title>
+    <description>This feed is published in English and Malayalam only.</description>
+  </channel>
+</rss>`;
+  return new Response(xml, {
+    status: 404,
+    headers: {
+      'Content-Type': 'application/xml; charset=utf-8',
+      'Cache-Control': 'public, s-maxage=3600',
+    },
+  });
+}
+
 export async function GET(request) {
   const url = new URL(request.url);
   const langParam = url.searchParams.get('lang');
-  const lang = SUPPORTED_FEED_LANGS.includes(langParam) ? langParam : null;
+  if (langParam && !SUPPORTED_FEED_LANGS.includes(langParam)) {
+    return unsupportedLanguageFeed();
+  }
+  const lang = langParam || null;
   const limitParam = parseInt(url.searchParams.get('limit'), 10);
   let limit = limitParam > 0 ? Math.min(limitParam, 200) : 50;
   const hoursParam = parseInt(url.searchParams.get('hours'), 10);
@@ -108,7 +122,7 @@ export async function GET(request) {
       .order('created_at', { ascending: false })
       .limit(queryLimit);
 
-    if (lang) query = query.eq('language', lang);
+    query = lang ? query.eq('language', lang) : query.in('language', SUPPORTED_FEED_LANGS);
     if (hours > 0) {
       const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
       query = query.gte('created_at', since);

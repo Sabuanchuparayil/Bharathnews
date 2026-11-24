@@ -120,7 +120,7 @@ export async function ingestFeedItems(env, feed, lang, items, options = {}) {
       continue;
     }
 
-    if (isBlockedPublisher({ name: feed.name, sourceUrl: item.link })) {
+    if (isBlockedPublisher({ name: feed.name, sourceUrl: item.link, title: item.title })) {
       skipped++;
       continue;
     }

@@ -78,6 +78,35 @@ export function capsForRole(roles, id) {
   return DEFAULT_CAPS[id] ? [...DEFAULT_CAPS[id]] : [];
 }
 
+/** Match a staff title or board id, including spacing and hyphen differences. */
+export function boardRoleFromLabel(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+  const lower = raw.toLowerCase();
+  const slug = lower.replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+  return EDITORIAL_BOARD_ROLES.find(item =>
+    item.id !== 'content_writer' && (
+      item.title.toLowerCase() === lower
+      || item.id === lower
+      || item.id === slug
+    )
+  ) || null;
+}
+
+/**
+ * Permissions for a signed-in person. A Content Writer with a board title
+ * uses that title's catalog row when it exists.
+ */
+export function capsForProfile(roles, profile) {
+  const accountRole = profile?.role || 'reader';
+  const accountCaps = capsForRole(roles, accountRole);
+  if (accountRole !== 'content_writer') return accountCaps;
+  const board = boardRoleFromLabel(profile?.editorialTitle) || boardRoleFromLabel(profile?.boardId);
+  if (!board) return accountCaps;
+  const match = (roles || []).find(role => role.id === board.id);
+  return match ? [...match.caps] : accountCaps;
+}
+
 export function roleHasCap(roles, id, cap) {
   return capsForRole(roles, id).includes(cap);
 }

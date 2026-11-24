@@ -167,7 +167,7 @@ export async function handleIngestLang(env, options = {}) {
   return results;
 }
 
-/** Rotate 2 regional languages per 10-min tick (all 7 covered every ~35 min). */
+/** Malayalam is the only regional ingest language. */
 export function pickRegionalLangGroup(tick = null, env = null) {
   const L = getLimits(env);
   const t = tick ?? Math.floor(Date.now() / (10 * 60 * 1000));

@@ -32,7 +32,7 @@ async function fetchUndistributedTelegram(env, limit) {
   );
   if (!res.ok) return { articles: [], error: `fetch failed: ${res.status}` };
   const articles = (await res.json()).filter(a =>
-    !isBlockedPublisher({ name: a.source, sourceUrl: a.source_url })
+    !isBlockedPublisher({ name: a.source, sourceUrl: a.source_url, title: a.title })
   );
   return { articles, error: null };
 }

@@ -33,7 +33,7 @@ export async function runDistributionJobsTick(env, options = {}) {
   }
 }
 
-/** Phase 3 — ingest only: English + 2 rotating regional langs (no publish). */
+/** Ingest only: English and Malayalam (no publish). */
 export async function runIngestTick(env) {
   const L = getLimits(env);
   const tick = Math.floor(Date.now() / (10 * 60 * 1000));

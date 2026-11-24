@@ -1,88 +1,60 @@
-/** Regional RSS sources — verified 2026-06-25.
- *  OneIndia feeds need rss2json proxy (Cloudflare 403).
- *  Google News feeds use googlenews type (rss2json in rss-parser).
- */
+/** Malayalam RSS — the only regional language this site publishes. */
 
-/** Malayalam feeds verified working — used first for ml ingest (Facebook/dlvr.it). */
+function mlSearch(name, query, category, subcategory) {
+  return {
+    url: `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=ml&gl=IN&ceid=IN:ml`,
+    name,
+    category,
+    subcategory,
+    region: 'kerala',
+    language: 'ml',
+    type: 'googlenews',
+  };
+}
+
+/** Malayalam feeds verified working — used first for ml ingest. */
 export const MALAYALAM_RSS_SOURCES = [
-  { url: 'https://www.asianetnews.com/rss', name: 'Asianet News Malayalam', category: 'india', region: 'kerala', language: 'ml', type: 'rss' },
-  { url: 'https://feeds.feedburner.com/Mathrubhumi', name: 'Mathrubhumi', category: 'india', region: 'kerala', language: 'ml', type: 'rss' },
-  { url: 'https://www.mediaoneonline.com/google_feeds.xml', name: 'Media One', category: 'india', region: 'kerala', language: 'ml', type: 'rss' },
-  { url: 'https://www.suprabhaatham.com/feed', name: 'Suprabhaatham', category: 'india', region: 'kerala', language: 'ml', type: 'rss' },
-  { url: 'https://www.keralakaumudi.com/ml/feed', name: 'Kerala Kaumudi', category: 'india', region: 'kerala', language: 'ml', type: 'rss' },
-  { url: 'https://news.google.com/rss/search?q=site:manoramaonline.com&hl=ml&gl=IN&ceid=IN:ml', name: 'Malayala Manorama (GN)', category: 'india', region: 'kerala', language: 'ml', type: 'googlenews' },
-  { url: 'https://news.google.com/rss/search?q=site:madhyamam.com&hl=ml&gl=IN&ceid=IN:ml', name: 'Madhyamam (GN)', category: 'india', region: 'kerala', language: 'ml', type: 'googlenews' },
-  { url: 'https://malayalam.oneindia.com/rss/malayalam-news-fb.xml', name: 'OneIndia Malayalam', category: 'india', region: 'kerala', language: 'ml', type: 'rss' },
+  { url: 'https://www.asianetnews.com/rss', name: 'Asianet News Malayalam', category: 'india', subcategory: 'india', region: 'kerala', language: 'ml', type: 'rss' },
+  { url: 'https://feeds.feedburner.com/Mathrubhumi', name: 'Mathrubhumi', category: 'india', subcategory: 'india', region: 'kerala', language: 'ml', type: 'rss' },
+  { url: 'https://www.mediaoneonline.com/google_feeds.xml', name: 'Media One', category: 'india', subcategory: 'india', region: 'kerala', language: 'ml', type: 'rss' },
+  { url: 'https://www.suprabhaatham.com/feed', name: 'Suprabhaatham', category: 'india', subcategory: 'india', region: 'kerala', language: 'ml', type: 'rss' },
+  { url: 'https://www.twentyfournews.com/feed', name: 'Twentyfour News', category: 'india', subcategory: 'india', region: 'kerala', language: 'ml', type: 'rss' },
+  { url: 'https://news.google.com/rss/search?q=site:manoramaonline.com&hl=ml&gl=IN&ceid=IN:ml', name: 'Malayala Manorama (GN)', category: 'india', subcategory: 'india', region: 'kerala', language: 'ml', type: 'googlenews' },
+  { url: 'https://news.google.com/rss/search?q=site:madhyamam.com&hl=ml&gl=IN&ceid=IN:ml', name: 'Madhyamam (GN)', category: 'india', subcategory: 'india', region: 'kerala', language: 'ml', type: 'googlenews' },
+  { url: 'https://malayalam.oneindia.com/rss/malayalam-news-fb.xml', name: 'OneIndia Malayalam', category: 'india', subcategory: 'india', region: 'kerala', language: 'ml', type: 'rss' },
 ];
 
-/** Feeds that fail from Workers (403/500/empty) or serve wrong language — excluded from ml rotation. */
+/** Section searches so Malayalam stories land on the same menus as English. */
+export const MALAYALAM_TOPIC_FEEDS = [
+  mlSearch('GN Malayalam Cricket', 'ക്രിക്കറ്റ് OR IPL', 'sports', 'cricket'),
+  mlSearch('GN Malayalam Football', 'ഫുട്ബോൾ OR ഫിഫ', 'sports', 'football'),
+  mlSearch('GN Malayalam Formula 1', 'ഫോർമുല വൺ OR Formula 1', 'sports', 'motorsport'),
+  mlSearch('GN Malayalam Olympics', 'ഒളിമ്പിക്സ്', 'sports', 'olympics'),
+  mlSearch('GN Malayalam Markets', 'സെൻസെക്സ് OR നിഫ്റ്റി OR ഓഹരി', 'business', 'markets'),
+  mlSearch('GN Malayalam Jobs', 'തൊഴിൽ ഒഴിവ് OR നിയമനം', 'jobs', 'jobs'),
+  mlSearch('GN Malayalam Personal Finance', 'ആദായനികുതി OR മ്യൂച്വൽ ഫണ്ട്', 'business', 'personal-finance'),
+  mlSearch('GN Malayalam Health', 'ആരോഗ്യം', 'health', 'health'),
+  mlSearch('GN Malayalam Education', 'വിദ്യാഭ്യാസം OR പരീക്ഷാ ഫലം', 'education', 'education'),
+  mlSearch('GN Malayalam Cinema', 'മലയാളം സിനിമ', 'entertainment', 'entertainment'),
+  mlSearch('GN Malayalam Gulf', 'ഗൾഫ് വാർത്ത OR ദുബായ് OR യുഎഇ', 'gcc', 'gulf'),
+  mlSearch('GN Malayalam Pravasi', 'പ്രവാസി', 'gcc', 'diaspora'),
+  mlSearch('GN Malayalam Space', 'ഐഎസ്ആർഒ OR ചന്ദ്രയാൻ', 'technology', 'space-science'),
+  mlSearch('GN Malayalam Gadgets', 'സ്മാർട്ട്ഫോൺ', 'technology', 'gadgets'),
+  mlSearch('GN Malayalam Startups', 'സ്റ്റാർട്ടപ്പ്', 'technology', 'startups'),
+];
+
+/** Feeds that fail from Workers or serve the wrong language. Janam TV and Republic are blocked separately. */
 export const DISABLED_ML_FEED_URLS = new Set([
   'https://news.google.com/rss?hl=ml-IN&gl=IN&ceid=IN:ml',
   'https://news.google.com/rss/search?q=Kerala+news&hl=ml-IN&gl=IN&ceid=IN:ml',
-  'https://www.twentyfournews.com/feed',
   'https://keralakaumudi.com/rss/news',
+  'https://www.keralakaumudi.com/ml/feed',
   'https://newsable.asianetnews.com/rss',
 ]);
 
 export const REGIONAL_RSS_SOURCES = [
-  // ── OneIndia (Greynium) — proxied via rss2json ──
   ...MALAYALAM_RSS_SOURCES,
-  { url: 'https://tamil.oneindia.com/rss/tamil-news-fb.xml', name: 'OneIndia Tamil', category: 'india', region: 'tamilnadu', language: 'ta', type: 'rss' },
-  { url: 'https://telugu.oneindia.com/rss/telugu-news-fb.xml', name: 'OneIndia Telugu', category: 'india', region: 'andhra', language: 'te', type: 'rss' },
-  { url: 'https://kannada.oneindia.com/rss/kannada-news-fb.xml', name: 'OneIndia Kannada', category: 'india', region: 'karnataka', language: 'kn', type: 'rss' },
-  { url: 'https://hindi.oneindia.com/rss/hindi-news-fb.xml', name: 'OneIndia Hindi', category: 'india', region: 'india', language: 'hi', type: 'rss' },
-
-  // ── Google News regional (rss2json proxy) ──
-  { url: 'https://news.google.com/rss?hl=ta-IN&gl=IN&ceid=IN:ta', name: 'Google News Tamil', category: 'india', region: 'tamilnadu', language: 'ta', type: 'googlenews' },
-  { url: 'https://news.google.com/rss?hl=te-IN&gl=IN&ceid=IN:te', name: 'Google News Telugu', category: 'india', region: 'andhra', language: 'te', type: 'googlenews' },
-  { url: 'https://news.google.com/rss?hl=kn-IN&gl=IN&ceid=IN:kn', name: 'Google News Kannada', category: 'india', region: 'karnataka', language: 'kn', type: 'googlenews' },
-  { url: 'https://news.google.com/rss?hl=hi-IN&gl=IN&ceid=IN:hi', name: 'Google News Hindi', category: 'india', region: 'india', language: 'hi', type: 'googlenews' },
-  { url: 'https://news.google.com/rss?hl=bn-IN&gl=IN&ceid=IN:bn', name: 'Google News Bengali', category: 'india', region: 'westbengal', language: 'bn', type: 'googlenews' },
-  { url: 'https://news.google.com/rss?hl=ur&gl=IN&ceid=IN:ur', name: 'Google News Urdu', category: 'india', region: 'india', language: 'ur', type: 'googlenews' },
-
-  // ── Google News topic searches (regional) ──
-  { url: 'https://news.google.com/rss/search?q=Karnataka+news&hl=kn-IN&gl=IN&ceid=IN:kn', name: 'GN Karnataka News', category: 'india', region: 'karnataka', language: 'kn', type: 'googlenews' },
-  { url: 'https://news.google.com/rss/search?q=Bengaluru+news&hl=kn-IN&gl=IN&ceid=IN:kn', name: 'GN Bengaluru Kannada', category: 'india', region: 'karnataka', language: 'kn', type: 'googlenews' },
-  { url: 'https://news.google.com/rss/search?q=West+Bengal+news&hl=bn-IN&gl=IN&ceid=IN:bn', name: 'GN Bengal News', category: 'india', region: 'westbengal', language: 'bn', type: 'googlenews' },
-  { url: 'https://news.google.com/rss/search?q=Kolkata+news&hl=bn-IN&gl=IN&ceid=IN:bn', name: 'GN Kolkata Bengali', category: 'india', region: 'westbengal', language: 'bn', type: 'googlenews' },
-  { url: 'https://news.google.com/rss/search?q=Hyderabad+Urdu+news&hl=ur&gl=IN&ceid=IN:ur', name: 'GN Hyderabad Urdu', category: 'india', region: 'india', language: 'ur', type: 'googlenews' },
-  { url: 'https://news.google.com/rss/search?q=India+Urdu+news&hl=ur&gl=IN&ceid=IN:ur', name: 'GN India Urdu', category: 'india', region: 'india', language: 'ur', type: 'googlenews' },
-  { url: 'https://news.google.com/rss/search?q=Tamil+Nadu+news&hl=ta-IN&gl=IN&ceid=IN:ta', name: 'GN Tamil Nadu', category: 'india', region: 'tamilnadu', language: 'ta', type: 'googlenews' },
-  { url: 'https://news.google.com/rss/search?q=Andhra+Pradesh+Telangana+news&hl=te-IN&gl=IN&ceid=IN:te', name: 'GN AP Telangana', category: 'india', region: 'andhra', language: 'te', type: 'googlenews' },
-
-  // ── Tamil publishers ──
-  { url: 'https://feeds.bbci.co.uk/tamil/rss.xml', name: 'BBC Tamil', category: 'india', region: 'tamilnadu', language: 'ta', type: 'rss' },
-  { url: 'https://www.thehindu.com/news/national/tamil-nadu/?service=rss', name: 'The Hindu Tamil Nadu', category: 'india', region: 'tamilnadu', language: 'ta', type: 'rss' },
-  { url: 'https://indianexpress.com/section/cities/chennai/feed/', name: 'IE Chennai', category: 'india', region: 'tamilnadu', language: 'ta', type: 'rss' },
-  { url: 'https://www.vikatan.com/feed', name: 'Vikatan', category: 'india', region: 'tamilnadu', language: 'ta', type: 'rss' },
-  { url: 'https://kumudam.com/rss/latest-posts', name: 'Kumudam', category: 'india', region: 'tamilnadu', language: 'ta', type: 'rss' },
-
-  // ── Telugu publishers ──
-  { url: 'https://www.sakshi.com/rss.xml', name: 'Sakshi', category: 'india', region: 'andhra', language: 'te', type: 'rss' },
-  { url: 'https://feeds.bbci.co.uk/telugu/rss.xml', name: 'BBC Telugu', category: 'india', region: 'andhra', language: 'te', type: 'rss' },
-  { url: 'https://10tv.in/feed/', name: '10TV Telugu', category: 'india', region: 'telangana', language: 'te', type: 'rss' },
-  { url: 'https://www.andhrajyothy.com/rss/feed.xml', name: 'Andhra Jyothy', category: 'india', region: 'andhra', language: 'te', type: 'rss' },
-
-  // ── Kannada publishers ──
-  { url: 'https://publictv.in/feed/', name: 'Public TV Kannada', category: 'india', region: 'karnataka', language: 'kn', type: 'rss' },
-  { url: 'https://www.prajavani.net/feed', name: 'Prajavani', category: 'india', region: 'karnataka', language: 'kn', type: 'rss' },
-
-  // ── Hindi publishers ──
-  { url: 'https://feeds.bbci.co.uk/hindi/rss.xml', name: 'BBC Hindi', category: 'india', region: 'india', language: 'hi', type: 'rss' },
-  { url: 'https://www.amarujala.com/rss/breaking-news.xml', name: 'Amar Ujala', category: 'india', region: 'india', language: 'hi', type: 'rss' },
-  { url: 'https://bhaskar.com/rss-v1--category-1061.xml', name: 'Dainik Bhaskar National', category: 'india', region: 'india', language: 'hi', type: 'rss' },
-  { url: 'https://bhaskar.com/rss-v1--category-1125.xml', name: 'Dainik Bhaskar World', category: 'world', region: 'india', language: 'hi', type: 'rss' },
-  { url: 'https://bhaskar.com/rss-v1--category-1051.xml', name: 'Dainik Bhaskar Business', category: 'business', region: 'india', language: 'hi', type: 'rss' },
-
-  // ── Bengali publishers ──
-  { url: 'https://feeds.bbci.co.uk/bengali/rss.xml', name: 'BBC Bengali', category: 'india', region: 'westbengal', language: 'bn', type: 'rss' },
-  { url: 'https://zeenews.india.com/bengali/rss.xml', name: 'Zee Bangla', category: 'india', region: 'westbengal', language: 'bn', type: 'rss' },
-  { url: 'https://bengali.abplive.com/news/feed', name: 'ABP Ananda', category: 'india', region: 'westbengal', language: 'bn', type: 'rss' },
-
-  // ── Urdu publishers ──
-  { url: 'https://feeds.bbci.co.uk/urdu/rss.xml', name: 'BBC Urdu', category: 'india', region: 'india', language: 'ur', type: 'rss' },
-  { url: 'https://www.etemaaddaily.com/rss/all-news', name: 'Etemaad Urdu', category: 'india', region: 'india', language: 'ur', type: 'rss' },
-  { url: 'https://urdu.siasat.com/feed/', name: 'Siasat Daily Urdu', category: 'india', region: 'india', language: 'ur', type: 'rss' },
+  ...MALAYALAM_TOPIC_FEEDS,
 ];
 
-export const REGIONAL_LANGUAGES = ['ml', 'ta', 'te', 'kn', 'bn', 'hi', 'ur'];
+export const REGIONAL_LANGUAGES = ['ml'];

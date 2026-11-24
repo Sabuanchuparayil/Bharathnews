@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { SITE_APEX_HOST, SITE_CANONICAL_HOST } from '@/lib/site-url';
 import { VALID_ROLES } from '@/lib/roles';
-import { capsForRole, fallbackCaps, fetchAccessRolesPublic } from '@/lib/access-roles';
+import { capsForProfile, capsForRole, defaultAccessRoles, fallbackCaps, fetchAccessRolesPublic } from '@/lib/access-roles';
 import { EMAIL_VERIFICATION_ENABLED } from '@/lib/email-verification';
 
 const AUTH_REQUIRED = ['/dashboard', '/settings', '/bookmarks', '/creator', '/employer', '/jobs/post', '/jobs/my', '/classifieds/post', '/classifieds/my'];
@@ -22,6 +22,11 @@ async function requestCaps(request, role, needsLookup) {
   const raw = request.cookies.get('bn_caps')?.value;
   if (raw === '0') return new Set();
   if (raw) return new Set(raw.split('.').filter(Boolean));
+  const boardId = request.cookies.get('bn_board')?.value || '';
+  if (role === 'content_writer' && /^[a-z][a-z0-9_]{0,31}$/.test(boardId)) {
+    const catalog = await fetchAccessRolesPublic();
+    return new Set(capsForProfile(catalog || defaultAccessRoles(), { role, boardId }));
+  }
   if (VALID_ROLES.has(role)) return new Set(fallbackCaps(role));
   if (!needsLookup) return new Set();
   const catalog = await fetchAccessRolesPublic();

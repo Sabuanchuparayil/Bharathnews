@@ -3,6 +3,7 @@ import { fetchAndParseFeed } from '../lib/rss-parser.js';
 import { rotateSourcePick } from '../lib/regional-rotation.js';
 import { ingestFeedItems } from '../lib/feed-item-store.js';
 import { getLimits } from '../lib/cf-limits.js';
+import { REGIONAL_LANGUAGES } from '../lib/regional-feeds.js';
 
 function pickSources(sources, maxTotal, priorityCategories = new Set(), priorityLanguages = new Set()) {
   return rotateSourcePick(sources, maxTotal, priorityCategories, priorityLanguages);
@@ -42,7 +43,7 @@ export async function handleRSSIngest(env) {
   ]);
 
   const englishDirect = allSources.filter(s => (s.language || 'en') === 'en');
-  const nonEnglish = [...allSources, ...googleSources].filter(s => (s.language || 'en') !== 'en');
+  const nonEnglish = [...allSources, ...googleSources].filter(s => REGIONAL_LANGUAGES.includes(s.language));
 
   const englishSlots = Math.min(L.ENGLISH_SOURCES_PER_TICK, englishDirect.length);
   const nonEnglishSlots = Math.max(0, L.MIXED_RSS_SOURCES - englishSlots);

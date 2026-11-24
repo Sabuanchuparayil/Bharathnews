@@ -9,7 +9,7 @@ import { getSources, updateSource, createSource, deleteSource } from '../service
 import { getCategoryLabel } from '../utils/categoryColors';
 
 const CATEGORIES = ['india', 'gcc', 'business', 'technology', 'sports', 'entertainment', 'health', 'education', 'jobs', 'realestate', 'world', 'lifestyle', 'opinion'];
-const LANGUAGES = ['en', 'hi', 'ml', 'ta', 'kn', 'te', 'bn'];
+const LANGUAGES = ['en', 'ml'];
 const TYPES = ['rss', 'googlenews', 'youtube'];
 
 const emptyForm = { name: '', url: '', category: 'india', language: 'en', type: 'rss', enabled: true };

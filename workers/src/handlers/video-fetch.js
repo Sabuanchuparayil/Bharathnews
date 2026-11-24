@@ -14,7 +14,8 @@ export async function handleVideoFetch(env, options = {}) {
     return [];
   }
 
-  const allChannels = await loadEnabledSources(env, 'youtube');
+  const allChannels = (await loadEnabledSources(env, 'youtube'))
+    .filter(channel => channel.language === 'ml' || channel.language === 'en');
   if (!allChannels.length) {
     console.log('Video fetch skipped: no enabled YouTube sources');
     return [];

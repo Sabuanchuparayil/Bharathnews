@@ -35,6 +35,7 @@ async function publishOne(env, raw, { skipImageResolve = false, skipSourceFetch 
   if (isBlockedPublisher({
     name: raw.source || '',
     sourceUrl: raw.sourceUrl || raw.source_url || '',
+    title: raw.title || '',
   })) {
     await patchRawArticle(env, slug, { status: 'rejected', editorial_status: 'rejected', reject_reason: 'blocked_publisher' });
     return 'skipped';
