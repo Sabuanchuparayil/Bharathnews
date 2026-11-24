@@ -351,7 +351,7 @@ const AdminDashboard = () => {
       </div>
 
       <div className="grid lg:grid-cols-5 gap-4 mt-4">
-        <SectionCard title="Most read" icon={Newspaper} className="lg:col-span-3">
+        <SectionCard title="Most read, 7 days" icon={Newspaper} className="lg:col-span-3">
           {!statsReady ? (
             <Skeleton className="h-24 w-full" />
           ) : (stats?.mostViewed || []).length === 0 ? (

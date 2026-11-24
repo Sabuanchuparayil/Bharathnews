@@ -19,7 +19,10 @@ async function exactCount(supabase, table, apply) {
   let query = supabase.from(table).select('id', { count: 'exact', head: true });
   if (apply) query = apply(query);
   const { count, error } = await query;
-  if (error) throw new Error(error.message || `Could not count ${table}.`);
+  if (error) {
+    console.error(`Stats count failed for ${table}:`, error.message);
+    return 0;
+  }
   return count || 0;
 }
 
@@ -60,6 +63,7 @@ export async function GET(request) {
       supabase.from('articles')
         .select('id, title, slug, views')
         .or('editorial_status.eq.published,editorial_status.is.null')
+        .gte('published_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
         .order('views', { ascending: false })
         .limit(5),
       supabase.from('article_referrers')
@@ -68,15 +72,11 @@ export async function GET(request) {
         .limit(500),
     ]);
 
-    if (facetsResult.error) {
-      return NextResponse.json({ error: facetsResult.error.message || 'Could not load stats.' }, { status: 500 });
-    }
-    if (recentResult.error) {
-      return NextResponse.json({ error: recentResult.error.message || 'Could not load recent articles.' }, { status: 500 });
-    }
+    if (facetsResult.error) console.error('Stats facets failed:', facetsResult.error.message);
+    if (recentResult.error) console.error('Stats recent articles failed:', recentResult.error.message);
 
     const stats = normalizeStats({
-      ...facetsResult.data,
+      ...(facetsResult.error || !facetsResult.data ? {} : facetsResult.data),
       totalArticles,
       subscribers,
       users,
@@ -85,7 +85,7 @@ export async function GET(request) {
       sourcesWithErrors,
       distributionPending,
       distributionFailed,
-      topArticles: recentResult.data,
+      topArticles: recentResult.error ? [] : recentResult.data,
       mostViewed: viewedResult.error ? [] : viewedResult.data,
       topReferrers: referrerTotals(referrerResult.error ? [] : referrerResult.data),
     });
