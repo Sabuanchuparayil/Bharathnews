@@ -36,6 +36,7 @@ export default function PublishDialog({
   open,
   title,
   category,
+  categories,
   authorSlug,
   languages,
   busy,
@@ -49,12 +50,15 @@ export default function PublishDialog({
   const [loadingBoard, setLoadingBoard] = useState(false);
   const [boardError, setBoardError] = useState('');
   const [publisherSlug, setPublisherSlug] = useState('');
-  const [chosenCategory, setChosenCategory] = useState(category || '');
+  const [chosenCategories, setChosenCategories] = useState([]);
   const [skipEnglish, setSkipEnglish] = useState(false);
 
   useEffect(() => {
     if (!open) return;
-    setChosenCategory(category || '');
+    const incoming = Array.isArray(categories) && categories.length
+      ? categories
+      : (category ? [category] : []);
+    setChosenCategories([...new Set(incoming.filter(item => item && item !== 'all'))].slice(0, 4));
     setSkipEnglish(Boolean(initialSkipEnglish) && storyLanguage !== 'en');
     setBoardError('');
     setLoadingBoard(true);
@@ -66,7 +70,7 @@ export default function PublishDialog({
       })
       .catch(err => setBoardError(err.message || 'Could not load the editorial board.'))
       .finally(() => setLoadingBoard(false));
-  }, [open, category, authorSlug, initialSkipEnglish, storyLanguage]);
+  }, [open, category, categories, authorSlug, initialSkipEnglish, storyLanguage]);
 
   if (!open) return null;
 
@@ -78,7 +82,14 @@ export default function PublishDialog({
     skipped: item.code === 'en' && waiveEnglish,
   }));
   const missing = rows.filter(item => !item.skipped && !item.ready);
-  const canPublish = !busy && !loadingBoard && publisherSlug && chosenCategory && missing.length === 0;
+  const toggleCategory = (id) => {
+    setChosenCategories(prev => {
+      if (prev.includes(id)) return prev.length === 1 ? prev : prev.filter(item => item !== id);
+      if (prev.length >= 4) return prev;
+      return [...prev, id];
+    });
+  };
+  const canPublish = !busy && !loadingBoard && publisherSlug && chosenCategories.length > 0 && missing.length === 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
@@ -117,17 +128,22 @@ export default function PublishDialog({
           )}
         </section>
 
-        <label className="block mt-5 text-sm font-semibold">
-          Category
-          <select
-            value={chosenCategory}
-            onChange={e => setChosenCategory(e.target.value)}
-            className="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm font-normal"
-          >
-            <option value="">Choose a category</option>
-            {contentCategories.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
-          </select>
-        </label>
+        <fieldset className="mt-5">
+          <legend className="text-sm font-semibold">Categories</legend>
+          <p className="text-xs text-gray-500 mt-0.5">Tick every section this story belongs to. Up to four.</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {contentCategories.map(item => (
+              <label key={item.id} className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm ${chosenCategories.includes(item.id) ? 'border-brand-600 bg-brand-50 dark:bg-brand-950/40' : 'border-stone-200 dark:border-white/10'}`}>
+                <input
+                  type="checkbox"
+                  checked={chosenCategories.includes(item.id)}
+                  onChange={() => toggleCategory(item.id)}
+                />
+                {item.name}
+              </label>
+            ))}
+          </div>
+        </fieldset>
 
         <section className="mt-5">
           <h4 className="text-sm font-semibold">Published by</h4>
@@ -176,7 +192,7 @@ export default function PublishDialog({
           <button
             type="button"
             disabled={!canPublish}
-            onClick={() => onConfirm({ publisherSlug, category: chosenCategory, skipEnglish: waiveEnglish })}
+            onClick={() => onConfirm({ publisherSlug, category: chosenCategories[0], categories: chosenCategories, skipEnglish: waiveEnglish })}
             className="px-4 py-2 bg-green-700 text-white rounded-xl text-sm disabled:opacity-50"
           >
             {busy ? 'Publishing…' : 'Publish'}

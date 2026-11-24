@@ -9,13 +9,26 @@ import { articleFreshnessMs } from '@/utils/articleDates';
 const emptyPage = { articles: [], lastDoc: null, hasMore: false };
 
 /** Card and list views. Omits full_content and translations, which make these sorts time out. */
-const LIST_COLUMNS = 'id,slug,title,summary,image_url,category,subcategory,source,source_url,author,language,views,likes,published_at,created_at,score';
+const LIST_COLUMNS = 'id,slug,title,summary,image_url,category,categories,subcategory,source,source_url,author,language,views,likes,published_at,created_at,score';
+const LIST_COLUMNS_PLAIN = LIST_COLUMNS.replace(',categories', '');
 
-function listQuery(supabase) {
+function listQuery(supabase, includeCategories = false) {
   return supabase
     .from('articles')
-    .select(LIST_COLUMNS)
+    .select(includeCategories ? LIST_COLUMNS : LIST_COLUMNS_PLAIN)
     .order('published_at', { ascending: false });
+}
+
+function safeCategoryId(value) {
+  return /^[a-z0-9-]+$/.test(String(value || '')) ? String(value) : '';
+}
+
+async function runList(supabase, build) {
+  const rich = await build(listQuery(supabase, true), true);
+  if (rich.error && /categories/i.test(rich.error.message || '')) {
+    return build(listQuery(supabase, false), false);
+  }
+  return rich;
 }
 
 function paginate(query, offset, pageSize) {
@@ -61,16 +74,16 @@ export const getArticlesPage = async (category = null, lastDoc = null, pageSize 
     return getBreakingArticlesPage(lastDoc, pageSize, language);
   }
 
-  let query = listQuery(supabase);
-  query = applyLanguageFilter(query, language);
-
-  if (category && category !== 'all') {
-    query = query.eq('category', category);
-  }
-
-  query = paginate(query, lastDoc?._offset, pageSize);
-
-  const { data, error } = await query;
+  const safeCategory = safeCategoryId(category);
+  const { data, error } = await runList(supabase, (query, extra) => {
+    let next = applyLanguageFilter(query, language);
+    if (safeCategory && category !== 'all') {
+      next = extra
+        ? next.or(`category.eq.${safeCategory},categories.cs.{${safeCategory}}`)
+        : next.eq('category', safeCategory);
+    }
+    return paginate(next, lastDoc?._offset, pageSize);
+  });
   if (error) {
     console.error('getArticlesPage:', error.message);
     return emptyPage;
@@ -178,10 +191,9 @@ export const getArticlesPageForSection = async (
     }
 
     const fetchSize = subcategoryId && subcategoryId !== 'all' ? pageSize * 4 : pageSize;
-    let query = applyLanguageFilter(listQuery(supabase), language);
-    query = paginate(query, lastDoc?._offset, fetchSize);
-
-    const { data, error } = await query;
+    const { data, error } = await runList(supabase, (query) => (
+      paginate(applyLanguageFilter(query, language), lastDoc?._offset, fetchSize)
+    ));
     if (error) {
       console.error('getArticlesPageForSection top-stories:', error.message);
       return emptyPage;
@@ -210,12 +222,16 @@ export const getArticlesPageForSection = async (
   }
 
   const fetchSize = subcategoryId && subcategoryId !== 'all' ? pageSize * 3 : pageSize;
+  const safeCategories = legacyCategories.map(safeCategoryId).filter(Boolean);
 
-  let query = listQuery(supabase).in('category', legacyCategories);
-  query = applyLanguageFilter(query, language);
-  query = paginate(query, lastDoc?._offset, fetchSize);
-
-  const { data, error } = await query;
+  const { data, error } = await runList(supabase, (query, extra) => {
+    const list = safeCategories.join(',');
+    let next = extra && list
+      ? query.or(`category.in.(${list}),categories.ov.{${list}}`)
+      : query.in('category', safeCategories.length ? safeCategories : legacyCategories);
+    next = applyLanguageFilter(next, language);
+    return paginate(next, lastDoc?._offset, fetchSize);
+  });
   if (error) {
     console.error('getArticlesPageForSection:', error.message);
     return emptyPage;

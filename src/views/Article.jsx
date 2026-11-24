@@ -26,6 +26,8 @@ import { getArticleSourceLang, resolveArticleDisplay } from '../lib/article-tran
 import { useLanguage } from '../context/LanguageContext';
 import { isExcerptOnly, normalizeArticleBody } from '@/lib/article-content';
 import Breadcrumbs, { categoryCrumb } from '../components/Breadcrumbs';
+import ArticleText from '../components/ArticleText';
+import { articleCategoryIds } from '@/config/category-taxonomy';
 
 const Article = ({ slug: slugProp, initialArticle = null }) => {
   const slug = slugProp;
@@ -216,15 +218,19 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
         <div className="lg:grid lg:grid-cols-[minmax(0,720px)_280px] lg:gap-10 lg:justify-center items-start">
         <article className="min-w-0">
           <header className="mb-6">
-            <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium mb-4 ${getCategoryColor(article.category)}`}>
-              {getCategoryLabel(article.category)}
-            </span>
+            <div className="flex flex-wrap gap-2 mb-4">
+              {articleCategoryIds(article).map(id => (
+                <span key={id} className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getCategoryColor(id)}`}>
+                  {getCategoryLabel(id)}
+                </span>
+              ))}
+            </div>
             <h1 className="font-display font-bold text-3xl md:text-4xl lg:text-5xl text-gray-900 dark:text-white mb-4 leading-tight text-balance">
-              {displayTitle}
+              <ArticleText text={displayTitle} />
             </h1>
             {displaySummary && (
               <p className="text-lg text-gray-600 dark:text-gray-300 mb-4 leading-relaxed">
-                {displaySummary}
+                <ArticleText text={displaySummary} />
               </p>
             )}
             <div className="flex items-center flex-wrap gap-x-4 gap-y-2 text-sm text-gray-500 dark:text-gray-400">
@@ -300,7 +306,7 @@ const Article = ({ slug: slugProp, initialArticle = null }) => {
               </div>
             )}
             {displayContent?.split(/\n+/).filter(Boolean).map((paragraph, i) => (
-              <p key={i}>{paragraph}</p>
+              <p key={i}><ArticleText text={paragraph} /></p>
             ))}
             {showSourceLink && (
               <a

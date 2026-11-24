@@ -10,6 +10,9 @@ import { useAuth } from '../context/AuthContext';
 import { useSiteSettings } from '../context/SiteSettingsContext';
 import { capsAllow } from '@/lib/access-roles';
 import { deskFetch } from '@/lib/desk-client';
+import ArticleText from '../components/ArticleText';
+import { getCategoryLabel } from '../utils/categoryColors';
+import { articleCategoryIds } from '@/config/category-taxonomy';
 
 const TABS = [
   { id: 'queue', label: 'Queue' },
@@ -147,20 +150,20 @@ const DeskReview = () => {
             <article key={article.id} className={`rounded-2xl border ${isAssignedToMe ? 'border-brand-300 dark:border-brand-700' : 'border-stone-200 dark:border-white/10'} p-5`}>
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs uppercase text-brand-700 dark:text-brand-300">{article.language} · {article.category} · {article.editorialStatus}</p>
-                  <h2 className="font-display font-bold text-xl mt-1">{article.title}</h2>
+                  <p className="text-xs uppercase text-brand-700 dark:text-brand-300">{article.language} · {articleCategoryIds(article).map(getCategoryLabel).join(', ')} · {article.editorialStatus}</p>
+                  <h2 className="font-display font-bold text-xl mt-1"><ArticleText text={article.title} /></h2>
                   {article.language === 'ml' && article.skipEnglish !== true && (
                     <div className="mt-3 rounded-xl bg-stone-50 dark:bg-white/5 px-3 py-2">
                       <p className="text-xs uppercase text-gray-500">English draft</p>
                       {article.translations?.en?.title && String(article.translations.en.fullContent || '').trim().length >= 40 ? (
                         <>
-                          <p className="font-medium mt-1">{article.translations.en.title}</p>
+                          <p className="font-medium mt-1"><ArticleText text={article.translations.en.title} /></p>
                           {article.translations.en.summary && (
-                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{article.translations.en.summary}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1"><ArticleText text={article.translations.en.summary} /></p>
                           )}
                         </>
                       ) : (
-                        <p className="text-sm text-gray-500 mt-1">The English draft is being prepared. Refresh the queue in a moment.</p>
+                        <p className="text-sm text-gray-500 mt-1">Open the draft and save it to prepare the English version.</p>
                       )}
                     </div>
                   )}
@@ -178,9 +181,9 @@ const DeskReview = () => {
               </button>
               {openId === article.id && (
                 <div className="mt-3 space-y-3">
-                  <p className="text-sm whitespace-pre-wrap text-gray-700 dark:text-gray-300 max-h-64 overflow-auto">{article.fullContent}</p>
+                  <p className="text-sm whitespace-pre-wrap text-gray-700 dark:text-gray-300 max-h-64 overflow-auto"><ArticleText text={article.fullContent} /></p>
                   {article.language === 'ml' && article.skipEnglish !== true && article.translations?.en?.fullContent && (
-                    <p className="text-sm whitespace-pre-wrap text-gray-700 dark:text-gray-300 max-h-64 overflow-auto border-t border-stone-200 dark:border-white/10 pt-3">{article.translations.en.fullContent}</p>
+                    <p className="text-sm whitespace-pre-wrap text-gray-700 dark:text-gray-300 max-h-64 overflow-auto border-t border-stone-200 dark:border-white/10 pt-3"><ArticleText text={article.translations.en.fullContent} /></p>
                   )}
                 </div>
               )}
@@ -272,6 +275,7 @@ const DeskReview = () => {
         open={Boolean(publishTarget)}
         title={publishTarget?.title}
         category={publishTarget?.category}
+        categories={publishTarget?.categories}
         authorSlug={publishTarget?.authorSlug}
         storyLanguage={publishTarget?.language || 'en'}
         initialSkipEnglish={publishTarget?.skipEnglish === true}

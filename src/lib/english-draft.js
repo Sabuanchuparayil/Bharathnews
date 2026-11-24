@@ -48,6 +48,24 @@ function textChunks(text) {
   return chunks;
 }
 
+async function translateMarked(text, translate) {
+  const parts = String(text || '').split(/(\*\*[^*\n]+?\*\*)/g);
+  let result = '';
+  for (const part of parts) {
+    if (!part) continue;
+    const bold = part.match(/^\*\*([^*\n]+)\*\*$/);
+    const source = bold ? bold[1] : part;
+    if (!source.trim()) {
+      result += part;
+      continue;
+    }
+    const translated = await translate(source);
+    if (!translated) return null;
+    result += bold ? `**${translated}**` : translated;
+  }
+  return result;
+}
+
 async function translateWithMemory(text) {
   const chunks = textChunks(text);
   if (!chunks.length) return '';
@@ -109,9 +127,9 @@ async function translateWithWorker({ title, summary, fullContent }) {
 async function translateMalayalamToEnglish({ title, summary, fullContent }) {
   const google = await translateWithWorker({ title, summary, fullContent });
   const draft = google || await (async () => {
-    const translatedTitle = await translateWithMemory(title);
-    const translatedSummary = summary ? await translateWithMemory(summary) : '';
-    const translatedBody = await translateWithMemory(fullContent);
+    const translatedTitle = await translateMarked(title, translateWithMemory);
+    const translatedSummary = summary ? await translateMarked(summary, translateWithMemory) : '';
+    const translatedBody = await translateMarked(fullContent, translateWithMemory);
     if (!translatedTitle || !translatedBody) return null;
     return {
       title: translatedTitle,

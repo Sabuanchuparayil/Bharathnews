@@ -1,4 +1,4 @@
-import { SUBCATEGORIES, LEGACY_TO_SUBCATEGORY } from '../config/category-taxonomy.js';
+import { SUBCATEGORIES, LEGACY_TO_SUBCATEGORY, articleCategoryIds } from '../config/category-taxonomy.js';
 
 function textBlob(article) {
   const parts = [
@@ -19,9 +19,7 @@ function matchesKeywords(text, keywords = []) {
  * Determine if an article belongs to a subcategory.
  * Uses DB subcategory column when present, then legacy category mapping, then keyword heuristics.
  */
-export function articleMatchesSubcategory(article, sectionId, subcategoryId) {
-  if (!subcategoryId || subcategoryId === 'all') return true;
-
+function matchesSingleCategory(article, sectionId, subcategoryId) {
   if (article.subcategory === subcategoryId) return true;
 
   const defaultSub = LEGACY_TO_SUBCATEGORY[article.category];
@@ -47,6 +45,19 @@ export function articleMatchesSubcategory(article, sectionId, subcategoryId) {
   }
 
   return defaultSub === subcategoryId;
+}
+
+export function articleMatchesSubcategory(article, sectionId, subcategoryId) {
+  if (!subcategoryId || subcategoryId === 'all') return true;
+  const ids = articleCategoryIds(article);
+  if (ids.length > 1) {
+    return ids.some(category => matchesSingleCategory({
+      ...article,
+      category,
+      subcategory: category === article.category ? article.subcategory : '',
+    }, sectionId, subcategoryId));
+  }
+  return matchesSingleCategory(article, sectionId, subcategoryId);
 }
 
 export function filterBySubcategory(articles, sectionId, subcategoryId) {

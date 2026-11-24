@@ -6,7 +6,6 @@ import { readSiteSettings } from '@/lib/site-settings';
 import {
   createEditorialArticle,
   editorialStats,
-  fillReviewEnglish,
   listEditorialArticles,
   publishDueDrafts,
   validateEditorialInput,
@@ -36,7 +35,7 @@ export async function GET(request) {
     const pageSize = settings.newsroom.reviewPageSize;
     const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10) || 0, 0);
     const status = view === 'mine' ? 'all' : (searchParams.get('status') || 'queue');
-    const listed = await listEditorialArticles({
+    const articles = await listEditorialArticles({
       status: view === 'mine' ? 'all' : status,
       mine: view === 'mine' ? auth.uid : null,
       assignedTo: view === 'assigned' ? auth.uid : null,
@@ -44,9 +43,6 @@ export async function GET(request) {
       limit: pageSize,
       offset,
     });
-    const articles = status === 'published' || status === 'rejected'
-      ? listed
-      : await fillReviewEnglish(listed);
     return NextResponse.json({ articles, hasMore: articles.length === pageSize, offset, role: auth.role });
   } catch (err) {
     return jsonError(err);

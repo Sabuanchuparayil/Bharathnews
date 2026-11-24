@@ -7,12 +7,13 @@ import { SOURCE_CATEGORY_IDS } from '@/config/category-taxonomy';
 import { readSiteSettings } from '@/lib/site-settings';
 import { recordAudit, snapshotArticle } from '@/lib/audit-log';
 import { findOpenImage } from '@/lib/open-images';
-import { englishDraftIsCurrent, withAutomaticEnglish } from '@/lib/english-draft';
+import { withAutomaticEnglish } from '@/lib/english-draft';
 
 const OPTIONAL_COLUMNS = [
   'is_ai_assisted', 'editor_notes', 'revision_count', 'scheduled_at', 'submitted_by',
   'image_credit', 'author_photo_url', 'author_title',
   'assigned_to', 'assigned_at', 'correction_note', 'unpublished_at', 'skip_english',
+  'categories',
 ];
 
 const CATEGORIES = new Set(SOURCE_CATEGORY_IDS);
@@ -44,13 +45,22 @@ function badRequest(message) {
 /** Checked on every publish: the board member signs it off and confirms the category. */
 export function validatePublishInput(body) {
   const publisherSlug = slugify(body?.publisherSlug || '');
-  const category = cleanText(body?.category, 40);
+  const categories = chosenCategories(body, '');
   if (!publisherSlug) return { error: 'Choose the editorial board member publishing this story.' };
-  if (!CATEGORIES.has(category)) return { error: 'Confirm a valid category before publishing.' };
+  if (!categories.length) return { error: 'Confirm a valid category before publishing.' };
   const skipEnglish = body && Object.prototype.hasOwnProperty.call(body, 'skipEnglish')
     ? body.skipEnglish === true
     : null;
-  return { value: { publisherSlug, category, skipEnglish } };
+  return { value: { publisherSlug, category: categories[0], categories, skipEnglish } };
+}
+
+function chosenCategories(body, fallback) {
+  const raw = Array.isArray(body?.categories) ? body.categories : [];
+  const picked = raw.map(item => cleanText(item, 40)).filter(item => CATEGORIES.has(item));
+  const single = cleanText(body?.category, 40);
+  const list = [...new Set(picked.length ? picked : (CATEGORIES.has(single) ? [single] : []))];
+  if (!list.length && CATEGORIES.has(fallback)) list.push(fallback);
+  return list.slice(0, 4);
 }
 
 async function resolveBoardMember(supabase, slug) {
@@ -135,7 +145,8 @@ export function validateEditorialInput(body, { partial = false, languages = null
   const title = cleanText(body.title, 200);
   const summary = cleanText(body.summary, 500);
   const fullContent = String(body.fullContent || body.full_content || '').trim().slice(0, 50000);
-  const category = cleanText(body.category, 40) || defaultCategory;
+  const categories = chosenCategories(body, defaultCategory);
+  const category = categories[0] || defaultCategory;
   const requested = cleanText(body.language, 8);
   const language = allowed.has(requested) ? requested : (allowed.has('en') ? 'en' : [...allowed][0]);
   const author = cleanText(body.author, 80);
@@ -196,6 +207,7 @@ export function validateEditorialInput(body, { partial = false, languages = null
       summary,
       fullContent,
       category,
+      categories,
       language,
       author,
       authorSlug,
@@ -279,6 +291,12 @@ async function writeRow(supabase, mode, payload, id) {
       err.status = 500;
       throw err;
     }
+    if (missing === 'categories' && Array.isArray(row.categories) && row.categories.length > 1) {
+      const err = new Error('More than one category needs the categories column.');
+      err.hint = 'Run supabase/migrations/20261124170000_article_categories.sql in the Supabase SQL editor.';
+      err.status = 500;
+      throw err;
+    }
     if (!missing) {
       const err = new Error(error.message || 'Could not save the article.');
       if (/column .* does not exist/i.test(error.message || '')) {
@@ -313,12 +331,14 @@ export async function createEditorialArticle(input, editor, { publishNow = false
     author_photo_url: resolved.authorPhotoUrl || '',
     author_title: resolved.authorTitle || '',
   };
-  let category = resolved.category;
+  let categories = resolved.categories?.length ? resolved.categories : [resolved.category];
+  let category = categories[0];
   if (publishNow) {
     if (!publishing) throw badRequest('Choose the editorial board member and confirm the category before publishing.');
     assertBilingual({ ...resolved, translations, skipEnglish: resolved.skipEnglish }, languages);
     byline = await resolveBoardMember(supabase, publishing.publisherSlug);
-    category = publishing.category;
+    categories = publishing.categories?.length ? publishing.categories : [publishing.category];
+    category = categories[0];
     translations = markTranslationsReviewed(translations, languages, { skipEnglish: resolved.skipEnglish === true });
   }
   let imageUrl = resolved.imageUrl || '';
@@ -354,6 +374,7 @@ export async function createEditorialArticle(input, editor, { publishNow = false
     image_credit: imageCredit,
     skip_english: resolved.skipEnglish === true,
     category,
+    categories,
     source,
     ...byline,
     language: resolved.language,
@@ -431,6 +452,7 @@ export async function updateEditorialArticle(id, input, { actorId = null, allowP
     image_credit: resolved.imageCredit || '',
     skip_english: skipEnglish,
     category: resolved.category,
+    categories: resolved.categories?.length ? resolved.categories : [resolved.category],
     author: resolved.author,
     author_slug: resolved.authorSlug,
     author_photo_url: resolved.authorPhotoUrl || '',
@@ -492,39 +514,7 @@ export async function getEditorialArticle(id) {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase.from('articles').select('*').eq('id', id).maybeSingle();
   if (error) throw error;
-  if (!data) return null;
-  const article = rowToApp(data);
-  const reviewable = article.editorialStatus === 'draft' || article.editorialStatus === 'needs_revision';
-  if (!reviewable || !needsFreshEnglish(article)) return article;
-  const translations = await withAutomaticEnglish(article);
-  if (!englishDraftIsCurrent(translations.en, article.title, article.fullContent)) return article;
-  const saved = await supabase.from('articles').update({ translations }).eq('id', id);
-  if (saved.error) return article;
-  return { ...article, translations };
-}
-
-function needsFreshEnglish(article) {
-  return String(article.language || '').trim().toLowerCase() === 'ml'
-    && article.skipEnglish !== true
-    && !englishDraftIsCurrent(article.translations?.en, article.title, article.fullContent);
-}
-
-export async function fillReviewEnglish(articles) {
-  const pending = (articles || []).filter(needsFreshEnglish).slice(0, 2);
-  if (!pending.length) return articles;
-  const supabase = getSupabaseAdmin();
-  const done = [];
-  for (const article of pending) {
-    const translations = await withAutomaticEnglish(article);
-    if (!englishDraftIsCurrent(translations.en, article.title, article.fullContent)) {
-      done.push(article);
-      continue;
-    }
-    const saved = await supabase.from('articles').update({ translations }).eq('id', article.id);
-    done.push(saved.error ? article : { ...article, translations });
-  }
-  const byId = new Map(done.map(item => [item.id, item]));
-  return articles.map(item => byId.get(item.id) || item);
+  return data ? rowToApp(data) : null;
 }
 
 export async function reviewEditorialArticle(id, { action, notes, publishing = null, actorId = null, correctionNote = '' }) {
@@ -565,7 +555,8 @@ export async function reviewEditorialArticle(id, { action, notes, publishing = n
       ...patch,
       ...byline,
       skip_english: skipEnglish,
-      category: publishing.category,
+      category: publishing.categories?.[0] || publishing.category,
+      categories: publishing.categories?.length ? publishing.categories : [publishing.category],
       is_ai_assisted: false,
       translations: markTranslationsReviewed(translations, languages, { skipEnglish }),
       editorial_status: 'published',

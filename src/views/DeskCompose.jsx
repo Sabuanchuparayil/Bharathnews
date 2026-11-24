@@ -20,6 +20,7 @@ const EMPTY = {
   summary: '',
   fullContent: '',
   category: 'india',
+  categories: ['india'],
   language: 'en',
   author: 'Bharath News Desk',
   authorSlug: 'bharath-news-desk',
@@ -99,7 +100,11 @@ const DeskCompose = () => {
           title: article.title || '',
           summary: article.summary || '',
           fullContent: article.fullContent || '',
-          category: article.category || settings.newsroom.defaultCategory || 'india',
+          category: (Array.isArray(article.categories) && article.categories[0]) || article.category || settings.newsroom.defaultCategory || 'india',
+          categories: (Array.isArray(article.categories) && article.categories.length
+            ? article.categories
+            : [article.category || settings.newsroom.defaultCategory || 'india']
+          ).filter(Boolean).slice(0, 4),
           language,
           author: article.author || 'Bharath News Desk',
           authorSlug: article.authorSlug || 'bharath-news-desk',
@@ -126,8 +131,9 @@ const DeskCompose = () => {
       title: form.title,
       summary: form.summary,
       fullContent: form.fullContent,
-      category: publishing?.category || form.category,
-      publisherSlug: publishing?.publisherSlug || '',
+    category: publishing?.categories?.[0] || publishing?.category || form.categories?.[0] || form.category,
+    categories: publishing?.categories || form.categories || [form.category],
+    publisherSlug: publishing?.publisherSlug || '',
       language: form.language,
       author: form.author,
       authorSlug: form.authorSlug,
@@ -162,7 +168,8 @@ const DeskCompose = () => {
           body: JSON.stringify({
             action: 'publish',
             publisherSlug: publishing?.publisherSlug || '',
-            category: publishing?.category || form.category,
+            category: publishing?.categories?.[0] || publishing?.category || form.categories?.[0] || form.category,
+            categories: publishing?.categories || form.categories || [form.category],
             skipEnglish: publishing?.skipEnglish === true,
           }),
         });
@@ -311,6 +318,7 @@ const DeskCompose = () => {
             <label className="block text-sm font-medium">
               {primaryLanguage.label} full story
               <textarea required value={form.fullContent} onChange={e => set('fullContent', e.target.value)} rows={14} className="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
+              <span className="mt-1 block text-xs font-normal text-gray-500">Wrap a sentence in **double asterisks** to make it bold.</span>
             </label>
           </div>
           {form.language !== 'en' && (
@@ -350,12 +358,34 @@ const DeskCompose = () => {
               </div>
             );
           })}
-          <label className="block text-sm font-medium">
-            Category
-            <select value={form.category} onChange={e => set('category', e.target.value)} className="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm">
-              {contentCategories.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
-            </select>
-          </label>
+          <fieldset>
+            <legend className="text-sm font-medium">Categories</legend>
+            <p className="text-xs text-gray-500 mt-1">Tick every section this story belongs to. Up to four. The first one you tick is the main category.</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {contentCategories.map(item => {
+                const selected = (form.categories || []).includes(item.id);
+                return (
+                  <label key={item.id} className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm ${selected ? 'border-brand-600 bg-brand-50 dark:bg-brand-950/40' : 'border-stone-200 dark:border-white/10'}`}>
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      onChange={() => {
+                        setForm(prev => {
+                          const current = prev.categories?.length ? prev.categories : [prev.category];
+                          const next = current.includes(item.id)
+                            ? current.filter(id => id !== item.id)
+                            : [...current, item.id].slice(0, 4);
+                          if (!next.length) return prev;
+                          return { ...prev, categories: next, category: next[0] };
+                        });
+                      }}
+                    />
+                    {item.name}
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
           <div className="rounded-2xl border border-stone-200 dark:border-white/10 p-4 space-y-3">
             <StaffAuthorPicker
               value={form}
@@ -411,6 +441,7 @@ const DeskCompose = () => {
           open={publishOpen}
           title={form.title}
           category={form.category}
+          categories={form.categories}
           authorSlug={form.authorSlug}
           storyLanguage={form.language}
           initialSkipEnglish={form.skipEnglish}

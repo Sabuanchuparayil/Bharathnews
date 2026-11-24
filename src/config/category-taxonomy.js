@@ -233,6 +233,14 @@ export function getSectionForPath(pathname) {
   return null;
 }
 
+export function articleCategoryIds(article) {
+  const extra = Array.isArray(article?.categories) ? article.categories : [];
+  const ids = [article?.category, ...extra]
+    .map(item => String(item || '').trim())
+    .filter(item => item && item !== 'all');
+  return [...new Set(ids)];
+}
+
 export function getSectionForLegacyCategory(category) {
   return LEGACY_TO_SECTION[category] || null;
 }

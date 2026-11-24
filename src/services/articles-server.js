@@ -31,11 +31,23 @@ export async function getArticlesPageServer(category = null, pageSize = 20) {
     .order('created_at', { ascending: false })
     .limit(pageSize);
 
-  if (category && category !== 'all') {
-    query = query.eq('category', category);
+  const safeCategory = /^[a-z0-9-]+$/.test(String(category || '')) ? String(category) : '';
+  if (safeCategory && category !== 'all') {
+    query = query.or(`category.eq.${safeCategory},categories.cs.{${safeCategory}}`);
   }
 
-  const { data } = await query;
+  let { data, error } = await query;
+  if (error && /categories/i.test(error.message || '') && safeCategory && category !== 'all') {
+    let fallback = supabase
+      .from('articles')
+      .select('*')
+      .or('editorial_status.eq.published,editorial_status.is.null')
+      .eq('category', safeCategory)
+      .order('created_at', { ascending: false })
+      .limit(pageSize);
+    const retry = await fallback;
+    data = retry.data;
+  }
   const articles = rowsToApp(data || []).map(serializeDoc);
   return { articles, hasMore: (data?.length || 0) === pageSize };
 }
