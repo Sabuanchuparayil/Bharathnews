@@ -3,6 +3,8 @@ import { verifyAdminRequest, createUserWithRole } from '@/lib/supabase-admin';
 import { getSupabaseAdmin } from '@/lib/supabase-server';
 import { rowToApp } from '@/lib/db-mapper';
 import { isAccountStatus } from '@/lib/account-status';
+import { readAccessRoles, resolveRoleAssignment } from '@/lib/access-roles';
+import { syncUserEditorialSeat } from '@/lib/staff-profiles';
 
 const MAX_PAGE_SIZE = 100;
 // Only the columns the admin UI needs - phone, date of birth etc. stay private.
@@ -44,9 +46,24 @@ export async function GET(request) {
       return NextResponse.json({ error: error.message || 'Could not load users.' }, { status: 500 });
     }
 
+    const ids = (data || []).map(row => row.id);
+    const titles = new Map();
+    if (ids.length) {
+      const { data: seats } = await supabase
+        .from('staff_profiles')
+        .select('user_id, title, is_active')
+        .in('user_id', ids);
+      for (const seat of seats || []) {
+        if (seat.is_active) titles.set(seat.user_id, seat.title || '');
+      }
+    }
+
     const total = count ?? (data || []).length;
     return NextResponse.json({
-      users: (data || []).map(rowToApp),
+      users: (data || []).map(row => ({
+        ...rowToApp(row),
+        editorialTitle: titles.get(row.id) || '',
+      })),
       total,
       hasMore: offset + (data || []).length < total,
     });
@@ -71,10 +88,32 @@ export async function POST(request) {
   const { email, password, displayName, role = 'reader' } = body || {};
 
   try {
-    const user = await createUserWithRole({ email, password, displayName, role });
-    return NextResponse.json({ user }, { status: 201 });
+    const supabase = getSupabaseAdmin();
+    const assignment = resolveRoleAssignment(role, await readAccessRoles(supabase));
+    if (assignment.error) {
+      return NextResponse.json({ error: assignment.error }, { status: 400 });
+    }
+    const user = await createUserWithRole({
+      email,
+      password,
+      displayName,
+      role: assignment.accountRole,
+    });
+    let editorialTitle = '';
+    if (assignment.board === 'set') {
+      const seat = await syncUserEditorialSeat(supabase, {
+        userId: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        title: assignment.editorialTitle,
+        board: 'set',
+      });
+      editorialTitle = seat.editorialTitle;
+    }
+    return NextResponse.json({ user: { ...user, editorialTitle } }, { status: 201 });
   } catch (err) {
     const status = err.status || 400;
-    return NextResponse.json({ error: err.message || 'Failed to create user.' }, { status });
+    const message = err.hint ? `${err.message} ${err.hint}` : (err.message || 'Failed to create user.');
+    return NextResponse.json({ error: message }, { status });
   }
 }

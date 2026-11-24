@@ -173,6 +173,73 @@ export async function resolveStaffAuthor({ author, authorSlug } = {}) {
   };
 }
 
+/** Creates, retitles, or deactivates the board seat linked to a user account. */
+export async function syncUserEditorialSeat(supabase, { userId, email, displayName, title, board }) {
+  if (!userId || board === 'keep') return { editorialTitle: '' };
+
+  const { data: existing, error } = await supabase
+    .from('staff_profiles')
+    .select('id')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) {
+    const err = new Error(error.message || 'Could not update the editorial board.');
+    err.hint = migrationHint(error.message);
+    throw err;
+  }
+
+  const now = new Date().toISOString();
+  if (board === 'clear') {
+    if (existing) {
+      const { error: updateError } = await supabase
+        .from('staff_profiles')
+        .update({ is_active: false, updated_at: now })
+        .eq('id', existing.id);
+      if (updateError) throw new Error(updateError.message || 'Could not update the editorial board.');
+    }
+    return { editorialTitle: '' };
+  }
+
+  if (existing) {
+    const { error: updateError } = await supabase
+      .from('staff_profiles')
+      .update({ title, is_active: true, email: email || '', updated_at: now })
+      .eq('id', existing.id);
+    if (updateError) throw new Error(updateError.message || 'Could not update the editorial board.');
+    return { editorialTitle: title };
+  }
+
+  const name = cleanText(displayName, 80) || cleanText(String(email || '').split('@')[0], 80) || 'Editor';
+  const base = slugify(name) || 'editor';
+  let slug = base;
+  for (let n = 2; n < 30; n += 1) {
+    const { data: clash } = await supabase.from('staff_profiles').select('id').eq('slug', slug).maybeSingle();
+    if (!clash) break;
+    slug = `${base}-${n}`.slice(0, 48);
+  }
+
+  const { error: insertError } = await supabase.from('staff_profiles').insert({
+    slug,
+    display_name: name,
+    title,
+    photo_url: '',
+    bio: '',
+    email: email || '',
+    sort_order: 100,
+    is_active: true,
+    assigned_topics: [],
+    user_id: userId,
+    created_at: now,
+    updated_at: now,
+  });
+  if (insertError) {
+    const err = new Error(insertError.message || 'Could not add this person to the editorial board.');
+    err.hint = migrationHint(insertError.message);
+    throw err;
+  }
+  return { editorialTitle: title };
+}
+
 export async function createStaffProfile(input, { userId = null } = {}) {
   const supabase = getSupabaseAdmin();
   const { data: existing } = await supabase.from('staff_profiles').select('id').eq('slug', input.slug).maybeSingle();

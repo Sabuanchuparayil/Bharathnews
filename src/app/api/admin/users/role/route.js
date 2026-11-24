@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { verifyAdminRequest } from '@/lib/supabase-admin';
 import { getSupabaseAdmin } from '@/lib/supabase-server';
-import { countOtherActiveAdmins, readAccessRoles, roleHasCap } from '@/lib/access-roles';
+import { countOtherActiveAdmins, readAccessRoles, resolveRoleAssignment, roleHasCap } from '@/lib/access-roles';
+import { syncUserEditorialSeat } from '@/lib/staff-profiles';
 
 export async function POST(request) {
   const auth = await verifyAdminRequest(request);
@@ -23,12 +24,13 @@ export async function POST(request) {
   const supabase = getSupabaseAdmin();
   try {
     const roles = await readAccessRoles(supabase);
-    if (typeof role !== 'string' || !roles.some(item => item.id === role)) {
-      return NextResponse.json({ error: 'Choose one of the access roles.' }, { status: 400 });
+    const assignment = resolveRoleAssignment(role, roles);
+    if (assignment.error) {
+      return NextResponse.json({ error: assignment.error }, { status: 400 });
     }
     const { data: target, error: targetError } = await supabase
       .from('users')
-      .select('id, email, role')
+      .select('id, email, display_name, role')
       .eq('id', userId)
       .maybeSingle();
     if (targetError) {
@@ -37,11 +39,7 @@ export async function POST(request) {
     if (!target) {
       return NextResponse.json({ error: 'User not found.' }, { status: 404 });
     }
-    if (target.role === role) {
-      return NextResponse.json({ success: true, role, unchanged: true });
-    }
-
-    const removingAdmin = roleHasCap(roles, target.role, 'admin') && !roleHasCap(roles, role, 'admin');
+    const removingAdmin = roleHasCap(roles, target.role, 'admin') && !roleHasCap(roles, assignment.accountRole, 'admin');
     if (removingAdmin) {
       if (userId === auth.uid) {
         return NextResponse.json({ error: "You can't remove your own admin access." }, { status: 400 });
@@ -52,15 +50,37 @@ export async function POST(request) {
       }
     }
 
-    const { error } = await supabase.from('users').update({ role }).eq('id', userId);
-    if (error) {
-      const message = /users_role_check|check constraint/i.test(error.message || '')
-        ? 'Run supabase/migrations/20261111120000_custom_access_roles.sql in the Supabase SQL editor, then try again.'
-        : (error.message || 'Could not update role.');
-      return NextResponse.json({ error: message }, { status: 500 });
+    if (target.role !== assignment.accountRole) {
+      const { error } = await supabase.from('users').update({ role: assignment.accountRole }).eq('id', userId);
+      if (error) {
+        const message = /users_role_check|check constraint/i.test(error.message || '')
+          ? 'Run supabase/migrations/20261111120000_custom_access_roles.sql in the Supabase SQL editor, then try again.'
+          : (error.message || 'Could not update role.');
+        return NextResponse.json({ error: message }, { status: 500 });
+      }
     }
-    return NextResponse.json({ success: true, role });
+
+    let editorialTitle = '';
+    if (assignment.board === 'keep') {
+      const { data: seat } = await supabase
+        .from('staff_profiles')
+        .select('title, is_active')
+        .eq('user_id', userId)
+        .maybeSingle();
+      editorialTitle = seat?.is_active ? (seat.title || '') : '';
+    } else {
+      const seat = await syncUserEditorialSeat(supabase, {
+        userId,
+        email: target.email,
+        displayName: target.display_name,
+        title: assignment.editorialTitle,
+        board: assignment.board,
+      });
+      editorialTitle = seat.editorialTitle;
+    }
+    return NextResponse.json({ success: true, role: assignment.accountRole, editorialTitle });
   } catch (err) {
-    return NextResponse.json({ error: err?.message || 'Failed to update role.' }, { status: 500 });
+    const message = err?.hint ? `${err.message} ${err.hint}` : (err?.message || 'Failed to update role.');
+    return NextResponse.json({ error: message }, { status: err?.status || 500 });
   }
 }

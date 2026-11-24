@@ -20,7 +20,53 @@ import { mergeSiteSettings } from '../lib/site-settings';
 import {
   CAPABILITY_OPTIONS, READER_BLOCKED_CAPS, defaultAccessRoles, slugifyRoleId,
 } from '@/lib/access-roles';
+import { EDITORIAL_BOARD_ROLES } from '@/lib/staff-profiles-client';
 const LANG_OPTIONS = ['en', 'ml'];
+
+function roleChoices(accessRoles) {
+  const editorialIds = new Set(EDITORIAL_BOARD_ROLES.map(item => item.id));
+  const editorial = [
+    ...EDITORIAL_BOARD_ROLES.map(item => ({
+      value: item.id === 'content_writer' ? 'content_writer' : `board:${item.id}`,
+      label: item.title,
+    })),
+    ...accessRoles
+      .filter(role => !role.builtin && role.caps.includes('editorial') && !role.caps.includes('admin'))
+      .map(role => ({ value: role.id, label: role.label })),
+  ];
+  const other = accessRoles
+    .filter(role => {
+      if (editorialIds.has(role.id)) return false;
+      if (!role.builtin && role.caps.includes('editorial') && !role.caps.includes('admin')) return false;
+      return true;
+    })
+    .map(role => ({ value: role.id, label: role.label }));
+  return { editorial, other };
+}
+
+function selectedAssignment(user) {
+  if ((user.role || 'reader') === 'content_writer' && user.editorialTitle) {
+    const match = EDITORIAL_BOARD_ROLES.find(item => item.title === user.editorialTitle);
+    if (match && match.id !== 'content_writer') return `board:${match.id}`;
+  }
+  return user.role || 'reader';
+}
+
+function RoleSelect({ value, onChange, accessRoles, ariaLabel, className }) {
+  const { editorial, other } = roleChoices(accessRoles);
+  const known = new Set([...editorial, ...other].map(item => item.value));
+  return (
+    <select value={known.has(value) ? value : (value || 'reader')} onChange={onChange} aria-label={ariaLabel} className={className}>
+      {!known.has(value) && value ? <option value={value}>{value}</option> : null}
+      <optgroup label="Editorial board">
+        {editorial.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
+      </optgroup>
+      <optgroup label="Account access">
+        {other.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
+      </optgroup>
+    </select>
+  );
+}
 const TABS = [
   { id: 'general', label: 'General', icon: Settings2 },
   { id: 'integrations', label: 'Integrations', icon: MessageCircle },
@@ -192,10 +238,13 @@ const AdminSettings = () => {
   };
 
   const changeRole = async (userId, role) => {
-    if (!accessRoles.some(item => item.id === role)) return;
     try {
-      await setUserRole(userId, role);
-      setUsers(prev => prev.map(u => u.id === userId ? { ...u, role } : u));
+      const result = await setUserRole(userId, role);
+      setUsers(prev => prev.map(u => (
+        u.id === userId
+          ? { ...u, role: result.role || u.role, editorialTitle: result.editorialTitle || '' }
+          : u
+      )));
       if (user?.id === userId) await refreshUserProfile();
       toast.success('Role updated');
     } catch (err) {
@@ -211,7 +260,9 @@ const AdminSettings = () => {
     try {
       const { createAdminUser } = await import('../services/admin');
       const created = await createAdminUser(newUser);
-      const label = accessRoles.find(item => item.id === created.role)?.label || created.role;
+      const label = created.editorialTitle
+        || accessRoles.find(item => item.id === created.role)?.label
+        || created.role;
       toast.success(`Created ${created.email} as ${label}`);
       setNewUser({ email: '', password: '', displayName: '', role: 'reader' });
       await loadUsers(null, true);
@@ -759,17 +810,14 @@ const AdminSettings = () => {
                   placeholder="Optional"
                 />
               </Field>
-              <Field label="Access role" hint="Create and rename roles in the list above. Editorial job titles stay on Editorial staff.">
-                <select
+              <Field label="Role" hint="Editorial board roles open the newsroom and add this person to the publish list. Photos and bios are edited on Editorial staff.">
+                <RoleSelect
                   value={newUser.role}
                   onChange={e => setNewUser(prev => ({ ...prev, role: e.target.value }))}
+                  accessRoles={accessRoles}
+                  ariaLabel="Role for the new user"
                   className={inputClass}
-                >
-                  {accessRoles.map(role => (
-                    <option key={role.id} value={role.id}>{role.label}</option>
-                  ))}
-                </select>
-                <Link href="/admin/staff" className="inline-block text-xs text-brand-600 mt-2">Create a new editorial role</Link>
+                />
               </Field>
               <div className="sm:col-span-2">
                 <button
@@ -835,20 +883,20 @@ const AdminSettings = () => {
                           {isSelf && <span className="text-[10px] text-gray-400 flex-shrink-0">(you)</span>}
                         </div>
                         <p className="text-xs text-gray-500 truncate">{u.email}</p>
+                        {u.editorialTitle ? (
+                          <p className="text-xs text-brand-700 dark:text-brand-300 truncate">Editorial board · {u.editorialTitle}</p>
+                        ) : null}
                         {accountStatus !== 'active' && u.status_reason && (
                           <p className="text-xs text-gray-500 mt-0.5 truncate" title={u.status_reason}>Reason: {u.status_reason}</p>
                         )}
                       </div>
-                      <select
-                        value={u.role || 'reader'}
+                      <RoleSelect
+                        value={selectedAssignment(u)}
                         onChange={e => changeRole(u.id, e.target.value)}
-                        aria-label={`Role for ${u.email}`}
+                        accessRoles={accessRoles}
+                        ariaLabel={`Role for ${u.email}`}
                         className="text-sm px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-transparent flex-shrink-0"
-                      >
-                        {(accessRoles.some(role => role.id === (u.role || 'reader')) ? accessRoles : [...accessRoles, { id: u.role, label: u.role }]).map(role => (
-                          <option key={role.id} value={role.id}>{role.label}</option>
-                        ))}
-                      </select>
+                      />
                     </div>
                     <div className="flex flex-wrap gap-2 mt-2">
                       <button

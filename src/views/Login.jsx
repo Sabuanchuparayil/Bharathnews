@@ -8,7 +8,9 @@ import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
-  const { user, userProfile, loading, loginWithGoogle, loginWithEmail, isAdmin } = useAuth();
+  const {
+    user, userProfile, loading, accessReady, loginWithGoogle, loginWithEmail, isAdmin, isEmailVerified, isProfileComplete,
+  } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState('');
@@ -34,7 +36,7 @@ export default function Login() {
   }, []);
 
   useEffect(() => {
-    if (loading || !user) return;
+    if (loading || !user || !accessReady) return;
 
     if (isAdminFlow) {
       if (!userProfile) return;
@@ -44,8 +46,18 @@ export default function Login() {
       }
     }
 
+    // Leave only after the access cookie is saved. Navigating earlier makes the
+    // server send the browser back to this page, and the redirect does not retry.
+    if (!isEmailVerified) {
+      router.replace(`/verify-email?next=${encodeURIComponent(next)}`);
+      return;
+    }
+    if (!isProfileComplete) {
+      router.replace(`/complete-profile?next=${encodeURIComponent(next)}`);
+      return;
+    }
     router.replace(next);
-  }, [loading, user, userProfile, isAdmin, isAdminFlow, next, router]);
+  }, [loading, user, userProfile, accessReady, isEmailVerified, isProfileComplete, isAdmin, isAdminFlow, next, router]);
 
   const handleGoogleSignIn = async () => {
     setError('');

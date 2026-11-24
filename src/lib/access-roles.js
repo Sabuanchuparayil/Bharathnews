@@ -1,4 +1,5 @@
 import { ALLOWED_ROLES, ROLE_LABELS } from './roles';
+import { EDITORIAL_BOARD_ROLES } from './staff-profiles-client';
 
 export const CAPABILITY_OPTIONS = [
   { id: 'admin', label: 'Admin area', detail: 'Settings, users, sources, and the rest of the admin pages' },
@@ -83,6 +84,36 @@ export function roleHasCap(roles, id, cap) {
 
 export function fallbackCaps(id) {
   return DEFAULT_CAPS[id] ? [...DEFAULT_CAPS[id]] : [];
+}
+
+/**
+ * Turns a Manage Users selection into the account role plus what should happen
+ * to that person's editorial board seat.
+ * `board:editor` keeps the account as Content Writer and sets the board title.
+ */
+export function resolveRoleAssignment(value, accessRoles) {
+  const raw = String(value || '').trim();
+  if (raw.startsWith('board:')) {
+    const board = EDITORIAL_BOARD_ROLES.find(item => item.id === raw.slice('board:'.length));
+    if (!board) return { error: 'Choose an editorial role.' };
+    return { accountRole: 'content_writer', editorialTitle: board.title, board: 'set' };
+  }
+
+  const access = (accessRoles || []).find(item => item.id === raw);
+  if (!access) return { error: 'Choose one of the access roles.' };
+
+  const known = EDITORIAL_BOARD_ROLES.find(item => item.id === access.id);
+  if (known || (access.caps.includes('editorial') && !access.caps.includes('admin'))) {
+    return {
+      accountRole: access.id,
+      editorialTitle: known ? known.title : access.label,
+      board: 'set',
+    };
+  }
+  if (access.caps.includes('admin')) {
+    return { accountRole: access.id, editorialTitle: '', board: 'keep' };
+  }
+  return { accountRole: access.id, editorialTitle: '', board: 'clear' };
 }
 
 export function adminRoleIds(roles) {

@@ -22,6 +22,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState(null);
   const [accessRoles, setAccessRoles] = useState(() => defaultAccessRoles());
+  const [accessReady, setAccessReady] = useState(false);
 
   const loadProfile = useCallback(async (supabase, userId) => {
     const { data, error } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
@@ -52,6 +53,7 @@ export const AuthProvider = ({ children }) => {
       if (!session?.user) {
         setUser(null);
         setUserProfile(null);
+        setAccessReady(false);
         clearAuthCookies();
         setLoading(false);
         return;
@@ -99,10 +101,13 @@ export const AuthProvider = ({ children }) => {
           profileComplete: hasCompleteProfile(profile),
           caps: capsForRole(catalog, profile?.role || 'reader'),
         });
+        setAccessReady(true);
       } catch (err) {
         if (isStale()) return;
         logger.error('Failed to load user profile:', err);
         setUserProfile(null);
+        setAuthCookies('reader', { emailVerified: false, profileComplete: false, caps: [] });
+        setAccessReady(true);
       }
       setLoading(false);
     };
@@ -290,6 +295,7 @@ export const AuthProvider = ({ children }) => {
     user,
     userProfile,
     loading,
+    accessReady,
     loginWithGoogle,
     loginWithEmail,
     logout,
