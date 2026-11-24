@@ -385,19 +385,36 @@ export async function updateEditorialArticle(id, input, { actorId = null, allowP
   return article;
 }
 
+const DESK_STATUSES = ['draft', 'needs_revision', 'published', 'rejected', 'unpublished'];
+
+function statusesForList(status) {
+  if (status === 'queue') return ['draft', 'needs_revision'];
+  if (!status || status === 'all') return DESK_STATUSES;
+  return [status];
+}
+
 export async function listEditorialArticles({ status = 'draft', mine = null, assignedTo = null, unassigned = false, limit = 40, offset = 0 } = {}) {
   const { supabase, source, pageSize } = await newsroomContext();
   const size = Math.min(Math.max(limit || pageSize, 1), 100);
   const start = Math.max(offset || 0, 0);
-  let query = supabase.from('articles').select('*').eq('source', source).order('created_at', { ascending: false }).range(start, start + size - 1);
-  if (status === 'queue') query = query.in('editorial_status', ['draft', 'needs_revision']);
-  else if (status !== 'all') query = query.eq('editorial_status', status);
-  if (mine) query = query.eq('submitted_by', mine);
-  if (assignedTo) query = query.eq('assigned_to', assignedTo);
-  if (unassigned) query = query.is('assigned_to', null);
-  const { data, error } = await query;
-  if (error) throw error;
-  return rowsToApp(data || []);
+  const need = start + size;
+  const batches = await Promise.all(statusesForList(status).map(item => {
+    let query = supabase.from('articles')
+      .select('*')
+      .eq('source', source)
+      .eq('editorial_status', item)
+      .order('created_at', { ascending: false })
+      .limit(need);
+    if (mine) query = query.eq('submitted_by', mine);
+    if (assignedTo) query = query.eq('assigned_to', assignedTo);
+    if (unassigned) query = query.is('assigned_to', null);
+    return query;
+  }));
+  const failed = batches.find(result => result.error);
+  if (failed) throw failed.error;
+  const rows = batches.flatMap(result => result.data || []);
+  rows.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  return rowsToApp(rows.slice(start, start + size));
 }
 
 export async function getEditorialArticle(id) {
@@ -602,15 +619,22 @@ export async function assignArticle(articleId, userId, { actorId = null } = {}) 
 export async function editorialStats() {
   const { supabase, source } = await newsroomContext();
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const [queue, publishedWeek, recent] = await Promise.all([
+  const [queue, publishedWeek, ...recentBatches] = await Promise.all([
     supabase.from('articles').select('id', { count: 'exact', head: true }).eq('source', source).in('editorial_status', ['draft', 'needs_revision']),
     supabase.from('articles').select('id', { count: 'exact', head: true }).eq('source', source).eq('editorial_status', 'published').gte('published_at', since),
-    supabase.from('articles').select('id, title, slug, author, editorial_status, language, published_at, created_at').eq('source', source).order('created_at', { ascending: false }).limit(8),
+    ...DESK_STATUSES.map(status => supabase.from('articles')
+      .select('id, title, slug, author, editorial_status, language, published_at, created_at')
+      .eq('source', source)
+      .eq('editorial_status', status)
+      .order('created_at', { ascending: false })
+      .limit(8)),
   ]);
+  const recent = recentBatches.flatMap(result => result.data || []);
+  recent.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   return {
     queue: queue.count || 0,
     publishedWeek: publishedWeek.count || 0,
-    recent: rowsToApp(recent.data || []),
+    recent: rowsToApp(recent.slice(0, 8)),
   };
 }
 

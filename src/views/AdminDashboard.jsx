@@ -122,7 +122,7 @@ function CoworkCard({ cowork, ready, staleHours }) {
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Last received</p>
           <p className={`text-sm font-medium ${stale ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>
-            {sinceHours !== null ? (sinceHours === 0 ? 'Less than 1 hour ago' : `${sinceHours}h ago`) : 'No data'}
+            {sinceHours !== null ? (sinceHours === 0 ? 'Less than 1 hour ago' : `${sinceHours}h ago`) : 'No batch received'}
           </p>
           {stale && <p className="text-[10px] text-red-500 mt-0.5">No content received in {sinceHours}+ hours</p>}
         </div>
