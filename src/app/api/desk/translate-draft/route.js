@@ -33,6 +33,7 @@ export async function POST(request) {
       fullContent: body.fullContent,
       skipEnglish: body.skipEnglish === true,
       skipMalayalam: body.skipMalayalam === true,
+      force: body.force === true,
       translations: body.translations,
     }, id);
     return NextResponse.json(result);

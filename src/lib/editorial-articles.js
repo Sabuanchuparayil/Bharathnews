@@ -540,7 +540,7 @@ const DESK_LIST_COLUMNS = [
   'id', 'title', 'slug', 'summary', 'author', 'author_slug', 'language', 'category',
   'categories', 'editorial_status', 'image_url', 'assigned_to', 'created_at',
   'published_at', 'scheduled_at', 'skip_english', 'skip_malayalam', 'submitted_by',
-  'editor_notes', 'correction_note',
+  'editor_notes', 'correction_note', 'translations',
 ];
 const DESK_LIST_OPTIONAL = [
   'categories', 'skip_english', 'skip_malayalam', 'assigned_to', 'scheduled_at',
@@ -641,6 +641,7 @@ export async function prepareEditorialTranslation(input, id = null) {
     summary,
     fullContent,
     ...flags,
+    force: input.force === true,
     translations: dropWaived({
       ...(existing?.translations || {}),
       ...(input.translations && typeof input.translations === 'object' ? input.translations : {}),

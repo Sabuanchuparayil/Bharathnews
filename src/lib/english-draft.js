@@ -98,7 +98,7 @@ async function translateWithWorker({ title, summary, fullContent, sourceLang, ta
   if (!WORKER_URL) return null;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.thebharathnews.com';
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 12000);
+  const timer = setTimeout(() => controller.abort(), 25000);
   try {
     const response = await fetch(`${WORKER_URL}/api/article-translate`, {
       method: 'POST',
@@ -173,7 +173,7 @@ async function translatePair({ title, summary, fullContent, sourceLang, targetLa
   };
 }
 
-async function fillPartner(article, { sourceLang, targetLang, skip }) {
+async function fillPartner(article, { sourceLang, targetLang, skip, force = false }) {
   const translations = { ...(article.translations || {}) };
   if (skip) return translations;
   const current = translations[targetLang];
@@ -184,7 +184,7 @@ async function fillPartner(article, { sourceLang, targetLang, skip }) {
     translations[targetLang] = { ...current, sourceHash: hash };
     return translations;
   }
-  if (isComplete(current) && matchesTarget && current.sourceHash === hash) return translations;
+  if (!force && isComplete(current) && matchesTarget && current.sourceHash === hash) return translations;
   const draft = await translatePair({
     title: article.title,
     summary: article.summary,
@@ -209,10 +209,10 @@ async function fillPartner(article, { sourceLang, targetLang, skip }) {
 export async function withAutomaticPartner(article) {
   const language = publicationLanguage(article);
   if (language === 'ml') {
-    return fillPartner(article, { sourceLang: 'ml', targetLang: 'en', skip: article.skipEnglish === true });
+    return fillPartner(article, { sourceLang: 'ml', targetLang: 'en', skip: article.skipEnglish === true, force: article.force === true });
   }
   if (language === 'en') {
-    return fillPartner(article, { sourceLang: 'en', targetLang: 'ml', skip: article.skipMalayalam === true });
+    return fillPartner(article, { sourceLang: 'en', targetLang: 'ml', skip: article.skipMalayalam === true, force: article.force === true });
   }
   return { ...(article.translations || {}) };
 }

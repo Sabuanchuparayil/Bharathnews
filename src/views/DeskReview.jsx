@@ -40,6 +40,7 @@ const DeskReview = () => {
   const [publishTarget, setPublishTarget] = useState(null);
   const prepareGeneration = useRef(0);
   const [publishing, setPublishing] = useState(false);
+  const [preparingId, setPreparingId] = useState('');
   const [loadError, setLoadError] = useState('');
 
   const load = useCallback(async (offset = 0) => {
@@ -122,6 +123,54 @@ const DeskReview = () => {
     const ok = await act(publishTarget.id, 'publish', choice);
     setPublishing(false);
     if (ok) setPublishTarget(null);
+  };
+
+  const partnerFor = (article) => {
+    const language = article?.language === 'ml' ? 'ml' : article?.language === 'en' ? 'en' : '';
+    if (!language) return null;
+    const code = language === 'ml' ? 'en' : 'ml';
+    const label = code === 'en' ? 'English' : 'Malayalam';
+    const skipped = code === 'en' ? article.skipEnglish === true : article.skipMalayalam === true;
+    const version = article.translations?.[code] || null;
+    const ready = String(version?.title || '').trim().length >= 4
+      && String(version?.fullContent || '').trim().length >= 40;
+    return { code, label, skipped, ready, version };
+  };
+
+  const preparePartner = async (article) => {
+    const partner = partnerFor(article);
+    if (!partner || partner.skipped) return;
+    setPreparingId(article.id);
+    try {
+      const full = await ensureArticle(article);
+      const data = await deskFetch('/api/desk/translate-draft', {
+        method: 'POST',
+        body: JSON.stringify({
+          id: full.id,
+          language: full.language,
+          title: full.title,
+          summary: full.summary,
+          fullContent: full.fullContent,
+          skipEnglish: full.skipEnglish === true,
+          skipMalayalam: full.skipMalayalam === true,
+          force: partner.ready,
+          translations: full.translations || {},
+        }),
+      });
+      const next = {
+        ...full,
+        translations: data.translations || {},
+        skipEnglish: data.skipEnglish === true,
+        skipMalayalam: data.skipMalayalam === true,
+      };
+      setArticles(prev => prev.map(item => (item.id === article.id ? { ...item, ...next } : item)));
+      if (publishTarget?.id === article.id) setPublishTarget(prev => (prev ? { ...prev, ...next } : prev));
+      if (!data.prepared) throw new Error(data.warning || `The ${partner.label} version could not be prepared.`);
+      toast.success(`${partner.label} version is ready. Read it before you publish.`);
+    } catch (err) {
+      toast.error(err.message || `Could not prepare the ${partner.label} version.`);
+    }
+    setPreparingId('');
   };
 
   const prepareLanguages = async (choice = {}) => {
@@ -213,39 +262,37 @@ const DeskReview = () => {
         {articles.map(article => {
           const assignee = editorName(article.assignedTo);
           const isAssignedToMe = article.assignedTo === user?.id;
+          const partner = partnerFor(article);
+          const preparing = preparingId === article.id;
           return (
             <article key={article.id} className={`rounded-2xl border ${isAssignedToMe ? 'border-brand-300 dark:border-brand-700' : 'border-stone-200 dark:border-white/10'} p-5`}>
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs uppercase text-brand-700 dark:text-brand-300">{article.language} · {articleCategoryIds(article).map(getCategoryLabel).join(', ')} · {article.editorialStatus}</p>
                   <h2 className="font-display font-bold text-xl mt-1"><ArticleText text={article.title} /></h2>
-                  {article.translations && article.language === 'ml' && article.skipEnglish !== true && (
+                  {partner && !partner.skipped && (
                     <div className="mt-3 rounded-xl bg-stone-50 dark:bg-white/5 px-3 py-2">
-                      <p className="text-xs uppercase text-gray-500">English draft</p>
-                      {article.translations?.en?.title && String(article.translations.en.fullContent || '').trim().length >= 40 ? (
+                      <p className="text-xs uppercase text-gray-500">{partner.label} draft</p>
+                      {partner.ready ? (
                         <>
-                          <p className="font-medium mt-1"><ArticleText text={article.translations.en.title} /></p>
-                          {article.translations.en.summary && (
-                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1"><ArticleText text={article.translations.en.summary} /></p>
+                          <p className="font-medium mt-1"><ArticleText text={partner.version.title} /></p>
+                          {partner.version.summary && (
+                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1"><ArticleText text={partner.version.summary} /></p>
                           )}
+                          <p className="text-xs text-gray-500 mt-1">Machine draft. Read it before you publish.</p>
                         </>
                       ) : (
-                        <p className="text-sm text-gray-500 mt-1">Open the draft and save it to prepare the English version.</p>
+                        <p className="text-sm text-gray-500 mt-1">No {partner.label} version yet.</p>
                       )}
-                    </div>
-                  )}
-                  {article.translations && article.language === 'en' && article.skipMalayalam !== true && (
-                    <div className="mt-3 rounded-xl bg-stone-50 dark:bg-white/5 px-3 py-2">
-                      <p className="text-xs uppercase text-gray-500">Malayalam draft</p>
-                      {article.translations?.ml?.title && String(article.translations.ml.fullContent || '').trim().length >= 40 ? (
-                        <>
-                          <p className="font-medium mt-1"><ArticleText text={article.translations.ml.title} /></p>
-                          {article.translations.ml.summary && (
-                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1"><ArticleText text={article.translations.ml.summary} /></p>
-                          )}
-                        </>
-                      ) : (
-                        <p className="text-sm text-gray-500 mt-1">Open the draft and save it to prepare the Malayalam version.</p>
+                      {article.editorialStatus !== 'published' && (
+                        <button
+                          type="button"
+                          onClick={() => preparePartner(article)}
+                          disabled={preparing}
+                          className="mt-2 px-4 py-2 rounded-xl text-sm bg-brand-600 text-white disabled:opacity-50"
+                        >
+                          {preparing ? 'Preparing…' : partner.ready ? `Prepare ${partner.label} again` : `Prepare ${partner.label}`}
+                        </button>
                       )}
                     </div>
                   )}
