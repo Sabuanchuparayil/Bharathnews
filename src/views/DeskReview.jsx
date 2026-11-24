@@ -87,6 +87,30 @@ const DeskReview = () => {
     if (ok) setPublishTarget(null);
   };
 
+  const prepareLanguages = async (choice = {}) => {
+    if (!publishTarget) return;
+    const skipEnglish = choice.skipEnglish === true && publishTarget.language !== 'en';
+    const skipMalayalam = choice.skipMalayalam === true && publishTarget.language !== 'ml';
+    const data = await deskFetch('/api/desk/translate-draft', {
+      method: 'POST',
+      body: JSON.stringify({
+        id: publishTarget.id,
+        language: publishTarget.language,
+        title: publishTarget.title,
+        summary: publishTarget.summary,
+        fullContent: publishTarget.fullContent,
+        skipEnglish,
+        skipMalayalam,
+        translations: publishTarget.translations || {},
+      }),
+    });
+    const translations = { ...(publishTarget.translations || {}), ...(data.translations || {}) };
+    const next = { translations, skipEnglish, skipMalayalam };
+    setPublishTarget(prev => (prev && prev.id === publishTarget.id ? { ...prev, ...next } : prev));
+    setArticles(prev => prev.map(item => (item.id === publishTarget.id ? { ...item, ...next } : item)));
+    if (!data.prepared) throw new Error(data.warning || 'The other language could not be prepared.');
+  };
+
   const assignTo = async (articleId, userId) => {
     try {
       await deskFetch(`/api/desk/articles/${articleId}`, {
@@ -167,6 +191,21 @@ const DeskReview = () => {
                       )}
                     </div>
                   )}
+                  {article.language === 'en' && article.skipMalayalam !== true && (
+                    <div className="mt-3 rounded-xl bg-stone-50 dark:bg-white/5 px-3 py-2">
+                      <p className="text-xs uppercase text-gray-500">Malayalam draft</p>
+                      {article.translations?.ml?.title && String(article.translations.ml.fullContent || '').trim().length >= 40 ? (
+                        <>
+                          <p className="font-medium mt-1"><ArticleText text={article.translations.ml.title} /></p>
+                          {article.translations.ml.summary && (
+                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1"><ArticleText text={article.translations.ml.summary} /></p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-sm text-gray-500 mt-1">Open the draft and save it to prepare the Malayalam version.</p>
+                      )}
+                    </div>
+                  )}
                   <p className="text-sm text-gray-500 mt-1">By {article.author}</p>
                   {assignee && (
                     <p className="text-xs text-brand-600 dark:text-brand-400 mt-1 flex items-center gap-1">
@@ -184,6 +223,9 @@ const DeskReview = () => {
                   <p className="text-sm whitespace-pre-wrap text-gray-700 dark:text-gray-300 max-h-64 overflow-auto"><ArticleText text={article.fullContent} /></p>
                   {article.language === 'ml' && article.skipEnglish !== true && article.translations?.en?.fullContent && (
                     <p className="text-sm whitespace-pre-wrap text-gray-700 dark:text-gray-300 max-h-64 overflow-auto border-t border-stone-200 dark:border-white/10 pt-3"><ArticleText text={article.translations.en.fullContent} /></p>
+                  )}
+                  {article.language === 'en' && article.skipMalayalam !== true && article.translations?.ml?.fullContent && (
+                    <p className="text-sm whitespace-pre-wrap text-gray-700 dark:text-gray-300 max-h-64 overflow-auto border-t border-stone-200 dark:border-white/10 pt-3"><ArticleText text={article.translations.ml.fullContent} /></p>
                   )}
                 </div>
               )}
@@ -279,6 +321,8 @@ const DeskReview = () => {
         authorSlug={publishTarget?.authorSlug}
         storyLanguage={publishTarget?.language || 'en'}
         initialSkipEnglish={publishTarget?.skipEnglish === true}
+        initialSkipMalayalam={publishTarget?.skipMalayalam === true}
+        onPrepare={prepareLanguages}
         languages={publishTarget ? languageStatus({ ...publishTarget, catalog: settings.newsroom.languages }) : []}
         fixHref={publishTarget ? `/desk/compose?id=${publishTarget.id}` : ''}
         busy={publishing}

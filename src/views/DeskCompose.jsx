@@ -31,6 +31,7 @@ const EMPTY = {
   imageCredit: '',
   scheduledAt: '',
   skipEnglish: false,
+  skipMalayalam: false,
   versions: {},
 };
 
@@ -115,6 +116,7 @@ const DeskCompose = () => {
           imageCredit: article.imageCredit || '',
           scheduledAt: toLocalInput(article._scheduledAtIso),
           skipEnglish: article.skipEnglish === true && language !== 'en',
+          skipMalayalam: article.skipMalayalam === true && language !== 'ml',
           versions,
         });
       })
@@ -125,8 +127,12 @@ const DeskCompose = () => {
     const skipEnglish = publishing && Object.prototype.hasOwnProperty.call(publishing, 'skipEnglish')
       ? publishing.skipEnglish === true
       : form.language !== 'en' && form.skipEnglish;
+    const skipMalayalam = publishing && Object.prototype.hasOwnProperty.call(publishing, 'skipMalayalam')
+      ? publishing.skipMalayalam === true
+      : form.language !== 'ml' && form.skipMalayalam;
     const translations = { ...(form.versions || {}) };
     if (skipEnglish) delete translations.en;
+    if (skipMalayalam) delete translations.ml;
     return {
       title: form.title,
       summary: form.summary,
@@ -143,6 +149,7 @@ const DeskCompose = () => {
       imageUrl: form.imageUrl,
       imageCredit: form.imageCredit,
       skipEnglish,
+      skipMalayalam,
       scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).toISOString() : null,
       publishNow,
       translations,
@@ -171,6 +178,7 @@ const DeskCompose = () => {
             category: publishing?.categories?.[0] || publishing?.category || form.categories?.[0] || form.category,
             categories: publishing?.categories || form.categories || [form.category],
             skipEnglish: publishing?.skipEnglish === true,
+            skipMalayalam: publishing?.skipMalayalam === true,
           }),
         });
       } else {
@@ -183,26 +191,24 @@ const DeskCompose = () => {
           }),
         });
       }
-      const english = data?.article?.translations?.en;
-      if (english && (english.title || english.fullContent)) {
-        setForm(prev => (
-          prev.language === 'en' || prev.skipEnglish
-            ? prev
-            : {
-              ...prev,
-              versions: {
-                ...prev.versions,
-                en: {
-                  title: english.title || '',
-                  summary: english.summary || '',
-                  fullContent: english.fullContent || '',
-                  sourceHash: english.sourceHash || '',
-                  provider: english.provider || '',
-                },
-              },
-            }
-        ));
-      }
+      const stored = data?.article?.translations || {};
+      setForm(prev => {
+        const versions = { ...prev.versions };
+        const apply = (code, skipped) => {
+          const version = stored[code];
+          if (!version || skipped || prev.language === code) return;
+          versions[code] = {
+            title: version.title || '',
+            summary: version.summary || '',
+            fullContent: version.fullContent || '',
+            sourceHash: version.sourceHash || '',
+            provider: version.provider || '',
+          };
+        };
+        apply('en', prev.skipEnglish);
+        apply('ml', prev.skipMalayalam);
+        return { ...prev, versions };
+      });
       setPublishOpen(false);
       toast.success(publishNow ? 'Published.' : 'Draft saved for review.');
       if (!draftId && data.article?.id && !publishNow) {
@@ -236,7 +242,8 @@ const DeskCompose = () => {
     catalog: languages,
   });
   const waiveEnglish = form.language !== 'en' && form.skipEnglish;
-  const liveNames = languages.filter(item => !(waiveEnglish && item.code === 'en')).map(item => item.label);
+  const waiveMalayalam = form.language !== 'ml' && form.skipMalayalam;
+  const liveNames = languages.filter(item => !((waiveEnglish && item.code === 'en') || (waiveMalayalam && item.code === 'ml'))).map(item => item.label);
   const versionLabel = liveNames.length < 2
     ? (liveNames[0] || 'this language')
     : `${liveNames.slice(0, -1).join(', ')} and ${liveNames[liveNames.length - 1]}`;
@@ -252,6 +259,8 @@ const DeskCompose = () => {
         title: prev.title,
         summary: prev.summary,
         fullContent: prev.fullContent,
+        sourceHash: '',
+        provider: '',
       };
       const next = versions[nextCode] || { title: '', summary: '', fullContent: '' };
       delete versions[nextCode];
@@ -262,6 +271,7 @@ const DeskCompose = () => {
         summary: next.summary || '',
         fullContent: next.fullContent || '',
         skipEnglish: nextCode === 'en' ? false : prev.skipEnglish,
+        skipMalayalam: nextCode === 'ml' ? false : prev.skipMalayalam,
         versions,
       };
     });
@@ -275,6 +285,42 @@ const DeskCompose = () => {
         [code]: { title: '', summary: '', fullContent: '', ...(prev.versions?.[code] || {}), [field]: value },
       },
     }));
+  };
+
+  const prepareLanguages = async (choice = {}) => {
+    const skipEnglish = choice.skipEnglish === true && form.language !== 'en';
+    const skipMalayalam = choice.skipMalayalam === true && form.language !== 'ml';
+    const data = await deskFetch('/api/desk/translate-draft', {
+      method: 'POST',
+      body: JSON.stringify({
+        id: draftId || undefined,
+        language: form.language,
+        title: form.title,
+        summary: form.summary,
+        fullContent: form.fullContent,
+        skipEnglish,
+        skipMalayalam,
+        translations: form.versions || {},
+      }),
+    });
+    const stored = data.translations || {};
+    setForm(prev => {
+      const versions = { ...prev.versions };
+      ['en', 'ml'].forEach(code => {
+        const version = stored[code];
+        if (!version || prev.language === code) return;
+        if ((code === 'en' && skipEnglish) || (code === 'ml' && skipMalayalam)) return;
+        versions[code] = {
+          title: version.title || '',
+          summary: version.summary || '',
+          fullContent: version.fullContent || '',
+          sourceHash: version.sourceHash || '',
+          provider: version.provider || '',
+        };
+      });
+      return { ...prev, skipEnglish, skipMalayalam, versions };
+    });
+    if (!data.prepared) throw new Error(data.warning || 'The other language could not be prepared.');
   };
 
   return (
@@ -295,9 +341,11 @@ const DeskCompose = () => {
               <h2 className="font-display font-bold">{primaryLanguage.label} version</h2>
               <p className="text-xs text-gray-500">
                 {versionState.map(item => (
-                  item.code === 'en' && form.skipEnglish && form.language !== 'en'
+                  item.code === 'en' && waiveEnglish
                     ? 'English not required'
-                    : `${item.label} ${item.ready ? 'ready' : 'missing a title or full story'}`
+                    : item.code === 'ml' && waiveMalayalam
+                      ? 'Malayalam not required'
+                      : `${item.label} ${item.ready ? 'ready' : 'missing a title or full story'}`
                 )).join(' · ')}
               </p>
             </div>
@@ -321,7 +369,17 @@ const DeskCompose = () => {
               <span className="mt-1 block text-xs font-normal text-gray-500">Wrap a sentence in **double asterisks** to make it bold.</span>
             </label>
           </div>
-          {form.language !== 'en' && (
+          {form.language === 'en' ? (
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={form.skipMalayalam}
+                onChange={e => set('skipMalayalam', e.target.checked)}
+                className="mt-1"
+              />
+              <span>This story does not need a Malayalam version. English is still required.</span>
+            </label>
+          ) : (
             <label className="flex items-start gap-2 text-sm">
               <input
                 type="checkbox"
@@ -334,7 +392,7 @@ const DeskCompose = () => {
           )}
           {otherLanguages.map(item => {
             const version = form.versions?.[item.code] || {};
-            const skipped = item.code === 'en' && form.skipEnglish;
+            const skipped = (item.code === 'en' && waiveEnglish) || (item.code === 'ml' && waiveMalayalam);
             const ready = versionState.find(entry => entry.code === item.code)?.ready;
             if (skipped) {
               return (
@@ -348,8 +406,8 @@ const DeskCompose = () => {
               <div key={item.code} id={`version-${item.code}`} className={`rounded-2xl border p-4 space-y-3 scroll-mt-24 ${ready ? 'border-stone-200 dark:border-white/10' : 'border-red-300 dark:border-red-800'}`}>
                 <h2 className="font-display font-bold">{item.label} version</h2>
                 <p className="text-xs text-gray-500">
-                  {item.code === 'en' && (version.provider === 'google-nmt' || version.provider === 'mymemory')
-                    ? 'Automatic English draft for review. Edit any sentence that needs a change.'
+                  {(version.provider === 'google-nmt' || version.provider === 'mymemory')
+                    ? `Automatic ${item.label} draft for review. Edit any sentence that needs a change.`
                     : `${ready ? 'Ready.' : 'Missing a title or full story.'} This story goes live in ${versionLabel}.`}
                 </p>
                 <input value={version.title || ''} onChange={e => setVersion(item.code, 'title', e.target.value)} placeholder={`${item.label} title`} className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
@@ -445,6 +503,8 @@ const DeskCompose = () => {
           authorSlug={form.authorSlug}
           storyLanguage={form.language}
           initialSkipEnglish={form.skipEnglish}
+          initialSkipMalayalam={form.skipMalayalam}
+          onPrepare={prepareLanguages}
           languages={languageStatus({
             language: form.language,
             title: form.title,

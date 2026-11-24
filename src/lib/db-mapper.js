@@ -60,6 +60,7 @@ const FIELD_MAP = {
   correction_note: 'correctionNote',
   unpublished_at: 'unpublishedAt',
   skip_english: 'skipEnglish',
+  skip_malayalam: 'skipMalayalam',
   received_at: 'receivedAt',
   email_verified: 'emailVerified',
   profile_complete: 'profileComplete',

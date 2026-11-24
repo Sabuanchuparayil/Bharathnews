@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { CATEGORIES } from '../config/feeds.config';
 import { deskFetch } from '@/lib/desk-client';
@@ -12,8 +12,8 @@ function joinLabels(labels) {
   return `${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}`;
 }
 
-function hasVersion(title, body) {
-  return String(title || '').trim().length >= 4 && String(body || '').trim().length >= 40;
+function hasVersion(title, body, minTitle = 4) {
+  return String(title || '').trim().length >= minTitle && String(body || '').trim().length >= 40;
 }
 
 /** Ready state for each newsroom language on a draft or saved article. */
@@ -25,7 +25,7 @@ export function languageStatus({ language, title, fullContent, translations, cat
   const primary = codes.some(item => item.code === language) ? language : codes[0].code;
   return codes.map(item => {
     if (item.code === primary) {
-      return { code: item.code, label: item.label, ready: hasVersion(title, fullContent) };
+      return { code: item.code, label: item.label, ready: hasVersion(title, fullContent, 8) };
     }
     const version = translations?.[item.code] || {};
     return { code: item.code, label: item.label, ready: hasVersion(version.title, version.fullContent) };
@@ -42,6 +42,8 @@ export default function PublishDialog({
   busy,
   storyLanguage,
   initialSkipEnglish,
+  initialSkipMalayalam,
+  onPrepare,
   onCancel,
   onConfirm,
   fixHref,
@@ -52,14 +54,50 @@ export default function PublishDialog({
   const [publisherSlug, setPublisherSlug] = useState('');
   const [chosenCategories, setChosenCategories] = useState([]);
   const [skipEnglish, setSkipEnglish] = useState(false);
+  const [skipMalayalam, setSkipMalayalam] = useState(false);
+  const [preparing, setPreparing] = useState(false);
+  const [prepareNote, setPrepareNote] = useState('');
+  const prepareRef = useRef(onPrepare);
+  const languagesRef = useRef(languages);
+  const preparingRef = useRef(false);
+  const runPrepareRef = useRef(() => {});
+  const openedFor = useRef('');
+  prepareRef.current = onPrepare;
+  languagesRef.current = languages;
+  runPrepareRef.current = () => {
+    const prepare = prepareRef.current;
+    if (!prepare || preparingRef.current) return;
+    const partner = storyLanguage === 'en' ? 'ml' : storyLanguage === 'ml' ? 'en' : '';
+    if (!partner) return;
+    const row = (languagesRef.current || []).find(item => item.code === partner);
+    if (row?.ready) return;
+    preparingRef.current = true;
+    setPreparing(true);
+    setPrepareNote('');
+    prepare({ skipEnglish: false, skipMalayalam: false })
+      .catch(err => setPrepareNote(err.message || 'The other language could not be prepared.'))
+      .finally(() => {
+        preparingRef.current = false;
+        setPreparing(false);
+      });
+  };
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      openedFor.current = '';
+      return;
+    }
+    const key = `${storyLanguage}|${title || ''}`;
+    if (openedFor.current !== key) {
+      openedFor.current = key;
+      setSkipEnglish(Boolean(initialSkipEnglish) && storyLanguage !== 'en');
+      setSkipMalayalam(Boolean(initialSkipMalayalam) && storyLanguage !== 'ml');
+      setPrepareNote('');
+    }
     const incoming = Array.isArray(categories) && categories.length
       ? categories
       : (category ? [category] : []);
     setChosenCategories([...new Set(incoming.filter(item => item && item !== 'all'))].slice(0, 4));
-    setSkipEnglish(Boolean(initialSkipEnglish) && storyLanguage !== 'en');
     setBoardError('');
     setLoadingBoard(true);
     deskFetch('/api/desk/staff')
@@ -70,16 +108,29 @@ export default function PublishDialog({
       })
       .catch(err => setBoardError(err.message || 'Could not load the editorial board.'))
       .finally(() => setLoadingBoard(false));
-  }, [open, category, categories, authorSlug, initialSkipEnglish, storyLanguage]);
+  }, [open, title, category, categories, authorSlug, storyLanguage]);
+
+  useEffect(() => {
+    if (!open) {
+      preparingRef.current = false;
+      return undefined;
+    }
+    const waived = storyLanguage === 'en' ? Boolean(initialSkipMalayalam) : Boolean(initialSkipEnglish);
+    if (waived) return undefined;
+    runPrepareRef.current();
+    return undefined;
+  }, [open, storyLanguage, initialSkipEnglish, initialSkipMalayalam, title]);
 
   if (!open) return null;
 
   const waiveEnglish = skipEnglish && storyLanguage !== 'en';
-  const kept = (languages || []).filter(item => item.code !== 'en').map(item => item.label);
+  const waiveMalayalam = skipMalayalam && storyLanguage !== 'ml';
+  const optionalCode = storyLanguage === 'en' ? 'ml' : 'en';
+  const kept = (languages || []).filter(item => item.code !== optionalCode).map(item => item.label);
   const keptLabel = joinLabels(kept);
   const rows = (languages || []).map(item => ({
     ...item,
-    skipped: item.code === 'en' && waiveEnglish,
+    skipped: (item.code === 'en' && waiveEnglish) || (item.code === 'ml' && waiveMalayalam),
   }));
   const missing = rows.filter(item => !item.skipped && !item.ready);
   const toggleCategory = (id) => {
@@ -109,18 +160,30 @@ export default function PublishDialog({
               </li>
             ))}
           </ul>
-          {storyLanguage !== 'en' && (
-            <label className="mt-3 flex items-start gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={skipEnglish}
-                onChange={e => setSkipEnglish(e.target.checked)}
-                className="mt-1"
-              />
-              <span>This story does not need an English version. {keptLabel} {kept.length === 1 ? 'is' : 'are'} still required.</span>
-            </label>
+          <label className="mt-3 flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={storyLanguage === 'en' ? skipMalayalam : skipEnglish}
+              onChange={e => {
+                const checked = e.target.checked;
+                if (storyLanguage === 'en') setSkipMalayalam(checked);
+                else setSkipEnglish(checked);
+                if (!checked) runPrepareRef.current();
+              }}
+              className="mt-1"
+            />
+            <span>
+              This story does not need {storyLanguage === 'en' ? 'a Malayalam' : 'an English'} version. {keptLabel} {kept.length === 1 ? 'is' : 'are'} still required.
+            </span>
+          </label>
+          {preparing && missing.length > 0 && (
+            <p className="mt-2 text-xs text-gray-500 flex items-center gap-2">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Preparing the {storyLanguage === 'en' ? 'Malayalam' : 'English'} version. Tick the box above to publish without it.
+            </p>
           )}
-          {missing.length > 0 && (
+          {prepareNote && <p className="mt-2 text-xs text-red-600">{prepareNote}</p>}
+          {missing.length > 0 && !preparing && (
             <p className="mt-2 text-xs text-red-600">
               {missing.map(item => item.label).join(' and ')} {missing.length === 1 ? 'is' : 'are'} required.{' '}
               {fixHref && <a href={`${fixHref}#version-${missing[0].code}`} className="underline">Edit the draft</a>}
@@ -192,7 +255,13 @@ export default function PublishDialog({
           <button
             type="button"
             disabled={!canPublish}
-            onClick={() => onConfirm({ publisherSlug, category: chosenCategories[0], categories: chosenCategories, skipEnglish: waiveEnglish })}
+            onClick={() => onConfirm({
+              publisherSlug,
+              category: chosenCategories[0],
+              categories: chosenCategories,
+              skipEnglish: waiveEnglish,
+              skipMalayalam: waiveMalayalam,
+            })}
             className="px-4 py-2 bg-green-700 text-white rounded-xl text-sm disabled:opacity-50"
           >
             {busy ? 'Publishing…' : 'Publish'}

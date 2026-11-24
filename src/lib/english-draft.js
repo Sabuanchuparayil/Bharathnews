@@ -15,12 +15,6 @@ function isComplete(version) {
     && String(version?.fullContent || '').trim().length >= 40;
 }
 
-/** A stored English draft still matches this Malayalam story. */
-export function englishDraftIsCurrent(version, title, fullContent) {
-  if (!isComplete(version) || !version.sourceHash) return false;
-  return version.sourceHash === sourceHash(title, fullContent);
-}
-
 function textChunks(text) {
   const parts = String(text || '').split(/\n+/).map(part => part.trim()).filter(Boolean);
   const chunks = [];
@@ -66,16 +60,25 @@ async function translateMarked(text, translate) {
   return result;
 }
 
-async function translateWithMemory(text) {
+function hasMalayalam(text) {
+  return /[\u0D00-\u0D7F]/.test(String(text || ''));
+}
+
+async function translateWithMemory(text, langpair) {
   const chunks = textChunks(text);
   if (!chunks.length) return '';
   const translated = [];
   for (const chunk of chunks) {
-    const response = await fetch('https://api.mymemory.translated.net/get', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ q: chunk, langpair: 'ml|en' }),
-    });
+    let response;
+    try {
+      response = await fetch('https://api.mymemory.translated.net/get', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ q: chunk, langpair }),
+      });
+    } catch {
+      return null;
+    }
     const data = await response.json().catch(() => ({}));
     const value = decodeHtmlEntities(String(data.responseData?.translatedText || '')).trim();
     if (!response.ok || data.quotaFinished || !value || /MYMEMORY WARNING/i.test(value)) return null;
@@ -84,7 +87,7 @@ async function translateWithMemory(text) {
   return translated.join('\n\n');
 }
 
-async function translateWithWorker({ title, summary, fullContent }) {
+async function translateWithWorker({ title, summary, fullContent, sourceLang, targetLang }) {
   if (!WORKER_URL) return null;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.thebharathnews.com';
   const controller = new AbortController();
@@ -100,8 +103,8 @@ async function translateWithWorker({ title, summary, fullContent }) {
         title: title || '',
         summary: summary || '',
         fullContent: String(fullContent || '').slice(0, 30000),
-        targetLang: 'en',
-        sourceLang: 'ml',
+        targetLang,
+        sourceLang,
       }),
       signal: controller.signal,
     });
@@ -124,12 +127,22 @@ async function translateWithWorker({ title, summary, fullContent }) {
   }
 }
 
-async function translateMalayalamToEnglish({ title, summary, fullContent }) {
-  const google = await translateWithWorker({ title, summary, fullContent });
-  const draft = google || await (async () => {
-    const translatedTitle = await translateMarked(title, translateWithMemory);
-    const translatedSummary = summary ? await translateMarked(summary, translateWithMemory) : '';
-    const translatedBody = await translateMarked(fullContent, translateWithMemory);
+function acceptable(draft, targetLang) {
+  if (!draft) return false;
+  const translatedTitle = draft.title.trim();
+  const translatedBody = draft.fullContent.trim();
+  if (translatedTitle.length < 4 || translatedBody.length < 40) return false;
+  if (targetLang === 'ml' && (!hasMalayalam(translatedTitle) || !hasMalayalam(translatedBody))) return false;
+  return true;
+}
+
+async function translatePair({ title, summary, fullContent, sourceLang, targetLang }) {
+  const google = await translateWithWorker({ title, summary, fullContent, sourceLang, targetLang });
+  const draft = (acceptable(google, targetLang) ? google : null) || await (async () => {
+    const translate = (text) => translateWithMemory(text, `${sourceLang}|${targetLang}`);
+    const translatedTitle = await translateMarked(title, translate);
+    const translatedSummary = summary ? await translateMarked(summary, translate) : '';
+    const translatedBody = await translateMarked(fullContent, translate);
     if (!translatedTitle || !translatedBody) return null;
     return {
       title: translatedTitle,
@@ -138,10 +151,9 @@ async function translateMalayalamToEnglish({ title, summary, fullContent }) {
       provider: 'mymemory',
     };
   })();
-  if (!draft) return null;
+  if (!acceptable(draft, targetLang)) return null;
   const translatedTitle = draft.title.trim();
   const translatedBody = draft.fullContent.trim();
-  if (translatedTitle.length < 4 || translatedBody.length < 40) return null;
   return {
     title: translatedTitle.slice(0, 200),
     summary: draft.summary.trim().slice(0, 500),
@@ -153,28 +165,43 @@ async function translateMalayalamToEnglish({ title, summary, fullContent }) {
   };
 }
 
-/**
- * Malayalam desk stories get an English draft for review.
- * A story marked skip English is left unchanged. A complete hand-written
- * English version is kept until the Malayalam text changes.
- */
-export async function withAutomaticEnglish(article) {
+async function fillPartner(article, { sourceLang, targetLang, skip }) {
   const translations = { ...(article.translations || {}) };
   const language = String(article.language || '').trim().toLowerCase();
-  if (article.skipEnglish === true || language !== 'ml') return translations;
-  const current = translations.en;
+  if (skip || language !== sourceLang) return translations;
+  const current = translations[targetLang];
   const hash = sourceHash(article.title, article.fullContent);
-  if (isComplete(current) && !current.sourceHash) {
-    translations.en = { ...current, sourceHash: hash };
+  const machine = current?.provider === 'google-nmt' || current?.provider === 'mymemory';
+  if (isComplete(current) && !current.sourceHash && !machine) {
+    translations[targetLang] = { ...current, sourceHash: hash };
     return translations;
   }
-  if (englishDraftIsCurrent(current, article.title, article.fullContent)) return translations;
-  const draft = await translateMalayalamToEnglish({
+  if (isComplete(current) && current.sourceHash === hash) return translations;
+  const draft = await translatePair({
     title: article.title,
     summary: article.summary,
     fullContent: article.fullContent,
+    sourceLang,
+    targetLang,
   });
   if (!draft) return translations;
-  translations.en = draft;
+  translations[targetLang] = draft;
   return translations;
+}
+
+/**
+ * The desk's other language is prepared for review.
+ * Malayalam stories get English. English stories get Malayalam.
+ * A waived language is left unchanged. A complete hand-written
+ * version is kept until the source text changes.
+ */
+export async function withAutomaticPartner(article) {
+  const language = String(article.language || '').trim().toLowerCase();
+  if (language === 'ml') {
+    return fillPartner(article, { sourceLang: 'ml', targetLang: 'en', skip: article.skipEnglish === true });
+  }
+  if (language === 'en') {
+    return fillPartner(article, { sourceLang: 'en', targetLang: 'ml', skip: article.skipMalayalam === true });
+  }
+  return { ...(article.translations || {}) };
 }
