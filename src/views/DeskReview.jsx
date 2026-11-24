@@ -67,7 +67,7 @@ const DeskReview = () => {
         method: 'PATCH',
         body: JSON.stringify({ action, notes: notes[id] || '', ...extra }),
       });
-      toast.success(action === 'publish' ? 'Published.' : action === 'correct' ? 'Correction saved.' : 'Updated.');
+      toast.success(action === 'publish' ? 'Published.' : action === 'reject' ? 'Rejected.' : action === 'correct' ? 'Correction saved.' : 'Updated.');
       load();
       return true;
     } catch (err) {
@@ -186,16 +186,32 @@ const DeskReview = () => {
                     value={notes[article.id] || ''}
                     onChange={e => setNotes(prev => ({ ...prev, [article.id]: e.target.value }))}
                     rows={2}
-                    placeholder="Note for the writer"
+                    placeholder="Note for the writer. A note is required to reject."
                     className="w-full mt-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-3 py-2 text-sm"
                   />
                   <div className="flex flex-wrap gap-2 mt-3">
-                    {canPublish && (
+                    {canPublish && article.editorialStatus !== 'rejected' && (
                       <>
                         <button type="button" onClick={() => setPublishTarget(article)} className="px-4 py-2 bg-green-700 text-white rounded-xl text-sm">Approve and publish</button>
                         <button type="button" onClick={() => act(article.id, 'needs_revision')} className="px-4 py-2 bg-amber-600 text-white rounded-xl text-sm">Request changes</button>
-                        <button type="button" onClick={() => act(article.id, 'reject')} className="px-4 py-2 bg-red-700 text-white rounded-xl text-sm">Reject</button>
                       </>
+                    )}
+                    {article.editorialStatus !== 'rejected' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const note = (notes[article.id] || '').trim();
+                          if (note.length < 8) {
+                            toast.error('Add a short note explaining why this story is rejected.');
+                            return;
+                          }
+                          if (!window.confirm(`Reject “${article.title}”? It leaves the queue and is not published.`)) return;
+                          act(article.id, 'reject');
+                        }}
+                        className="px-4 py-2 bg-red-700 text-white rounded-xl text-sm"
+                      >
+                        Reject
+                      </button>
                     )}
                     <Link href={`/desk/compose?id=${article.id}`} className="px-4 py-2 rounded-xl text-sm border border-stone-200 dark:border-white/10">Edit</Link>
                   </div>

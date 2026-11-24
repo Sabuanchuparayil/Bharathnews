@@ -78,7 +78,7 @@ export async function PATCH(request, { params }) {
       if (!article) return NextResponse.json({ error: 'Assignment columns not available. Run the migration.' }, { status: 500 });
       return NextResponse.json({ article });
     }
-    if (['publish', 'reject', 'needs_revision'].includes(body.action) && !capsAllow(auth.caps, 'publish')) {
+    if (['publish', 'needs_revision'].includes(body.action) && !capsAllow(auth.caps, 'publish')) {
       return NextResponse.json({ error: 'Publishing is limited to editors.' }, { status: 403 });
     }
     if ((body.action === 'unpublish' || body.action === 'correct') && !capsAllow(auth.caps, 'correct')) {

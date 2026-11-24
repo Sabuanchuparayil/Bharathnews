@@ -458,6 +458,9 @@ export async function reviewEditorialArticle(id, { action, notes, publishing = n
   } else if (action === 'needs_revision') {
     patch = { ...patch, editorial_status: 'needs_revision', revision_count: (existing.revision_count || 0) + 1 };
   } else if (action === 'reject') {
+    if (existing.editorial_status === 'published') throw badRequest('Unpublish a live story instead of rejecting it.');
+    if (existing.editorial_status === 'rejected') throw badRequest('This story is already rejected.');
+    if (cleanText(notes, 1000).length < 8) throw badRequest('Add a short note explaining why this story is rejected.');
     patch = { ...patch, editorial_status: 'rejected' };
   } else if (action === 'unpublish') {
     if (existing.editorial_status !== 'published') throw badRequest('Only a published story can be unpublished.');

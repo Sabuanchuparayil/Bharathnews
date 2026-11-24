@@ -4,7 +4,7 @@ import { EDITORIAL_BOARD_ROLES } from './staff-profiles-client';
 export const CAPABILITY_OPTIONS = [
   { id: 'admin', label: 'Admin area', detail: 'Settings, users, sources, and the rest of the admin pages' },
   { id: 'editorial', label: 'Newsroom', detail: 'Write and edit drafts' },
-  { id: 'publish', label: 'Publish', detail: 'Approve, reject, and put a story live' },
+  { id: 'publish', label: 'Publish', detail: 'Approve a story and put it live' },
   { id: 'assign', label: 'Assign', detail: 'Hand a draft to an editor' },
   { id: 'correct', label: 'Correct', detail: 'Correct or unpublish a live story' },
   { id: 'contributor', label: 'Community articles', detail: 'Submit community writing' },
