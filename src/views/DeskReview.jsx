@@ -149,6 +149,21 @@ const DeskReview = () => {
                 <div>
                   <p className="text-xs uppercase text-brand-700 dark:text-brand-300">{article.language} · {article.category} · {article.editorialStatus}</p>
                   <h2 className="font-display font-bold text-xl mt-1">{article.title}</h2>
+                  {article.language === 'ml' && article.skipEnglish !== true && (
+                    <div className="mt-3 rounded-xl bg-stone-50 dark:bg-white/5 px-3 py-2">
+                      <p className="text-xs uppercase text-gray-500">English draft</p>
+                      {article.translations?.en?.title && String(article.translations.en.fullContent || '').trim().length >= 40 ? (
+                        <>
+                          <p className="font-medium mt-1">{article.translations.en.title}</p>
+                          {article.translations.en.summary && (
+                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{article.translations.en.summary}</p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-sm text-gray-500 mt-1">The English draft is being prepared. Refresh the queue in a moment.</p>
+                      )}
+                    </div>
+                  )}
                   <p className="text-sm text-gray-500 mt-1">By {article.author}</p>
                   {assignee && (
                     <p className="text-xs text-brand-600 dark:text-brand-400 mt-1 flex items-center gap-1">
@@ -162,7 +177,12 @@ const DeskReview = () => {
                 {openId === article.id ? 'Hide preview' : 'Preview'}
               </button>
               {openId === article.id && (
-                <p className="mt-3 text-sm whitespace-pre-wrap text-gray-700 dark:text-gray-300 max-h-64 overflow-auto">{article.fullContent}</p>
+                <div className="mt-3 space-y-3">
+                  <p className="text-sm whitespace-pre-wrap text-gray-700 dark:text-gray-300 max-h-64 overflow-auto">{article.fullContent}</p>
+                  {article.language === 'ml' && article.skipEnglish !== true && article.translations?.en?.fullContent && (
+                    <p className="text-sm whitespace-pre-wrap text-gray-700 dark:text-gray-300 max-h-64 overflow-auto border-t border-stone-200 dark:border-white/10 pt-3">{article.translations.en.fullContent}</p>
+                  )}
+                </div>
               )}
               {article.editorialStatus !== 'published' && (
                 <>

@@ -89,6 +89,8 @@ const DeskCompose = () => {
             title: version.title || '',
             summary: version.summary || '',
             fullContent: version.fullContent || '',
+            sourceHash: version.sourceHash || '',
+            provider: version.provider || '',
           };
         }
         setStatus(article.editorialStatus || 'draft');
@@ -173,6 +175,26 @@ const DeskCompose = () => {
             ...payload(false),
           }),
         });
+      }
+      const english = data?.article?.translations?.en;
+      if (english && (english.title || english.fullContent)) {
+        setForm(prev => (
+          prev.language === 'en' || prev.skipEnglish
+            ? prev
+            : {
+              ...prev,
+              versions: {
+                ...prev.versions,
+                en: {
+                  title: english.title || '',
+                  summary: english.summary || '',
+                  fullContent: english.fullContent || '',
+                  sourceHash: english.sourceHash || '',
+                  provider: english.provider || '',
+                },
+              },
+            }
+        ));
       }
       setPublishOpen(false);
       toast.success(publishNow ? 'Published.' : 'Draft saved for review.');
@@ -318,7 +340,9 @@ const DeskCompose = () => {
               <div key={item.code} id={`version-${item.code}`} className={`rounded-2xl border p-4 space-y-3 scroll-mt-24 ${ready ? 'border-stone-200 dark:border-white/10' : 'border-red-300 dark:border-red-800'}`}>
                 <h2 className="font-display font-bold">{item.label} version</h2>
                 <p className="text-xs text-gray-500">
-                  {ready ? 'Ready.' : 'Missing a title or full story.'} This story goes live in {versionLabel}.
+                  {item.code === 'en' && (version.provider === 'google-nmt' || version.provider === 'mymemory')
+                    ? 'Automatic English draft for review. Edit any sentence that needs a change.'
+                    : `${ready ? 'Ready.' : 'Missing a title or full story.'} This story goes live in ${versionLabel}.`}
                 </p>
                 <input value={version.title || ''} onChange={e => setVersion(item.code, 'title', e.target.value)} placeholder={`${item.label} title`} className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
                 <textarea value={version.summary || ''} onChange={e => setVersion(item.code, 'summary', e.target.value)} rows={2} placeholder={`${item.label} summary`} className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />

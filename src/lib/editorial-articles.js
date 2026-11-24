@@ -7,6 +7,7 @@ import { SOURCE_CATEGORY_IDS } from '@/config/category-taxonomy';
 import { readSiteSettings } from '@/lib/site-settings';
 import { recordAudit, snapshotArticle } from '@/lib/audit-log';
 import { findOpenImage } from '@/lib/open-images';
+import { englishDraftIsCurrent, withAutomaticEnglish } from '@/lib/english-draft';
 
 const OPTIONAL_COLUMNS = [
   'is_ai_assisted', 'editor_notes', 'revision_count', 'scheduled_at', 'submitted_by',
@@ -92,9 +93,15 @@ function missingLanguages({ language, title, fullContent, translations, skipEngl
 
 function assertBilingual(article, languages) {
   const missing = missingLanguages(article, languages);
-  if (missing.length) {
-    throw badRequest(`Add the ${missing.join(' and ')} version (title and full story) before publishing.`);
+  if (!missing.length) return;
+  const waitingForEnglish = missing.length === 1
+    && missing[0] === 'English'
+    && String(article.language || '').trim().toLowerCase() === 'ml'
+    && article.skipEnglish !== true;
+  if (waitingForEnglish) {
+    throw badRequest('The English draft could not be prepared. Save the story again in a moment.');
   }
+  throw badRequest(`Add the ${missing.join(' and ')} version (title and full story) before publishing.`);
 }
 
 function dropWaivedEnglish(translations, skipEnglish) {
@@ -172,10 +179,13 @@ export function validateEditorialInput(body, { partial = false, languages = null
   if (body.translations && typeof body.translations === 'object' && !Array.isArray(body.translations)) {
     for (const [code, version] of Object.entries(body.translations)) {
       if (!allowed.has(code) || code === language || !version || typeof version !== 'object') continue;
+      const sourceHash = String(version.sourceHash || '');
       translations[code] = {
         title: cleanText(version.title, 200),
         summary: cleanText(version.summary, 500),
         fullContent: String(version.fullContent || '').trim().slice(0, 50000),
+        sourceHash: /^[a-f0-9]{16}$/.test(sourceHash) ? sourceHash : '',
+        provider: version.provider === 'google-nmt' || version.provider === 'mymemory' ? version.provider : '',
       };
     }
   }
@@ -193,7 +203,9 @@ export function validateEditorialInput(body, { partial = false, languages = null
       authorTitle,
       imageUrl,
       imageCredit,
-      skipEnglish: body.skipEnglish === true && language !== 'en',
+      skipEnglish: body && Object.prototype.hasOwnProperty.call(body, 'skipEnglish')
+        ? body.skipEnglish === true && language !== 'en'
+        : null,
       tags: asTags(body.tags),
       scheduledAt,
       translation,
@@ -237,7 +249,8 @@ function translationMap(primaryLang, translation, extras = null) {
       summary: version.summary || '',
       fullContent: version.fullContent || '',
       machineAssisted: true,
-      provider: 'claude-cowork',
+      provider: version.provider === 'google-nmt' || version.provider === 'mymemory' ? version.provider : 'claude-cowork',
+      sourceHash: /^[a-f0-9]{16}$/.test(String(version.sourceHash || '')) ? version.sourceHash : '',
       updatedAt: new Date().toISOString(),
     };
   };
@@ -283,10 +296,17 @@ async function writeRow(supabase, mode, payload, id) {
 export async function createEditorialArticle(input, editor, { publishNow = false, autoAssign = false, publishing = null } = {}) {
   const { supabase, source, languages } = await newsroomContext();
   const resolved = await withResolvedStaffAuthor(input);
-  let translations = dropWaivedEnglish(
-    translationMap(resolved.language, resolved.translation, resolved.translations),
-    resolved.skipEnglish,
-  );
+  let translations = await withAutomaticEnglish({
+    language: resolved.language,
+    title: resolved.title,
+    summary: resolved.summary,
+    fullContent: resolved.fullContent,
+    skipEnglish: resolved.skipEnglish === true,
+    translations: dropWaivedEnglish(
+      translationMap(resolved.language, resolved.translation, resolved.translations),
+      resolved.skipEnglish,
+    ),
+  });
   let byline = {
     author: resolved.author,
     author_slug: resolved.authorSlug,
@@ -387,10 +407,21 @@ export async function updateEditorialArticle(id, input, { actorId = null, allowP
 
   const resolved = await withResolvedStaffAuthor(input);
   const slug = resolved.title ? await uniqueSlug(supabase, resolved.title, id) : existing.slug;
-  const translations = dropWaivedEnglish({
-    ...(existing.translations || {}),
-    ...translationMap(resolved.language || existing.language, resolved.translation, resolved.translations),
-  }, resolved.skipEnglish === true);
+  const language = String(resolved.language || existing.language || 'en').trim().toLowerCase();
+  const skipEnglish = resolved.skipEnglish === null
+    ? existing.skip_english === true && language !== 'en'
+    : resolved.skipEnglish === true;
+  const translations = await withAutomaticEnglish({
+    language: resolved.language || existing.language,
+    title: resolved.title,
+    summary: resolved.summary,
+    fullContent: resolved.fullContent,
+    skipEnglish,
+    translations: dropWaivedEnglish({
+      ...(existing.translations || {}),
+      ...translationMap(resolved.language || existing.language, resolved.translation, resolved.translations),
+    }, skipEnglish),
+  });
   const data = await writeRow(supabase, 'update', {
     title: resolved.title,
     slug,
@@ -398,7 +429,7 @@ export async function updateEditorialArticle(id, input, { actorId = null, allowP
     full_content: resolved.fullContent,
     image_url: resolved.imageUrl || '',
     image_credit: resolved.imageCredit || '',
-    skip_english: resolved.skipEnglish === true,
+    skip_english: skipEnglish,
     category: resolved.category,
     author: resolved.author,
     author_slug: resolved.authorSlug,
@@ -461,7 +492,39 @@ export async function getEditorialArticle(id) {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase.from('articles').select('*').eq('id', id).maybeSingle();
   if (error) throw error;
-  return data ? rowToApp(data) : null;
+  if (!data) return null;
+  const article = rowToApp(data);
+  const reviewable = article.editorialStatus === 'draft' || article.editorialStatus === 'needs_revision';
+  if (!reviewable || !needsFreshEnglish(article)) return article;
+  const translations = await withAutomaticEnglish(article);
+  if (!englishDraftIsCurrent(translations.en, article.title, article.fullContent)) return article;
+  const saved = await supabase.from('articles').update({ translations }).eq('id', id);
+  if (saved.error) return article;
+  return { ...article, translations };
+}
+
+function needsFreshEnglish(article) {
+  return String(article.language || '').trim().toLowerCase() === 'ml'
+    && article.skipEnglish !== true
+    && !englishDraftIsCurrent(article.translations?.en, article.title, article.fullContent);
+}
+
+export async function fillReviewEnglish(articles) {
+  const pending = (articles || []).filter(needsFreshEnglish).slice(0, 2);
+  if (!pending.length) return articles;
+  const supabase = getSupabaseAdmin();
+  const done = [];
+  for (const article of pending) {
+    const translations = await withAutomaticEnglish(article);
+    if (!englishDraftIsCurrent(translations.en, article.title, article.fullContent)) {
+      done.push(article);
+      continue;
+    }
+    const saved = await supabase.from('articles').update({ translations }).eq('id', article.id);
+    done.push(saved.error ? article : { ...article, translations });
+  }
+  const byId = new Map(done.map(item => [item.id, item]));
+  return articles.map(item => byId.get(item.id) || item);
 }
 
 export async function reviewEditorialArticle(id, { action, notes, publishing = null, actorId = null, correctionNote = '' }) {
@@ -482,11 +545,19 @@ export async function reviewEditorialArticle(id, { action, notes, publishing = n
     const primary = String(existing.language || 'en').trim().toLowerCase();
     const requested = publishing.skipEnglish === null ? existing.skip_english === true : publishing.skipEnglish === true;
     const skipEnglish = requested && primary !== 'en';
+    const translations = await withAutomaticEnglish({
+      language: existing.language,
+      title: existing.title,
+      summary: existing.summary,
+      fullContent: existing.full_content,
+      skipEnglish,
+      translations: existing.translations || {},
+    });
     assertBilingual({
       language: existing.language,
       title: existing.title,
       fullContent: existing.full_content,
-      translations: existing.translations,
+      translations,
       skipEnglish,
     }, languages);
     const byline = await resolveBoardMember(supabase, publishing.publisherSlug);
@@ -496,7 +567,7 @@ export async function reviewEditorialArticle(id, { action, notes, publishing = n
       skip_english: skipEnglish,
       category: publishing.category,
       is_ai_assisted: false,
-      translations: markTranslationsReviewed(existing.translations, languages, { skipEnglish }),
+      translations: markTranslationsReviewed(translations, languages, { skipEnglish }),
       editorial_status: 'published',
       published_at: existing.published_at || now,
     };
@@ -557,12 +628,21 @@ export async function publishDueDrafts() {
   const published = [];
   const skipped = [];
   for (const row of data || []) {
+    const skipEnglish = row.skip_english === true && String(row.language || 'en').trim().toLowerCase() !== 'en';
+    const translations = await withAutomaticEnglish({
+      language: row.language,
+      title: row.title,
+      summary: row.summary,
+      fullContent: row.full_content,
+      skipEnglish,
+      translations: row.translations || {},
+    });
     const missing = missingLanguages({
       language: row.language,
       title: row.title,
       fullContent: row.full_content,
-      translations: row.translations,
-      skipEnglish: row.skip_english === true,
+      translations,
+      skipEnglish,
     }, languages);
     if (missing.length) {
       skipped.push({ id: row.id, title: row.title, reason: `Missing the ${missing.join(' and ')} version.` });
@@ -581,9 +661,7 @@ export async function publishDueDrafts() {
     const saved = await writeRow(supabase, 'update', {
       ...byline,
       is_ai_assisted: false,
-      translations: markTranslationsReviewed(row.translations, languages, {
-        skipEnglish: row.skip_english === true && String(row.language || 'en').trim().toLowerCase() !== 'en',
-      }),
+      translations: markTranslationsReviewed(translations, languages, { skipEnglish }),
       editorial_status: 'published',
       published_at: now,
     }, row.id);
