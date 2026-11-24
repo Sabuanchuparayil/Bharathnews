@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { LogIn, Shield, AlertCircle, Mail } from 'lucide-react';
 import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
+import { EMAIL_VERIFICATION_ENABLED } from '@/lib/email-verification';
 
 export default function Login() {
   const {
@@ -50,7 +51,7 @@ export default function Login() {
 
     // Leave only after the access cookie is saved. Navigating earlier makes the
     // server send the browser back to this page, and the redirect does not retry.
-    if (!isEmailVerified) {
+    if (EMAIL_VERIFICATION_ENABLED && !isEmailVerified) {
       router.replace(`/verify-email?next=${encodeURIComponent(next)}`);
       return;
     }

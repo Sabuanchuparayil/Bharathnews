@@ -7,6 +7,7 @@ import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import { hasCompleteProfile } from '@/lib/profile-fields';
 import { deskAuthHeaders } from '@/lib/desk-client';
+import { EMAIL_VERIFICATION_ENABLED } from '@/lib/email-verification';
 
 function safeNext(value) {
   if (!value || !value.startsWith('/') || value.startsWith('//')) return '/dashboard';
@@ -26,7 +27,7 @@ export default function VerifyEmail() {
 
   useEffect(() => {
     if (loading || !user || !userProfile) return;
-    if (userProfile.emailVerified !== true) return;
+    if (EMAIL_VERIFICATION_ENABLED && userProfile.emailVerified !== true) return;
     const dest = hasCompleteProfile(userProfile)
       ? next
       : `/complete-profile?next=${encodeURIComponent(next)}`;

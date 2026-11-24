@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { SITE_APEX_HOST, SITE_CANONICAL_HOST } from '@/lib/site-url';
 import { VALID_ROLES } from '@/lib/roles';
 import { capsForRole, fallbackCaps, fetchAccessRolesPublic } from '@/lib/access-roles';
+import { EMAIL_VERIFICATION_ENABLED } from '@/lib/email-verification';
 
 const AUTH_REQUIRED = ['/dashboard', '/settings', '/bookmarks', '/creator', '/employer', '/jobs/post', '/jobs/my', '/classifieds/post', '/classifieds/my'];
 const ADMIN_PREFIX = '/admin';
@@ -171,10 +172,11 @@ export async function middleware(request) {
   }
 
   if (auth === '1' && requiresAuth(pathname) && !isAccountGateOpen(pathname)) {
-    if (!verified && pathname !== '/verify-email') {
+    if (EMAIL_VERIFICATION_ENABLED && !verified && pathname !== '/verify-email') {
       return redirectAccount(request, '/verify-email');
     }
-    if (verified && !profileReady && pathname !== '/complete-profile' && pathname !== '/verify-email') {
+    const pastEmailGate = !EMAIL_VERIFICATION_ENABLED || verified;
+    if (pastEmailGate && !profileReady && pathname !== '/complete-profile' && pathname !== '/verify-email') {
       return redirectAccount(request, '/complete-profile');
     }
   }

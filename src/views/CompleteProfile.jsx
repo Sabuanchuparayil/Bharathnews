@@ -8,6 +8,7 @@ import ProfileDetailsForm from '../components/ProfileDetailsForm';
 import { useAuth } from '../context/AuthContext';
 import { EMPTY_PROFILE_DETAILS, hasCompleteProfile, profileToDetails, validateProfileDetails } from '@/lib/profile-fields';
 import { getCreatorProfileByUserId, saveAccountProfile, updateCreatorProfile } from '../services/creator';
+import { EMAIL_VERIFICATION_ENABLED } from '@/lib/email-verification';
 
 function safeNext(value) {
   if (!value || !value.startsWith('/') || value.startsWith('//')) return '/dashboard';
@@ -31,7 +32,7 @@ export default function CompleteProfile() {
       setReady(true);
       return;
     }
-    if (userProfile?.emailVerified === false) {
+    if (EMAIL_VERIFICATION_ENABLED && userProfile?.emailVerified === false) {
       router.replace(`/verify-email?next=${encodeURIComponent(next)}`);
       return;
     }
