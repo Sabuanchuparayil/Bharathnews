@@ -101,14 +101,25 @@ export async function POST(request) {
     });
     let editorialTitle = '';
     if (assignment.board === 'set') {
-      const seat = await syncUserEditorialSeat(supabase, {
-        userId: user.uid,
-        email: user.email,
-        displayName: user.displayName,
-        title: assignment.editorialTitle,
-        board: 'set',
-      });
-      editorialTitle = seat.editorialTitle;
+      try {
+        const seat = await syncUserEditorialSeat(supabase, {
+          userId: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          title: assignment.editorialTitle,
+          board: 'set',
+        });
+        editorialTitle = seat.editorialTitle;
+      } catch (seatError) {
+        await supabase.from('staff_profiles').delete().eq('user_id', user.uid);
+        await supabase.from('users').delete().eq('id', user.uid);
+        const { error: deleteError } = await supabase.auth.admin.deleteUser(user.uid);
+        const reason = seatError.hint ? `${seatError.message} ${seatError.hint}` : (seatError.message || 'Could not add the editorial board seat.');
+        const message = deleteError
+          ? `${reason} The new account could not be removed: ${deleteError.message}`
+          : `${reason} The new account was removed.`;
+        return NextResponse.json({ error: message }, { status: seatError.status || 500 });
+      }
     }
     return NextResponse.json({ user: { ...user, editorialTitle } }, { status: 201 });
   } catch (err) {

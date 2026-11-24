@@ -106,7 +106,6 @@ export const AuthProvider = ({ children }) => {
         if (isStale()) return;
         logger.error('Failed to load user profile:', err);
         setUserProfile(null);
-        setAuthCookies('reader', { emailVerified: false, profileComplete: false, caps: [] });
         setAccessReady(true);
       }
       setLoading(false);
@@ -306,7 +305,7 @@ export const AuthProvider = ({ children }) => {
     toggleBookmark: handleToggleBookmark,
     toggleLike: handleToggleLike,
     isEmailVerified: userProfile?.emailVerified === true,
-    isProfileComplete: userProfile?.profileComplete === true,
+    isProfileComplete: hasCompleteProfile(userProfile),
     isAdmin: caps.has('admin'),
     isContentWriter: caps.has('editorial') || caps.has('admin'),
     isContributor: caps.has('contributor') || caps.has('admin'),

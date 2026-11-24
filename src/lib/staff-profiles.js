@@ -240,6 +240,23 @@ export async function syncUserEditorialSeat(supabase, { userId, email, displayNa
   return { editorialTitle: title };
 }
 
+/** Puts a user's board seat back to the row captured before a failed role change. */
+export async function restoreEditorialSeat(supabase, userId, previous) {
+  if (!userId) return;
+  if (!previous) {
+    const { error } = await supabase.from('staff_profiles').delete().eq('user_id', userId);
+    if (error) throw new Error(error.message || 'Could not restore the editorial board seat.');
+    return;
+  }
+  const { error } = await supabase.from('staff_profiles').update({
+    title: previous.title,
+    is_active: previous.is_active,
+    email: previous.email || '',
+    display_name: previous.display_name,
+  }).eq('id', previous.id);
+  if (error) throw new Error(error.message || 'Could not restore the editorial board seat.');
+}
+
 export async function createStaffProfile(input, { userId = null } = {}) {
   const supabase = getSupabaseAdmin();
   const { data: existing } = await supabase.from('staff_profiles').select('id').eq('slug', input.slug).maybeSingle();

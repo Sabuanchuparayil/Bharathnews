@@ -93,6 +93,11 @@ export function fallbackCaps(id) {
  */
 export function resolveRoleAssignment(value, accessRoles) {
   const raw = String(value || '').trim();
+  if (raw.startsWith('seat:')) {
+    const title = raw.slice('seat:'.length).trim().slice(0, 80);
+    if (title.length < 2) return { error: 'Choose an editorial role.' };
+    return { accountRole: 'content_writer', editorialTitle: title, board: 'keep' };
+  }
   if (raw.startsWith('board:')) {
     const board = EDITORIAL_BOARD_ROLES.find(item => item.id === raw.slice('board:'.length));
     if (!board) return { error: 'Choose an editorial role.' };

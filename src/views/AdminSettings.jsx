@@ -48,6 +48,7 @@ function selectedAssignment(user) {
   if ((user.role || 'reader') === 'content_writer' && user.editorialTitle) {
     const match = EDITORIAL_BOARD_ROLES.find(item => item.title === user.editorialTitle);
     if (match && match.id !== 'content_writer') return `board:${match.id}`;
+    if (!match) return `seat:${user.editorialTitle}`;
   }
   return user.role || 'reader';
 }
@@ -55,10 +56,11 @@ function selectedAssignment(user) {
 function RoleSelect({ value, onChange, accessRoles, ariaLabel, className }) {
   const { editorial, other } = roleChoices(accessRoles);
   const known = new Set([...editorial, ...other].map(item => item.value));
+  const customTitle = String(value || '').startsWith('seat:') ? value.slice('seat:'.length) : '';
   return (
-    <select value={known.has(value) ? value : (value || 'reader')} onChange={onChange} aria-label={ariaLabel} className={className}>
-      {!known.has(value) && value ? <option value={value}>{value}</option> : null}
+    <select value={(known.has(value) || customTitle) ? value : (value || 'reader')} onChange={onChange} aria-label={ariaLabel} className={className}>
       <optgroup label="Editorial board">
+        {customTitle ? <option value={value}>{customTitle}</option> : null}
         {editorial.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
       </optgroup>
       <optgroup label="Account access">

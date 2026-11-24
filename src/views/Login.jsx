@@ -38,12 +38,14 @@ export default function Login() {
   useEffect(() => {
     if (loading || !user || !accessReady) return;
 
-    if (isAdminFlow) {
-      if (!userProfile) return;
-      if (!isAdmin) {
-        setError('Your account does not have admin access. Contact the site owner.');
-        return;
-      }
+    if (!userProfile) {
+      setError('Could not load your account. Refresh and try again.');
+      return;
+    }
+
+    if (isAdminFlow && !isAdmin) {
+      setError('Your account does not have admin access. Contact the site owner.');
+      return;
     }
 
     // Leave only after the access cookie is saved. Navigating earlier makes the

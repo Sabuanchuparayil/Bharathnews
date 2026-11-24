@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifyAdminRequest } from '@/lib/supabase-admin';
 import { getSupabaseAdmin } from '@/lib/supabase-server';
 import { countOtherActiveAdmins, readAccessRoles, resolveRoleAssignment, roleHasCap } from '@/lib/access-roles';
-import { syncUserEditorialSeat } from '@/lib/staff-profiles';
+import { restoreEditorialSeat, syncUserEditorialSeat } from '@/lib/staff-profiles';
 
 export async function POST(request) {
   const auth = await verifyAdminRequest(request);
@@ -50,25 +50,17 @@ export async function POST(request) {
       }
     }
 
-    if (target.role !== assignment.accountRole) {
-      const { error } = await supabase.from('users').update({ role: assignment.accountRole }).eq('id', userId);
-      if (error) {
-        const message = /users_role_check|check constraint/i.test(error.message || '')
-          ? 'Run supabase/migrations/20261111120000_custom_access_roles.sql in the Supabase SQL editor, then try again.'
-          : (error.message || 'Could not update role.');
-        return NextResponse.json({ error: message }, { status: 500 });
-      }
+    const { data: previousSeat, error: seatReadError } = await supabase
+      .from('staff_profiles')
+      .select('id, title, is_active, email, display_name')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (seatReadError) {
+      return NextResponse.json({ error: seatReadError.message || 'Could not load the editorial board seat.' }, { status: 500 });
     }
 
-    let editorialTitle = '';
-    if (assignment.board === 'keep') {
-      const { data: seat } = await supabase
-        .from('staff_profiles')
-        .select('title, is_active')
-        .eq('user_id', userId)
-        .maybeSingle();
-      editorialTitle = seat?.is_active ? (seat.title || '') : '';
-    } else {
+    let editorialTitle = previousSeat?.is_active ? (previousSeat.title || '') : '';
+    if (assignment.board !== 'keep') {
       const seat = await syncUserEditorialSeat(supabase, {
         userId,
         email: target.email,
@@ -77,6 +69,25 @@ export async function POST(request) {
         board: assignment.board,
       });
       editorialTitle = seat.editorialTitle;
+    }
+
+    if (target.role !== assignment.accountRole) {
+      const { error } = await supabase.from('users').update({ role: assignment.accountRole }).eq('id', userId);
+      if (error) {
+        const message = /users_role_check|check constraint/i.test(error.message || '')
+          ? 'Run supabase/migrations/20261111120000_custom_access_roles.sql in the Supabase SQL editor, then try again.'
+          : (error.message || 'Could not update role.');
+        if (assignment.board !== 'keep') {
+          try {
+            await restoreEditorialSeat(supabase, userId, previousSeat);
+          } catch (restoreError) {
+            return NextResponse.json({
+              error: `${message} The board seat could not be restored: ${restoreError.message}`,
+            }, { status: 500 });
+          }
+        }
+        return NextResponse.json({ error: message }, { status: 500 });
+      }
     }
     return NextResponse.json({ success: true, role: assignment.accountRole, editorialTitle });
   } catch (err) {
