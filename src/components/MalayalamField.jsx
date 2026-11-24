@@ -4,6 +4,25 @@ import React, { useEffect, useId, useRef, useState } from 'react';
 import { deskFetch } from '@/lib/desk-client';
 
 const suggestionCache = new Map();
+const CACHE_LIMIT = 200;
+
+function cachedSuggestions(key) {
+  const cached = suggestionCache.get(key);
+  if (!cached) return null;
+  suggestionCache.delete(key);
+  suggestionCache.set(key, cached);
+  return cached;
+}
+
+function rememberSuggestions(key, suggestions) {
+  if (!suggestions.length) return;
+  suggestionCache.delete(key);
+  suggestionCache.set(key, suggestions);
+  while (suggestionCache.size > CACHE_LIMIT) {
+    const oldest = suggestionCache.keys().next().value;
+    suggestionCache.delete(oldest);
+  }
+}
 
 function latinToken(value, cursor) {
   const match = String(value || '').slice(0, cursor).match(/[A-Za-z]{2,}$/);
@@ -15,13 +34,13 @@ function latinToken(value, cursor) {
 
 async function malayalamSuggestions(text, signal) {
   const key = text.toLowerCase();
-  const cached = suggestionCache.get(key);
+  const cached = cachedSuggestions(key);
   if (cached) return cached;
   const data = await deskFetch(`/api/desk/transliterate?text=${encodeURIComponent(key)}`, { signal });
   const suggestions = Array.isArray(data.suggestions)
     ? data.suggestions.filter(item => typeof item === 'string' && item.trim())
     : [];
-  if (suggestions.length) suggestionCache.set(key, suggestions);
+  rememberSuggestions(key, suggestions);
   return suggestions;
 }
 
@@ -32,7 +51,7 @@ export const MalayalamTypingSwitch = ({ checked, onChange }) => (
       Type Malayalam with English letters
     </label>
     <p className="text-xs text-gray-500">
-      Type njan and choose ഞാൻ. Enter or Space uses the suggestion. Escape keeps the English word. CAPITALS such as AED stay in English.
+      Type njan and click ഞാൻ. Enter uses the word in a title. In the story, Enter starts a new line. Escape or Space keeps the English word. CAPITALS such as AED stay in English.
     </p>
   </div>
 );
@@ -52,6 +71,7 @@ const MalayalamField = ({
   const fieldRef = useRef(null);
   const caretRef = useRef(null);
   const dismissedRef = useRef('');
+  const requestRef = useRef(null);
   const [token, setToken] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [highlighted, setHighlighted] = useState(0);
@@ -72,19 +92,21 @@ const MalayalamField = ({
       return undefined;
     }
     const controller = new AbortController();
+    requestRef.current = controller;
     const timer = setTimeout(() => {
       malayalamSuggestions(token, controller.signal).then(words => {
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted || dismissedRef.current === token) return;
         setSuggestions(words);
         setHighlighted(0);
       }).catch(err => {
-        if (controller.signal.aborted || err?.name === 'AbortError') return;
+        if (controller.signal.aborted || dismissedRef.current === token || err?.name === 'AbortError') return;
         setSuggestions([]);
       });
     }, 140);
     return () => {
       clearTimeout(timer);
       controller.abort();
+      if (requestRef.current === controller) requestRef.current = null;
     };
   }, [token, transliterate]);
 
@@ -126,17 +148,13 @@ const MalayalamField = ({
     if (event.key === 'Escape') {
       event.preventDefault();
       dismissedRef.current = token;
+      requestRef.current?.abort();
       setSuggestions([]);
       return;
     }
-    if (event.key === 'Enter') {
+    if (event.key === 'Enter' && !multiline) {
       event.preventDefault();
       applySuggestion(suggestions[highlighted] || suggestions[0]);
-      return;
-    }
-    if (event.key === ' ') {
-      event.preventDefault();
-      applySuggestion(suggestions[highlighted] || suggestions[0], ' ');
     }
   };
 
