@@ -8,11 +8,15 @@ export function getArticleSourceLang(article) {
   return article?.language || 'en';
 }
 
+function isCompleteStoredTranslation(tr) {
+  if (!tr || typeof tr !== 'object') return false;
+  return String(tr.title || '').trim().length >= 4 && String(tr.fullContent || '').trim().length >= 40;
+}
+
 export function getStoredTranslation(article, langCode) {
   if (!article?.translations || !langCode) return null;
   const tr = article.translations[langCode];
-  if (!tr || typeof tr !== 'object') return null;
-  if (!tr.title && !tr.fullContent && !tr.summary) return null;
+  if (!isCompleteStoredTranslation(tr)) return null;
   return tr;
 }
 
@@ -37,9 +41,9 @@ export function resolveArticleDisplay(article, readLang) {
   const stored = getStoredTranslation(article, target);
   if (stored) {
     return {
-      title: decodeHtmlEntities(stored.title || article.title),
-      summary: decodeHtmlEntities(stored.summary || article.summary),
-      fullContent: decodeHtmlEntities(stored.fullContent || article.fullContent),
+      title: decodeHtmlEntities(stored.title),
+      summary: decodeHtmlEntities(stored.summary || ''),
+      fullContent: decodeHtmlEntities(stored.fullContent),
       lang: target,
       isTranslation: true,
       // Newsroom translations are checked by the editorial board before publishing.
@@ -55,7 +59,7 @@ export function listAvailableReadLangs(article) {
   const codes = new Set([sourceLang]);
   if (article?.translations && typeof article.translations === 'object') {
     for (const [code, tr] of Object.entries(article.translations)) {
-      if (tr?.title || tr?.fullContent || tr?.summary) codes.add(code);
+      if (isCompleteStoredTranslation(tr)) codes.add(code);
     }
   }
   return READABLE_LANGS.filter(l => codes.has(l.code));

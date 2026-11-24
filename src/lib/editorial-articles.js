@@ -97,12 +97,23 @@ function assertBilingual(article, languages) {
   }
 }
 
-/** Board sign-off means the translation was checked by a person. */
-function markTranslationsReviewed(translations, languages = []) {
+function dropWaivedEnglish(translations, skipEnglish) {
   const out = { ...(translations || {}) };
+  if (skipEnglish) delete out.en;
+  return out;
+}
+
+/** Board sign-off means a complete translation was checked by a person. */
+function markTranslationsReviewed(translations, languages = [], { skipEnglish = false } = {}) {
+  const out = dropWaivedEnglish(translations, skipEnglish);
   const codes = languages.length ? languages.map(item => item.code) : ['en', 'ml'];
   for (const code of codes) {
-    if (out[code]) out[code] = { ...out[code], machineAssisted: false, reviewedAt: new Date().toISOString() };
+    const version = out[code];
+    if (!version) continue;
+    const title = String(version.title || '').trim();
+    const body = String(version.fullContent || '').trim();
+    if (title.length < 4 || body.length < 40) continue;
+    out[code] = { ...version, machineAssisted: false, reviewedAt: new Date().toISOString() };
   }
   return out;
 }
@@ -272,7 +283,10 @@ async function writeRow(supabase, mode, payload, id) {
 export async function createEditorialArticle(input, editor, { publishNow = false, autoAssign = false, publishing = null } = {}) {
   const { supabase, source, languages } = await newsroomContext();
   const resolved = await withResolvedStaffAuthor(input);
-  let translations = translationMap(resolved.language, resolved.translation, resolved.translations);
+  let translations = dropWaivedEnglish(
+    translationMap(resolved.language, resolved.translation, resolved.translations),
+    resolved.skipEnglish,
+  );
   let byline = {
     author: resolved.author,
     author_slug: resolved.authorSlug,
@@ -285,7 +299,7 @@ export async function createEditorialArticle(input, editor, { publishNow = false
     assertBilingual({ ...resolved, translations, skipEnglish: resolved.skipEnglish }, languages);
     byline = await resolveBoardMember(supabase, publishing.publisherSlug);
     category = publishing.category;
-    translations = markTranslationsReviewed(translations, languages);
+    translations = markTranslationsReviewed(translations, languages, { skipEnglish: resolved.skipEnglish === true });
   }
   let imageUrl = resolved.imageUrl || '';
   let imageCredit = resolved.imageCredit || '';
@@ -367,14 +381,16 @@ export async function updateEditorialArticle(id, input, { actorId = null, allowP
     err.status = 409;
     throw err;
   }
-  await snapshotArticle(existing, { actorId, reason: allowPublished ? 'correct' : 'edit' }, supabase);
+  if (allowPublished) {
+    await snapshotArticle(existing, { actorId, reason: 'correct' }, supabase);
+  }
 
   const resolved = await withResolvedStaffAuthor(input);
   const slug = resolved.title ? await uniqueSlug(supabase, resolved.title, id) : existing.slug;
-  const translations = {
+  const translations = dropWaivedEnglish({
     ...(existing.translations || {}),
     ...translationMap(resolved.language || existing.language, resolved.translation, resolved.translations),
-  };
+  }, resolved.skipEnglish === true);
   const data = await writeRow(supabase, 'update', {
     title: resolved.title,
     slug,
@@ -480,7 +496,7 @@ export async function reviewEditorialArticle(id, { action, notes, publishing = n
       skip_english: skipEnglish,
       category: publishing.category,
       is_ai_assisted: false,
-      translations: markTranslationsReviewed(existing.translations, languages),
+      translations: markTranslationsReviewed(existing.translations, languages, { skipEnglish }),
       editorial_status: 'published',
       published_at: existing.published_at || now,
     };
@@ -565,7 +581,9 @@ export async function publishDueDrafts() {
     const saved = await writeRow(supabase, 'update', {
       ...byline,
       is_ai_assisted: false,
-      translations: markTranslationsReviewed(row.translations, languages),
+      translations: markTranslationsReviewed(row.translations, languages, {
+        skipEnglish: row.skip_english === true && String(row.language || 'en').trim().toLowerCase() !== 'en',
+      }),
       editorial_status: 'published',
       published_at: now,
     }, row.id);

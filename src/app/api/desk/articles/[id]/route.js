@@ -11,7 +11,7 @@ import {
   validateEditorialInput,
   validatePublishInput,
 } from '@/lib/editorial-articles';
-import { listArticleRevisions } from '@/lib/audit-log';
+import { clearArticleRevisions, listArticleRevisions } from '@/lib/audit-log';
 
 function isFullArticleWrite(body) {
   if (body.action === 'update') return true;
@@ -69,6 +69,10 @@ export async function PATCH(request, { params }) {
         correctionNote: body.correctionNote || body.notes || '',
       }, { actorId: auth.uid, allowPublished: correcting });
       return NextResponse.json({ article });
+    }
+    if (body.action === 'clear_revisions') {
+      await clearArticleRevisions(id);
+      return NextResponse.json({ ok: true });
     }
     if (body.action === 'assign') {
       if (!capsAllow(auth.caps, 'assign')) {

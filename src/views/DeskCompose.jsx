@@ -60,6 +60,21 @@ const DeskCompose = () => {
 
   const set = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
 
+  const clearRevisions = async () => {
+    if (!draftId) return;
+    if (!window.confirm('Remove the earlier versions? The story you are editing stays.')) return;
+    try {
+      await deskFetch(`/api/desk/articles/${draftId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ action: 'clear_revisions' }),
+      });
+      setRevisions([]);
+      toast.success('Earlier versions removed.');
+    } catch (err) {
+      toast.error(err.message || 'Could not remove the earlier versions.');
+    }
+  };
+
   useEffect(() => {
     if (!draftId) return;
     deskFetch(`/api/desk/articles/${draftId}`)
@@ -99,27 +114,32 @@ const DeskCompose = () => {
       .catch(err => toast.error(err.message || 'Could not open this draft.'));
   }, [draftId, languageKey, languages, settings.newsroom.defaultCategory]);
 
-  const payload = (publishNow = false, publishing = null) => ({
-    title: form.title,
-    summary: form.summary,
-    fullContent: form.fullContent,
-    category: publishing?.category || form.category,
-    publisherSlug: publishing?.publisherSlug || '',
-    language: form.language,
-    author: form.author,
-    authorSlug: form.authorSlug,
-    authorPhotoUrl: form.authorPhotoUrl,
-    authorTitle: form.authorTitle,
-    tags: form.tags,
-    imageUrl: form.imageUrl,
-    imageCredit: form.imageCredit,
-    skipEnglish: publishing && Object.prototype.hasOwnProperty.call(publishing, 'skipEnglish')
+  const payload = (publishNow = false, publishing = null) => {
+    const skipEnglish = publishing && Object.prototype.hasOwnProperty.call(publishing, 'skipEnglish')
       ? publishing.skipEnglish === true
-      : form.language !== 'en' && form.skipEnglish,
-    scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).toISOString() : null,
-    publishNow,
-    translations: form.versions,
-  });
+      : form.language !== 'en' && form.skipEnglish;
+    const translations = { ...(form.versions || {}) };
+    if (skipEnglish) delete translations.en;
+    return {
+      title: form.title,
+      summary: form.summary,
+      fullContent: form.fullContent,
+      category: publishing?.category || form.category,
+      publisherSlug: publishing?.publisherSlug || '',
+      language: form.language,
+      author: form.author,
+      authorSlug: form.authorSlug,
+      authorPhotoUrl: form.authorPhotoUrl,
+      authorTitle: form.authorTitle,
+      tags: form.tags,
+      imageUrl: form.imageUrl,
+      imageCredit: form.imageCredit,
+      skipEnglish,
+      scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).toISOString() : null,
+      publishNow,
+      translations,
+    };
+  };
 
   const save = async (publishNow = false, publishing = null) => {
     setSaving(true);
@@ -340,7 +360,10 @@ const DeskCompose = () => {
           </label>
           {revisions.length > 0 && (
             <div className="rounded-2xl border border-stone-200 dark:border-white/10 p-4">
-              <h2 className="font-display font-bold mb-2">Earlier versions</h2>
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <h2 className="font-display font-bold">Earlier versions</h2>
+                <button type="button" onClick={clearRevisions} className="text-sm text-red-700 dark:text-red-300">Remove earlier versions</button>
+              </div>
               <ul className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
                 {revisions.map(item => (
                   <li key={item.id}>
@@ -354,7 +377,7 @@ const DeskCompose = () => {
             <button type="submit" disabled={saving || (status === 'published' && !canCorrect)} className="btn-primary px-5 py-2.5 rounded-xl disabled:opacity-50">
               {status === 'published' ? 'Save correction' : 'Save draft'}
             </button>
-            {canPublish && !draftId && (
+            {canPublish && status !== 'published' && status !== 'rejected' && (
               <button type="button" disabled={saving} onClick={() => setPublishOpen(true)} className="btn-secondary px-5 py-2.5 rounded-xl disabled:opacity-50">Publish now</button>
             )}
             <Link href="/desk/review" className="px-5 py-2.5 text-sm text-gray-500">Review queue</Link>

@@ -35,6 +35,16 @@ export async function snapshotArticle(existing, { actorId, reason }, supabase = 
   }
 }
 
+export async function clearArticleRevisions(articleId, supabase = getSupabaseAdmin()) {
+  if (!supabase || !articleId) return;
+  const { error } = await supabase.from('article_revisions').delete().eq('article_id', articleId);
+  if (error && !missingTable(error.message)) {
+    const err = new Error(error.message || 'Could not remove the earlier versions.');
+    err.status = 500;
+    throw err;
+  }
+}
+
 export async function listArticleRevisions(articleId) {
   if (!articleId) return [];
   const supabase = getSupabaseAdmin();
