@@ -22,14 +22,14 @@ const METALS = [
   { symbol: 'XPT', key: 'platinum', label: 'Platinum' },
 ];
 
-async function fetchJson(url, timeoutMs = 8000) {
+async function fetchJson(url, { fresh = false, timeoutMs = 8000 } = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(url, {
       signal: controller.signal,
       headers: { Accept: 'application/json' },
-      next: { revalidate: 900 },
+      ...(fresh ? { cache: 'no-store' } : { next: { revalidate: 900 } }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json();
@@ -122,11 +122,11 @@ function formatNum(n, d) {
   }).format(n);
 }
 
-export async function fetchNriRates() {
+export async function fetchNriRates({ fresh = false } = {}) {
   const [fxData, ...metalResults] = await Promise.all([
-    fetchJson(FX_URL),
+    fetchJson(FX_URL, { fresh }),
     ...METALS.map(m =>
-      fetchJson(`${METAL_URL}/${m.symbol}`).catch(() => null)
+      fetchJson(`${METAL_URL}/${m.symbol}`, { fresh }).catch(() => null)
     ),
   ]);
 
@@ -140,10 +140,14 @@ export async function fetchNriRates() {
     if (row?.price) metalPrices[m.key] = row.price;
   });
 
-  const updatedAt = fxData.time_last_update_utc || new Date().toISOString();
+  const published = new Date(fxData.time_last_update_utc || '');
+  const updatedAt = Number.isNaN(published.getTime())
+    ? new Date().toISOString()
+    : published.toISOString();
 
   return {
-    updatedAt: new Date(updatedAt).toISOString(),
+    updatedAt,
+    fetchedAt: new Date().toISOString(),
     source: {
       fx: 'ExchangeRate-API',
       metals: 'Gold-API.com',

@@ -1,20 +1,21 @@
 import { NextResponse } from 'next/server';
 import { fetchNriRates } from '@/lib/nri-rates';
 
-export const revalidate = 900;
-
-export async function GET() {
+export async function GET(request) {
+  const fresh = new URL(request.url).searchParams.get('fresh') === '1';
   try {
-    const data = await fetchNriRates();
+    const data = await fetchNriRates({ fresh });
     return NextResponse.json(data, {
       headers: {
-        'Cache-Control': 'public, s-maxage=900, stale-while-revalidate=1800',
+        'Cache-Control': fresh
+          ? 'private, no-store'
+          : 'public, s-maxage=900, stale-while-revalidate=1800',
       },
     });
   } catch (err) {
     return NextResponse.json(
-      { error: err.message || 'Rates unavailable' },
-      { status: 503, headers: { 'Cache-Control': 'public, s-maxage=60' } },
+      { error: err instanceof Error ? err.message : 'Rates unavailable' },
+      { status: 503, headers: { 'Cache-Control': 'private, no-store' } },
     );
   }
 }

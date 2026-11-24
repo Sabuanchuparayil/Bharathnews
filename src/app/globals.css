@@ -15,6 +15,16 @@
     }
   }
 
+  :root {
+    --site-header-height: calc(6.25rem + env(safe-area-inset-top, 0px));
+  }
+
+  @media (min-width: 1280px) {
+    :root {
+      --site-header-height: calc(9.25rem + env(safe-area-inset-top, 0px));
+    }
+  }
+
   html {
     scroll-behavior: smooth;
     -webkit-tap-highlight-color: transparent;
@@ -347,7 +357,7 @@ html[data-lang='ml'] .font-display {
   }
 
   .header-offset {
-    height: calc(6.25rem + env(safe-area-inset-top, 0px));
+    height: var(--site-header-height);
   }
 
   .safe-bottom {

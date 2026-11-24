@@ -55,7 +55,7 @@ export default function LanguageSwitcher({ compact = false }) {
         <div
           role="listbox"
           aria-label="Select language"
-          className="absolute right-0 mt-2 w-48 bg-white dark:bg-dark-surface-1 border border-gray-200 dark:border-gray-700 rounded-2xl p-1.5 z-[100] shadow-xl max-h-80 overflow-y-auto"
+          className="absolute right-0 mt-2 w-48 bg-white dark:bg-[#3d3d58] border border-gray-200 dark:border-white/15 rounded-2xl p-1.5 z-[100] shadow-floating max-h-80 overflow-y-auto"
         >
           {languages.map(lang => {
             const selected = language === lang.code;

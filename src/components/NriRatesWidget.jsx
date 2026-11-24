@@ -1,12 +1,22 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ArrowRight, Coins, Gem, RefreshCw, TrendingUp } from 'lucide-react';
 import { formatDistanceToNowStrict } from 'date-fns';
 
 const REFRESH_MS = 15 * 60 * 1000;
+const RATES_EVENT = 'bn-nri-rates';
+
+function formatChecked(value) {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const seconds = Math.max(0, Math.round((Date.now() - date.getTime()) / 1000));
+  if (seconds < 45) return 'just now';
+  return formatDistanceToNowStrict(date, { addSuffix: true });
+}
 
 function RateSkeleton() {
   return (
@@ -21,30 +31,55 @@ function RateSkeleton() {
 const NriRatesWidget = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [checkedAt, setCheckedAt] = useState(null);
+  const [, setTick] = useState(0);
+  const requestRef = useRef(0);
 
-  const load = async () => {
+  const load = useCallback(async (fresh = false) => {
+    const requestId = ++requestRef.current;
+    const started = Date.now();
+    if (fresh) setRefreshing(true);
     setError(null);
     try {
-      const res = await fetch('/api/nri-rates');
+      const url = fresh ? `/api/nri-rates?fresh=1&t=${Date.now()}` : '/api/nri-rates';
+      const res = await fetch(url, fresh ? { cache: 'no-store' } : undefined);
       if (!res.ok) throw new Error('Rates unavailable');
-      setData(await res.json());
+      const json = await res.json();
+      if (requestId !== requestRef.current) return;
+      setData(json);
+      setCheckedAt(new Date());
+      window.dispatchEvent(new CustomEvent(RATES_EVENT, { detail: json }));
     } catch (e) {
-      setError(e.message);
+      if (requestId !== requestRef.current) return;
+      setError(e instanceof Error ? e.message : 'Rates unavailable');
     } finally {
-      setLoading(false);
+      if (fresh) {
+        const wait = 450 - (Date.now() - started);
+        if (wait > 0) await new Promise(resolve => setTimeout(resolve, wait));
+      }
+      if (requestId === requestRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
-  };
+  }, []);
 
   useEffect(() => {
-    load();
-    const id = setInterval(load, REFRESH_MS);
+    load(false);
+    const id = setInterval(() => load(false), REFRESH_MS);
+    return () => clearInterval(id);
+  }, [load]);
+
+  useEffect(() => {
+    const id = setInterval(() => setTick(value => value + 1), 30000);
     return () => clearInterval(id);
   }, []);
 
-  const updatedLabel = data?.updatedAt
-    ? formatDistanceToNowStrict(new Date(data.updatedAt), { addSuffix: true })
-    : null;
+  const updatedLabel = formatChecked(checkedAt || data?.fetchedAt);
+  const marketLabel = formatChecked(data?.updatedAt);
+  const marketTitle = marketLabel ? `Market data published ${marketLabel}` : undefined;
 
   return (
     <section className="py-5 sm:py-6 border-y border-gray-100 dark:border-gray-800/80 bg-gradient-to-b from-brand-50/40 to-transparent dark:from-brand-950/20 dark:to-transparent">
@@ -64,14 +99,18 @@ const NriRatesWidget = () => {
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-3 text-sm text-gray-500 dark:text-gray-400 w-full sm:w-auto">
-            {updatedLabel && <span className="flex-1 sm:flex-none">Updated {updatedLabel}</span>}
+            <span className="flex-1 sm:flex-none" aria-live="polite" title={marketTitle}>
+              {refreshing ? 'Refreshing…' : error && data ? 'Could not refresh' : updatedLabel ? `Updated ${updatedLabel}` : null}
+            </span>
             <button
               type="button"
-              onClick={() => { setLoading(true); load(); }}
-              className="btn-ghost p-2 rounded-lg flex-shrink-0"
+              onClick={() => load(true)}
+              disabled={refreshing}
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-gray-600 hover:bg-surface-2 hover:text-gray-900 disabled:opacity-60 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
               aria-label="Refresh rates"
+              aria-busy={refreshing}
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
             </button>
             <Link
               href="/money/gold-rate-today"
@@ -88,7 +127,7 @@ const NriRatesWidget = () => {
         {error && !data && (
           <p className="text-sm text-gray-500 dark:text-gray-400 py-2">
             Rates temporarily unavailable.{' '}
-            <button type="button" onClick={load} className="text-brand-600 underline">
+            <button type="button" onClick={() => load(true)} className="text-brand-600 underline">
               Retry
             </button>
           </p>

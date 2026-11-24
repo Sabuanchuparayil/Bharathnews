@@ -50,7 +50,7 @@ const NotificationsPanel = ({ isOpen, onClose }) => {
             initial={{ opacity: 0, y: 24, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 24, scale: 0.98 }}
-            className="fixed inset-x-0 bottom-0 sm:inset-x-auto sm:top-16 sm:right-4 sm:bottom-auto w-full sm:w-96 glass-card-solid rounded-t-2xl sm:rounded-2xl shadow-floating border border-gray-100 dark:border-gray-800 z-[60] overflow-hidden safe-bottom"
+            className="fixed inset-x-0 bottom-0 sm:inset-x-auto sm:top-[var(--site-header-height)] sm:right-4 sm:bottom-auto w-full sm:w-96 glass-card-solid rounded-t-2xl sm:rounded-2xl shadow-floating border border-gray-100 dark:border-gray-800 z-[60] overflow-hidden safe-bottom"
             role="dialog"
             aria-modal="true"
             aria-label="Trending stories"

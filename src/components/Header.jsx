@@ -91,8 +91,8 @@ const Header = () => {
       >
         <UtilityBar />
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 xl:gap-4 h-16">
-            <Link href="/" className="flex items-center gap-2 group flex-shrink-0 z-10 min-w-0">
+          <div className="flex items-center gap-2 h-16">
+            <Link href="/" className="flex items-center gap-2 group flex-shrink-0 min-w-0">
               <img
                 src="/logo-mark.png"
                 alt={brandName}
@@ -108,19 +108,7 @@ const Header = () => {
               </div>
             </Link>
 
-            <nav className="hidden xl:flex items-center justify-center gap-0.5 2xl:gap-1 min-w-0 overflow-x-auto scrollbar-hide px-1">
-              {HEADER_NAV.map(link => (
-                <NavDropdown
-                  key={link.path}
-                  link={link}
-                  isActive={isActive(link.path)}
-                  compact={link.navTier === 'secondary'}
-                  className={link.navTier === 'secondary' ? 'hidden xl:inline-flex' : 'inline-flex'}
-                />
-              ))}
-            </nav>
-
-            <div className="flex items-center justify-end gap-0.5 sm:gap-1 flex-shrink-0">
+            <div className="relative z-40 ml-auto flex items-center justify-end gap-0.5 sm:gap-1 flex-shrink-0">
               <button
                 onClick={() => setSearchOpen(true)}
                 className="btn-ghost touch-target rounded-xl"
@@ -180,7 +168,7 @@ const Header = () => {
                         initial={{ opacity: 0, scale: 0.95, y: -10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                        className="absolute right-0 mt-2 w-56 glass-card-solid rounded-2xl p-2 z-50"
+                        className="absolute right-0 mt-2 w-56 rounded-2xl border border-gray-200 bg-white p-2 text-gray-800 shadow-floating z-[80] dark:border-white/15 dark:bg-[#3d3d58] dark:text-stone-50"
                       >
                         <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800 mb-1">
                           <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{menuName}</p>
@@ -230,6 +218,19 @@ const Header = () => {
             </div>
           </div>
         </div>
+        <nav className="relative z-20 hidden xl:block border-t border-black/5 dark:border-white/10 overflow-visible" aria-label="Sections">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 overflow-visible">
+            <div className="flex items-center justify-center gap-0.5 h-12 overflow-visible">
+              {HEADER_NAV.map(link => (
+                <NavDropdown
+                  key={link.path}
+                  link={link}
+                  isActive={isActive(link.path)}
+                />
+              ))}
+            </div>
+          </div>
+        </nav>
       </header>
 
       <AnimatePresence>
