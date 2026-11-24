@@ -11,7 +11,7 @@ import { findOpenImage } from '@/lib/open-images';
 const OPTIONAL_COLUMNS = [
   'is_ai_assisted', 'editor_notes', 'revision_count', 'scheduled_at', 'submitted_by',
   'image_credit', 'author_photo_url', 'author_title',
-  'assigned_to', 'assigned_at', 'correction_note', 'unpublished_at',
+  'assigned_to', 'assigned_at', 'correction_note', 'unpublished_at', 'skip_english',
 ];
 
 const CATEGORIES = new Set(SOURCE_CATEGORY_IDS);
@@ -46,7 +46,10 @@ export function validatePublishInput(body) {
   const category = cleanText(body?.category, 40);
   if (!publisherSlug) return { error: 'Choose the editorial board member publishing this story.' };
   if (!CATEGORIES.has(category)) return { error: 'Confirm a valid category before publishing.' };
-  return { value: { publisherSlug, category } };
+  const skipEnglish = body && Object.prototype.hasOwnProperty.call(body, 'skipEnglish')
+    ? body.skipEnglish === true
+    : null;
+  return { value: { publisherSlug, category, skipEnglish } };
 }
 
 async function resolveBoardMember(supabase, slug) {
@@ -67,12 +70,14 @@ async function resolveBoardMember(supabase, slug) {
   };
 }
 
-/** Both English and Malayalam must be complete; returns the missing language names. */
-function missingLanguages({ language, title, fullContent, translations }, languages = []) {
+/** Required languages must be complete. English can be waived for one selected story. */
+function missingLanguages({ language, title, fullContent, translations, skipEnglish = false }, languages = []) {
   const codes = languages.length ? languages : [{ code: 'en', label: 'English' }, { code: 'ml', label: 'Malayalam' }];
   const primary = codes.some(item => item.code === language) ? language : codes[0].code;
+  const waiveEnglish = skipEnglish === true && primary !== 'en';
   const missing = [];
   for (const item of codes) {
+    if (item.code === 'en' && waiveEnglish) continue;
     if (item.code === primary) {
       if (cleanText(title, 200).length < 4 || String(fullContent || '').trim().length < 40) missing.push(item.label);
       continue;
@@ -177,6 +182,7 @@ export function validateEditorialInput(body, { partial = false, languages = null
       authorTitle,
       imageUrl,
       imageCredit,
+      skipEnglish: body.skipEnglish === true && language !== 'en',
       tags: asTags(body.tags),
       scheduledAt,
       translation,
@@ -243,6 +249,12 @@ async function writeRow(supabase, mode, payload, id) {
     const { data, error } = await query;
     if (!error) return data;
     const missing = OPTIONAL_COLUMNS.find(col => error.message?.includes(col) && col in row);
+    if (missing === 'skip_english' && row.skip_english === true) {
+      const err = new Error('Skipping English needs the skip_english column.');
+      err.hint = 'Run supabase/migrations/20261124160000_skip_english.sql in the Supabase SQL editor.';
+      err.status = 500;
+      throw err;
+    }
     if (!missing) {
       const err = new Error(error.message || 'Could not save the article.');
       if (/column .* does not exist/i.test(error.message || '')) {
@@ -270,7 +282,7 @@ export async function createEditorialArticle(input, editor, { publishNow = false
   let category = resolved.category;
   if (publishNow) {
     if (!publishing) throw badRequest('Choose the editorial board member and confirm the category before publishing.');
-    assertBilingual({ ...resolved, translations }, languages);
+    assertBilingual({ ...resolved, translations, skipEnglish: resolved.skipEnglish }, languages);
     byline = await resolveBoardMember(supabase, publishing.publisherSlug);
     category = publishing.category;
     translations = markTranslationsReviewed(translations, languages);
@@ -306,6 +318,7 @@ export async function createEditorialArticle(input, editor, { publishNow = false
     full_content: resolved.fullContent,
     image_url: imageUrl,
     image_credit: imageCredit,
+    skip_english: resolved.skipEnglish === true,
     category,
     source,
     ...byline,
@@ -369,6 +382,7 @@ export async function updateEditorialArticle(id, input, { actorId = null, allowP
     full_content: resolved.fullContent,
     image_url: resolved.imageUrl || '',
     image_credit: resolved.imageCredit || '',
+    skip_english: resolved.skipEnglish === true,
     category: resolved.category,
     author: resolved.author,
     author_slug: resolved.authorSlug,
@@ -449,16 +463,21 @@ export async function reviewEditorialArticle(id, { action, notes, publishing = n
 
   if (action === 'publish') {
     if (!publishing) throw badRequest('Choose the editorial board member and confirm the category before publishing.');
+    const primary = String(existing.language || 'en').trim().toLowerCase();
+    const requested = publishing.skipEnglish === null ? existing.skip_english === true : publishing.skipEnglish === true;
+    const skipEnglish = requested && primary !== 'en';
     assertBilingual({
       language: existing.language,
       title: existing.title,
       fullContent: existing.full_content,
       translations: existing.translations,
+      skipEnglish,
     }, languages);
     const byline = await resolveBoardMember(supabase, publishing.publisherSlug);
     patch = {
       ...patch,
       ...byline,
+      skip_english: skipEnglish,
       category: publishing.category,
       is_ai_assisted: false,
       translations: markTranslationsReviewed(existing.translations, languages),
@@ -527,6 +546,7 @@ export async function publishDueDrafts() {
       title: row.title,
       fullContent: row.full_content,
       translations: row.translations,
+      skipEnglish: row.skip_english === true,
     }, languages);
     if (missing.length) {
       skipped.push({ id: row.id, title: row.title, reason: `Missing the ${missing.join(' and ')} version.` });

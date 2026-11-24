@@ -7,6 +7,11 @@ import { deskFetch } from '@/lib/desk-client';
 
 const contentCategories = CATEGORIES.filter(item => item.id !== 'all');
 
+function joinLabels(labels) {
+  if (labels.length < 2) return labels[0] || 'The other language';
+  return `${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}`;
+}
+
 function hasVersion(title, body) {
   return String(title || '').trim().length >= 4 && String(body || '').trim().length >= 40;
 }
@@ -34,6 +39,8 @@ export default function PublishDialog({
   authorSlug,
   languages,
   busy,
+  storyLanguage,
+  initialSkipEnglish,
   onCancel,
   onConfirm,
   fixHref,
@@ -43,10 +50,12 @@ export default function PublishDialog({
   const [boardError, setBoardError] = useState('');
   const [publisherSlug, setPublisherSlug] = useState('');
   const [chosenCategory, setChosenCategory] = useState(category || '');
+  const [skipEnglish, setSkipEnglish] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setChosenCategory(category || '');
+    setSkipEnglish(Boolean(initialSkipEnglish) && storyLanguage !== 'en');
     setBoardError('');
     setLoadingBoard(true);
     deskFetch('/api/desk/staff')
@@ -57,11 +66,18 @@ export default function PublishDialog({
       })
       .catch(err => setBoardError(err.message || 'Could not load the editorial board.'))
       .finally(() => setLoadingBoard(false));
-  }, [open, category, authorSlug]);
+  }, [open, category, authorSlug, initialSkipEnglish, storyLanguage]);
 
   if (!open) return null;
 
-  const missing = (languages || []).filter(item => !item.ready);
+  const waiveEnglish = skipEnglish && storyLanguage !== 'en';
+  const kept = (languages || []).filter(item => item.code !== 'en').map(item => item.label);
+  const keptLabel = joinLabels(kept);
+  const rows = (languages || []).map(item => ({
+    ...item,
+    skipped: item.code === 'en' && waiveEnglish,
+  }));
+  const missing = rows.filter(item => !item.skipped && !item.ready);
   const canPublish = !busy && !loadingBoard && publisherSlug && chosenCategory && missing.length === 0;
 
   return (
@@ -73,18 +89,29 @@ export default function PublishDialog({
         <section className="mt-5">
           <h4 className="text-sm font-semibold">Language versions</h4>
           <ul className="mt-2 space-y-1">
-            {(languages || []).map(item => (
+            {rows.map(item => (
               <li key={item.code} className="flex items-center gap-2 text-sm">
-                {item.ready
+                {item.skipped || item.ready
                   ? <CheckCircle2 className="w-4 h-4 text-green-600" />
                   : <XCircle className="w-4 h-4 text-red-600" />}
-                {item.label} {item.ready ? 'ready' : 'missing a title or full story'}
+                {item.label} {item.skipped ? 'not required for this story' : item.ready ? 'ready' : 'missing a title or full story'}
               </li>
             ))}
           </ul>
+          {storyLanguage !== 'en' && (
+            <label className="mt-3 flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={skipEnglish}
+                onChange={e => setSkipEnglish(e.target.checked)}
+                className="mt-1"
+              />
+              <span>This story does not need an English version. {keptLabel} {kept.length === 1 ? 'is' : 'are'} still required.</span>
+            </label>
+          )}
           {missing.length > 0 && (
             <p className="mt-2 text-xs text-red-600">
-              Both English and Malayalam are required.{' '}
+              {missing.map(item => item.label).join(' and ')} {missing.length === 1 ? 'is' : 'are'} required.{' '}
               {fixHref && <a href={`${fixHref}#version-${missing[0].code}`} className="underline">Edit the draft</a>}
             </p>
           )}
@@ -149,7 +176,7 @@ export default function PublishDialog({
           <button
             type="button"
             disabled={!canPublish}
-            onClick={() => onConfirm({ publisherSlug, category: chosenCategory })}
+            onClick={() => onConfirm({ publisherSlug, category: chosenCategory, skipEnglish: waiveEnglish })}
             className="px-4 py-2 bg-green-700 text-white rounded-xl text-sm disabled:opacity-50"
           >
             {busy ? 'Publishing…' : 'Publish'}

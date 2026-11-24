@@ -29,6 +29,7 @@ const EMPTY = {
   imageUrl: '',
   imageCredit: '',
   scheduledAt: '',
+  skipEnglish: false,
   versions: {},
 };
 
@@ -91,6 +92,7 @@ const DeskCompose = () => {
           imageUrl: article.imageUrl && !isStoredPlaceholderImage(article.imageUrl) ? article.imageUrl : '',
           imageCredit: article.imageCredit || '',
           scheduledAt: toLocalInput(article._scheduledAtIso),
+          skipEnglish: article.skipEnglish === true && language !== 'en',
           versions,
         });
       })
@@ -111,6 +113,9 @@ const DeskCompose = () => {
     tags: form.tags,
     imageUrl: form.imageUrl,
     imageCredit: form.imageCredit,
+    skipEnglish: publishing && Object.prototype.hasOwnProperty.call(publishing, 'skipEnglish')
+      ? publishing.skipEnglish === true
+      : form.language !== 'en' && form.skipEnglish,
     scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).toISOString() : null,
     publishNow,
     translations: form.versions,
@@ -119,19 +124,36 @@ const DeskCompose = () => {
   const save = async (publishNow = false, publishing = null) => {
     setSaving(true);
     try {
-      const data = draftId
-        ? await deskFetch(`/api/desk/articles/${draftId}`, {
+      let data;
+      if (!draftId) {
+        data = await deskFetch('/api/desk/articles', {
+          method: 'POST',
+          body: JSON.stringify(payload(publishNow, publishing)),
+        });
+      } else if (publishNow) {
+        await deskFetch(`/api/desk/articles/${draftId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ action: 'update', ...payload(false, publishing) }),
+        });
+        data = await deskFetch(`/api/desk/articles/${draftId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            action: 'publish',
+            publisherSlug: publishing?.publisherSlug || '',
+            category: publishing?.category || form.category,
+            skipEnglish: publishing?.skipEnglish === true,
+          }),
+        });
+      } else {
+        data = await deskFetch(`/api/desk/articles/${draftId}`, {
           method: 'PATCH',
           body: JSON.stringify({
             action: status === 'published' ? 'correct' : 'update',
             correctionNote: 'Updated after publication.',
             ...payload(false),
           }),
-        })
-        : await deskFetch('/api/desk/articles', {
-          method: 'POST',
-          body: JSON.stringify(payload(publishNow, publishing)),
         });
+      }
       setPublishOpen(false);
       toast.success(publishNow ? 'Published.' : 'Draft saved for review.');
       if (!draftId && data.article?.id && !publishNow) {
@@ -164,10 +186,15 @@ const DeskCompose = () => {
     translations: form.versions,
     catalog: languages,
   });
-  const versionNames = languages.map(item => item.label);
-  const versionLabel = versionNames.length < 2
-    ? (versionNames[0] || 'this language')
-    : `${versionNames.slice(0, -1).join(', ')} and ${versionNames[versionNames.length - 1]}`;
+  const waiveEnglish = form.language !== 'en' && form.skipEnglish;
+  const liveNames = languages.filter(item => !(waiveEnglish && item.code === 'en')).map(item => item.label);
+  const versionLabel = liveNames.length < 2
+    ? (liveNames[0] || 'this language')
+    : `${liveNames.slice(0, -1).join(', ')} and ${liveNames[liveNames.length - 1]}`;
+  const keptNames = languages.filter(item => item.code !== 'en').map(item => item.label);
+  const keptLabel = keptNames.length < 2
+    ? (keptNames[0] || 'The other language')
+    : `${keptNames.slice(0, -1).join(', ')} and ${keptNames[keptNames.length - 1]}`;
   const changeLanguage = (nextCode) => {
     setForm(prev => {
       if (nextCode === prev.language) return prev;
@@ -185,6 +212,7 @@ const DeskCompose = () => {
         title: next.title || '',
         summary: next.summary || '',
         fullContent: next.fullContent || '',
+        skipEnglish: nextCode === 'en' ? false : prev.skipEnglish,
         versions,
       };
     });
@@ -217,7 +245,11 @@ const DeskCompose = () => {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-display font-bold">{primaryLanguage.label} version</h2>
               <p className="text-xs text-gray-500">
-                {versionState.map(item => `${item.label} ${item.ready ? 'ready' : 'missing a title or full story'}`).join(' · ')}
+                {versionState.map(item => (
+                  item.code === 'en' && form.skipEnglish && form.language !== 'en'
+                    ? 'English not required'
+                    : `${item.label} ${item.ready ? 'ready' : 'missing a title or full story'}`
+                )).join(' · ')}
               </p>
             </div>
             <label className="block text-sm font-medium">
@@ -239,14 +271,34 @@ const DeskCompose = () => {
               <textarea required value={form.fullContent} onChange={e => set('fullContent', e.target.value)} rows={14} className="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
             </label>
           </div>
+          {form.language !== 'en' && (
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={form.skipEnglish}
+                onChange={e => set('skipEnglish', e.target.checked)}
+                className="mt-1"
+              />
+              <span>This story does not need an English version. {keptLabel} {keptNames.length === 1 ? 'is' : 'are'} still required.</span>
+            </label>
+          )}
           {otherLanguages.map(item => {
             const version = form.versions?.[item.code] || {};
+            const skipped = item.code === 'en' && form.skipEnglish;
             const ready = versionState.find(entry => entry.code === item.code)?.ready;
+            if (skipped) {
+              return (
+                <div key={item.code} id={`version-${item.code}`} className="rounded-2xl border border-stone-200 dark:border-white/10 p-4 scroll-mt-24">
+                  <h2 className="font-display font-bold">{item.label} version</h2>
+                  <p className="text-xs text-gray-500 mt-1">Not required for this story.</p>
+                </div>
+              );
+            }
             return (
               <div key={item.code} id={`version-${item.code}`} className={`rounded-2xl border p-4 space-y-3 scroll-mt-24 ${ready ? 'border-stone-200 dark:border-white/10' : 'border-red-300 dark:border-red-800'}`}>
                 <h2 className="font-display font-bold">{item.label} version</h2>
                 <p className="text-xs text-gray-500">
-                  {ready ? 'Ready.' : 'Missing a title or full story.'} Every story goes live in {versionLabel}.
+                  {ready ? 'Ready.' : 'Missing a title or full story.'} This story goes live in {versionLabel}.
                 </p>
                 <input value={version.title || ''} onChange={e => setVersion(item.code, 'title', e.target.value)} placeholder={`${item.label} title`} className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
                 <textarea value={version.summary || ''} onChange={e => setVersion(item.code, 'summary', e.target.value)} rows={2} placeholder={`${item.label} summary`} className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
@@ -313,6 +365,8 @@ const DeskCompose = () => {
           title={form.title}
           category={form.category}
           authorSlug={form.authorSlug}
+          storyLanguage={form.language}
+          initialSkipEnglish={form.skipEnglish}
           languages={languageStatus({
             language: form.language,
             title: form.title,

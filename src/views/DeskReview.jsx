@@ -253,6 +253,8 @@ const DeskReview = () => {
         title={publishTarget?.title}
         category={publishTarget?.category}
         authorSlug={publishTarget?.authorSlug}
+        storyLanguage={publishTarget?.language || 'en'}
+        initialSkipEnglish={publishTarget?.skipEnglish === true}
         languages={publishTarget ? languageStatus({ ...publishTarget, catalog: settings.newsroom.languages }) : []}
         fixHref={publishTarget ? `/desk/compose?id=${publishTarget.id}` : ''}
         busy={publishing}
