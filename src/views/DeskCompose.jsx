@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { toast } from 'react-toastify';
 import DeskLayout from '../components/DeskLayout';
 import CoverImagePicker from '../components/CoverImagePicker';
+import MalayalamField, { MalayalamTypingSwitch } from '../components/MalayalamField';
 import StaffAuthorPicker from '../components/StaffAuthorPicker';
 import PublishDialog, { languageStatus } from '../components/PublishDialog';
 import { useAuth } from '../context/AuthContext';
@@ -54,6 +55,7 @@ const DeskCompose = () => {
   const searchParams = useSearchParams();
   const draftId = searchParams.get('id') || '';
   const [form, setForm] = useState(EMPTY);
+  const [malayalamTyping, setMalayalamTyping] = useState(true);
   const prepareGeneration = useRef(0);
   const [saving, setSaving] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
@@ -363,19 +365,34 @@ const DeskCompose = () => {
                 {languages.map(item => <option key={item.code} value={item.code}>{item.label}</option>)}
               </select>
             </label>
-            <label className="block text-sm font-medium">
-              {primaryLanguage.label} title
-              <input required value={form.title} onChange={e => set('title', e.target.value)} className="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
-            </label>
-            <label className="block text-sm font-medium">
-              {primaryLanguage.label} summary
-              <textarea value={form.summary} onChange={e => set('summary', e.target.value)} rows={3} className="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
-            </label>
-            <label className="block text-sm font-medium">
-              {primaryLanguage.label} full story
-              <textarea required value={form.fullContent} onChange={e => set('fullContent', e.target.value)} rows={14} className="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
-              <span className="mt-1 block text-xs font-normal text-gray-500">Wrap a sentence in **double asterisks** to make it bold.</span>
-            </label>
+            {form.language === 'ml' && (
+              <MalayalamTypingSwitch checked={malayalamTyping} onChange={setMalayalamTyping} />
+            )}
+            <MalayalamField
+              label={`${primaryLanguage.label} title`}
+              required
+              value={form.title}
+              onChange={value => set('title', value)}
+              transliterate={form.language === 'ml' && malayalamTyping}
+            />
+            <MalayalamField
+              label={`${primaryLanguage.label} summary`}
+              multiline
+              rows={3}
+              value={form.summary}
+              onChange={value => set('summary', value)}
+              transliterate={form.language === 'ml' && malayalamTyping}
+            />
+            <MalayalamField
+              label={`${primaryLanguage.label} full story`}
+              multiline
+              rows={14}
+              required
+              value={form.fullContent}
+              onChange={value => set('fullContent', value)}
+              transliterate={form.language === 'ml' && malayalamTyping}
+              hint="Wrap a sentence in **double asterisks** to make it bold."
+            />
           </div>
           {form.language === 'en' ? (
             <label className="flex items-start gap-2 text-sm">
@@ -418,9 +435,31 @@ const DeskCompose = () => {
                     ? `Automatic ${item.label} draft for review. Edit any sentence that needs a change.`
                     : `${ready ? 'Ready.' : 'Missing a title or full story.'} This story goes live in ${versionLabel}.`}
                 </p>
-                <input value={version.title || ''} onChange={e => setVersion(item.code, 'title', e.target.value)} placeholder={`${item.label} title`} className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
-                <textarea value={version.summary || ''} onChange={e => setVersion(item.code, 'summary', e.target.value)} rows={2} placeholder={`${item.label} summary`} className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
-                <textarea value={version.fullContent || ''} onChange={e => setVersion(item.code, 'fullContent', e.target.value)} rows={8} placeholder={`${item.label} full story`} className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-4 py-3 text-sm" />
+                {item.code === 'ml' && (
+                  <MalayalamTypingSwitch checked={malayalamTyping} onChange={setMalayalamTyping} />
+                )}
+                <MalayalamField
+                  value={version.title || ''}
+                  onChange={value => setVersion(item.code, 'title', value)}
+                  placeholder={`${item.label} title`}
+                  transliterate={item.code === 'ml' && malayalamTyping}
+                />
+                <MalayalamField
+                  multiline
+                  rows={2}
+                  value={version.summary || ''}
+                  onChange={value => setVersion(item.code, 'summary', value)}
+                  placeholder={`${item.label} summary`}
+                  transliterate={item.code === 'ml' && malayalamTyping}
+                />
+                <MalayalamField
+                  multiline
+                  rows={8}
+                  value={version.fullContent || ''}
+                  onChange={value => setVersion(item.code, 'fullContent', value)}
+                  placeholder={`${item.label} full story`}
+                  transliterate={item.code === 'ml' && malayalamTyping}
+                />
               </div>
             );
           })}
@@ -465,6 +504,7 @@ const DeskCompose = () => {
             <h2 className="font-display font-bold">Cover image</h2>
             <CoverImagePicker
               category={form.category}
+              title={form.title}
               imageUrl={form.imageUrl}
               imageCredit={form.imageCredit}
               onChange={next => setForm(prev => ({ ...prev, ...next }))}

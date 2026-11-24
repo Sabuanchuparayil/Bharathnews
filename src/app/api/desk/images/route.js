@@ -3,6 +3,8 @@ import { verifyEditorialRequest } from '@/lib/editorial-auth';
 import { searchImageCatalog } from '@/data/image-catalog';
 import { searchOpenImages } from '@/lib/open-images';
 
+export const maxDuration = 20;
+
 export async function GET(request) {
   const auth = await verifyEditorialRequest(request);
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
@@ -14,7 +16,11 @@ export async function GET(request) {
   const lookup = query.trim() || category.trim() || 'news';
   const page = Math.floor(Math.max(0, offset) / 8) + 1;
   const open = await searchOpenImages({ query: lookup, page, pageSize: 8 });
-  if (open.length) return NextResponse.json({ source: 'openverse', images: open });
+  if (open.length) {
+    const source = open.every(image => image.provider === 'commons') ? 'commons' : 'openverse';
+    const images = open.map(({ provider, ...image }) => image);
+    return NextResponse.json({ source, images });
+  }
 
   const key = process.env.UNSPLASH_ACCESS_KEY;
 

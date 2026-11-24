@@ -1,21 +1,23 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { deskFetch } from '@/lib/desk-client';
+import { coverSearchQuery } from '@/lib/open-images';
 
-const CoverImagePicker = ({ category, imageUrl, imageCredit, onChange }) => {
+const CoverImagePicker = ({ category, title, imageUrl, imageCredit, onChange }) => {
   const [query, setQuery] = useState('');
   const [offset, setOffset] = useState(0);
   const [images, setImages] = useState([]);
   const [source, setSource] = useState('');
   const [busy, setBusy] = useState(false);
+  const seeded = useRef(false);
 
-  const search = async (nextOffset = 0) => {
+  const search = useCallback(async (nextOffset, nextQuery) => {
     setBusy(true);
     try {
       const params = new URLSearchParams({
-        q: query,
+        q: nextQuery,
         category: category || '',
         offset: String(nextOffset),
       });
@@ -27,7 +29,16 @@ const CoverImagePicker = ({ category, imageUrl, imageCredit, onChange }) => {
       toast.error(err.message || 'Could not load images.');
     }
     setBusy(false);
-  };
+  }, [category]);
+
+  useEffect(() => {
+    if (seeded.current || !title) return;
+    const next = coverSearchQuery(title);
+    if (!next) return;
+    seeded.current = true;
+    setQuery(next);
+    search(0, next);
+  }, [title, search]);
 
   const upload = async (file) => {
     if (!file) return;
@@ -61,13 +72,16 @@ const CoverImagePicker = ({ category, imageUrl, imageCredit, onChange }) => {
           placeholder="Search covers: Kerala, Dubai, gold, cricket"
           className="flex-1 min-w-[12rem] rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-surface-1 px-3 py-2 text-sm"
         />
-        <button type="button" onClick={() => search(0)} disabled={busy} className="btn-secondary px-4 py-2 rounded-xl text-sm">
+        <button type="button" onClick={() => search(0, query)} disabled={busy} className="btn-secondary px-4 py-2 rounded-xl text-sm">
           Suggest
         </button>
-        <button type="button" onClick={() => search(offset + 8)} disabled={busy || images.length === 0} className="btn-secondary px-4 py-2 rounded-xl text-sm">
+        <button type="button" onClick={() => search(offset + 8, query)} disabled={busy || images.length === 0} className="btn-secondary px-4 py-2 rounded-xl text-sm">
           More
         </button>
       </div>
+      {source === 'commons' && images.length > 0 && (
+        <p className="text-xs text-gray-500">Openly licensed photos from Wikimedia Commons. Choosing one saves the photographer credit on the story.</p>
+      )}
       {source === 'openverse' && images.length > 0 && (
         <p className="text-xs text-gray-500">Openly licensed photos from Openverse. Choosing one saves the photographer credit on the story.</p>
       )}
