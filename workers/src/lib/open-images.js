@@ -83,7 +83,6 @@ async function requestOpenverse(q, page, pageSize, wide, timeoutMs = 8000) {
   url.searchParams.set('page', String(Math.max(page, 1)));
   url.searchParams.set('mature', 'false');
   url.searchParams.set('license', 'cc0,pdm,by,by-sa');
-  url.searchParams.set('category', 'photograph');
   if (wide) url.searchParams.set('aspect_ratio', 'wide');
 
   const controller = new AbortController();
@@ -96,9 +95,10 @@ async function requestOpenverse(q, page, pageSize, wide, timeoutMs = 8000) {
     if (!res.ok) return [];
     const json = await res.json();
     return (json.results || []).map(photo => {
-      if (photo.width && Number(photo.width) < 600) return null;
+      if (photo.width && Number(photo.width) < 480) return null;
       const full = sizedUrl(photo.url, photo.width);
       if (!full.startsWith('https://')) return null;
+      if (!/\.(jpe?g|png|webp)(\?|$)/i.test(full)) return null;
       return {
         url: full,
         thumb: photo.thumbnail || full,

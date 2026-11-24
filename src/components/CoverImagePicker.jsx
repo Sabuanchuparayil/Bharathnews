@@ -71,8 +71,11 @@ const CoverImagePicker = ({ category, imageUrl, imageCredit, onChange }) => {
       {source === 'openverse' && images.length > 0 && (
         <p className="text-xs text-gray-500">Openly licensed photos from Openverse. Choosing one saves the photographer credit on the story.</p>
       )}
+      {source === 'none' && (
+        <p className="text-xs text-gray-500">No openly licensed photo matched that search. Upload one or paste a URL.</p>
+      )}
       {source === 'catalog' && images.length > 0 && (
-        <p className="text-xs text-gray-500">Openverse had no match for that search. Showing the newsroom catalog.</p>
+        <p className="text-xs text-gray-500">Newsroom catalog for this section. Search a place or topic for a closer photo.</p>
       )}
       {images.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">

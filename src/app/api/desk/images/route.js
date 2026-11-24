@@ -47,6 +47,10 @@ export async function GET(request) {
     }
   }
 
+  if (query.trim()) {
+    return NextResponse.json({ source: 'none', images: [] });
+  }
+
   return NextResponse.json({
     source: 'catalog',
     images: searchImageCatalog({ query, category, offset }),
